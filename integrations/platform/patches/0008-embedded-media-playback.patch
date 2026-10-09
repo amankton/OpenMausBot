@@ -1,0 +1,17 @@
+diff --git a/packages/presentation/src/utils.ts b/packages/presentation/src/utils.ts
+index 395ac538c..273f69d08 100644
+--- a/packages/presentation/src/utils.ts
++++ b/packages/presentation/src/utils.ts
+@@ -942,7 +942,11 @@ export function setPresentationCookie (token: string, workspaceUuid: WorkspaceUu
+     } catch {}
+ 
+     const normalized = path.startsWith('/') ? path : `/${path}`
+-    document.cookie = `${cookieName}=${cookieValue}; path=${normalized}`
++    // Native media cannot attach a bearer header. In an embedded workspace,
++    // keep its file cookie in the embedding site's own partition (CHIPS).
++    const embedded = window.self !== window.top && window.isSecureContext
++    const attributes = embedded ? '; SameSite=None; Secure; Partitioned' : ''
++    document.cookie = `${cookieName}=${cookieValue}; path=${normalized}${attributes}`
+   }
+ }
+ 

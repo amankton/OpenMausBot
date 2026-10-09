@@ -18,7 +18,7 @@
 // it happens, which is why waiting feels like listening to someone work
 // rather than listening to nothing.
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { AudioLines, Check, ChevronDown, Loader2, Phone, PhoneOff, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Phone, PhoneOff, X } from "lucide-react";
 
 import { useStore, visibleMessages, type Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
@@ -288,7 +288,7 @@ export function CallTargetButton({
         data-call-button={placement}
         className={cn(
           "relative flex shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60",
-          composer ? "size-8" : "size-9",
+          composer ? "h-8 gap-1.5 px-2.5" : "size-9",
           active
             ? "bg-danger text-white hover:brightness-110"
             : composer
@@ -302,7 +302,8 @@ export function CallTargetButton({
       >
         {active
           ? <PhoneOff size={composer ? 15 : 17} />
-          : composer ? <AudioLines size={16} aria-hidden="true" /> : <Phone size={17} />}
+          : <Phone size={composer ? 16 : 17} aria-hidden="true" />}
+        {composer && <span className="text-xs font-medium">{active ? "End call" : "Call"}</span>}
         {unavailable && (
           <span className="absolute right-1 top-1 size-1.5 rounded-full bg-warning ring-2 ring-app" aria-hidden="true" />
         )}

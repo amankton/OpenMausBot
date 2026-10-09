@@ -1,14 +1,14 @@
 // The places at the foot of the sidebar, as direct rows: Routines (the
 // Automations page), Triggers and Apps (the two glass pop-ups). They used to
 // hide behind a hover "Tools" menu; three rows cost little and each is one
-// click instead of a hover and a click. Team map is an Advanced-mode place:
-// a fourth row there, no menu.
-import { CalendarDays, Network, Puzzle, Zap } from "lucide-react";
+// click instead of a hover and a click. Shared workspace is available in both
+// interface modes alongside the original agent Team map.
+import { Building2, CalendarDays, Network, Puzzle, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
+import { sharedWorkspaceAvailable } from "@/lib/release-profile";
 import { t } from "@/lib/i18n";
-import { useAdvancedMode } from "@/lib/interface-mode";
 import { isRoutineProblemRun } from "@/lib/routines";
 import type { SidebarDensity } from "@/lib/sidebar-preferences";
 import { useStore } from "@/state/store";
@@ -62,7 +62,6 @@ function NavRow({
 
 export function SidebarFooterNav({ density }: { density: SidebarDensity }) {
   const { state, dispatch } = useStore();
-  const advanced = useAdvancedMode();
   const iconsOnly = density === "icons";
   const iconSize = iconsOnly ? 20 : 18;
   const tone = (active: boolean) => (active ? "text-accent" : "text-ink-secondary");
@@ -71,6 +70,21 @@ export function SidebarFooterNav({ density }: { density: SidebarDensity }) {
   return (
     // `tools` is the guided tour's anchor for "the places down here".
     <nav data-tour="tools" aria-label={t("sidebar.tools")} className="flex flex-col gap-0.5">
+      {sharedWorkspaceAvailable && <a
+        href="/workspace"
+        target="chief-shared-workspace"
+        rel="noopener noreferrer"
+        data-sidebar-nav="shared-workspace"
+        aria-label={iconsOnly ? "Shared workspace" : undefined}
+        title="Shared workspace (opens in another window)"
+        className={cn(
+          "relative flex w-full items-center rounded-xl text-left text-ink transition-colors hover:bg-raised/50",
+          iconsOnly ? "min-h-10 justify-center px-2 py-2" : "min-h-9 gap-3 px-3 py-1.5",
+        )}
+      >
+        <Building2 size={iconSize} className="text-ink-secondary" />
+        {!iconsOnly && <span className="flex-1 truncate text-[14px]">Shared workspace</span>}
+      </a>}
       <NavRow
         id="routines"
         label={t("sidebar.nav.routines")}
@@ -98,17 +112,15 @@ export function SidebarFooterNav({ density }: { density: SidebarDensity }) {
         icon={(active) => <Puzzle size={iconSize} className={tone(active)} />}
         onClick={() => dispatch({ type: "togglePlugins", open: true })}
       />
-      {advanced && (
-        <NavRow
-          id="team-map"
-          label={t("sidebar.nav.teamMap")}
-          tourId="team-tools"
-          iconsOnly={iconsOnly}
-          active={state.activeView === "team-map"}
-          icon={(active) => <Network size={iconSize} className={tone(active)} />}
-          onClick={() => dispatch({ type: "showTeamMap" })}
-        />
-      )}
+      <NavRow
+        id="team-map"
+        label={t("sidebar.nav.teamMap")}
+        tourId="team-tools"
+        iconsOnly={iconsOnly}
+        active={state.activeView === "team-map"}
+        icon={(active) => <Network size={iconSize} className={tone(active)} />}
+        onClick={() => dispatch({ type: "showTeamMap" })}
+      />
     </nav>
   );
 }

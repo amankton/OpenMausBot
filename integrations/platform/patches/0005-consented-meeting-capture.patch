@@ -1,0 +1,1001 @@
+diff --git a/plugins/love-resources/src/capture-client.ts b/plugins/love-resources/src/capture-client.ts
+new file mode 100644
+index 0000000..7933072
+--- /dev/null
++++ b/plugins/love-resources/src/capture-client.ts
+@@ -0,0 +1,58 @@
++// Chief meeting notes UI. Licensed under EPL-2.0, as the retained Platform source.
++import { concatLink } from '@hcengineering/core'
++import love from '@hcengineering/love'
++import { getMetadata } from '@hcengineering/platform'
++import { getCurrentWorkspaceUuid } from '@hcengineering/presentation'
++import { getPlatformToken } from './utils'
++
++export type CaptureState = 'pending' | 'starting' | 'capturing' | 'stopping' | 'processing' | 'ready' | 'failed' | 'cancelled' | 'deleted'
++export interface CaptureSegment { id: string, personId: string, speaker: string, startMs: number, endMs: number, text: string }
++export interface CaptureSuggestion { id: string, kind: 'decision' | 'action', text: string, sourceSegmentId: string, personId: string }
++export interface CaptureSession {
++  id: string
++  workspace: string
++  meetingId: string
++  title: string
++  revision: number
++  state: CaptureState
++  requestedBy: string
++  requestedAt: number
++  startedAt?: number
++  stoppedAt?: number
++  reason?: string
++  participants: Array<{ personId: string, name: string, consent: 'pending' | 'accepted' | 'declined' }>
++  segments?: CaptureSegment[]
++  suggestions?: CaptureSuggestion[]
++}
++export interface CaptureStatus {
++  available: boolean
++  reason?: string
++  worker: { state: 'offline' | 'ready' | 'busy' }
++  selfPersonId: string
++  joined: boolean
++  session?: CaptureSession
++  limits: { maxParticipants: number, maxDurationMs: number, maxBytes: number }
++}
++export class CaptureError extends Error {
++  constructor (readonly status: number) {
++    super(status === 409 ? 'Attendance or consent changed. Refresh and review the current request.' :
++      status === 401 || status === 403 ? 'Meeting notes are not available to this account.' :
++        status === 404 ? 'This meeting notes session is no longer available.' : 'Meeting notes are unavailable. Try refreshing.')
++  }
++}
++export class CaptureClient {
++  constructor (readonly workspace: string) {}
++  async call<T> (path: string, method = 'GET', body?: unknown): Promise<T> {
++    if (getCurrentWorkspaceUuid() !== this.workspace) throw new CaptureError(403)
++    const endpoint = getMetadata(love.metadata.ServiceEndpoint)
++    if (endpoint === undefined) throw new CaptureError(503)
++    const response = await fetch(concatLink(endpoint, '/capture' + path), {
++      method, credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(15000),
++      headers: { Authorization: 'Bearer ' + getPlatformToken(), 'Content-Type': 'application/json' },
++      ...(body === undefined ? {} : { body: JSON.stringify(body) })
++    })
++    if (getCurrentWorkspaceUuid() !== this.workspace) throw new CaptureError(403)
++    if (!response.ok) throw new CaptureError(response.status)
++    return await response.json() as T
++  }
++}
+diff --git a/plugins/love-resources/src/capture-export.ts b/plugins/love-resources/src/capture-export.ts
+new file mode 100644
+index 0000000..020a7c3
+--- /dev/null
++++ b/plugins/love-resources/src/capture-export.ts
+@@ -0,0 +1,38 @@
++// Chief meeting review format version 1. Licensed under EPL-2.0.
++import { type CaptureSession, type CaptureSegment } from './capture-client'
++
++export interface ReviewedItem { id: string, text: string, selected: boolean }
++function bounded (text: string, limit: number, label: string): string {
++  if (typeof text !== 'string' || text.trim().length === 0 || text.length > limit) throw new Error(label + ' is missing or too long.')
++  return text
++}
++function segment (value: CaptureSegment): CaptureSegment {
++  if (!Number.isFinite(value.startMs) || !Number.isFinite(value.endMs) || value.startMs < 0 || value.endMs < value.startMs) throw new Error('Invalid transcript timing.')
++  return { id: bounded(value.id, 200, 'Segment ID'), personId: bounded(value.personId, 200, 'Person ID'),
++    speaker: bounded(value.speaker, 200, 'Speaker'), startMs: value.startMs, endMs: value.endMs,
++    text: bounded(value.text, 8000, 'Source text') }
++}
++export function reviewedBundle (session: CaptureSession, reviewerPersonId: string, edits: ReviewedItem[], includeTranscript: boolean, confirmed: boolean, now = new Date()): string {
++  if (!confirmed || session.state !== 'ready' || !session.participants.some(p => p.personId === reviewerPersonId)) throw new Error('Review this authorized completed session before exporting.')
++  if (!Number.isSafeInteger(session.revision) || session.revision < 1 || !Number.isFinite(session.requestedAt) || session.requestedAt < 0) throw new Error('Invalid session provenance.')
++  const selected = edits.filter(item => item.selected)
++  if (selected.length > 100 || new Set(selected.map(item => item.id)).size !== selected.length) throw new Error('Select at most 100 distinct items.')
++  const segments = new Map((session.segments ?? []).map(value => [value.id, value]))
++  const suggestions = new Map((session.suggestions ?? []).map(value => [value.id, value]))
++  const items = selected.map(item => {
++    const suggestion = suggestions.get(item.id)
++    const original = suggestion === undefined ? undefined : segments.get(suggestion.sourceSegmentId)
++    if (suggestion === undefined || original === undefined || suggestion.personId !== original.personId || !['decision', 'action'].includes(suggestion.kind)) throw new Error('The source for a selected suggestion is no longer available.')
++    const { id, ...source } = segment(original)
++    return { id: bounded(suggestion.id, 200, 'Suggestion ID'), kind: suggestion.kind, text: bounded(item.text, 4000, 'Reviewed text'), source: { segmentId: id, ...source } }
++  })
++  if (includeTranscript && (session.segments?.length ?? 0) > 2000) throw new Error('The transcript exceeds the export limit of 2000 segments.')
++  if (items.length === 0 && !includeTranscript) throw new Error('Select reviewed items or explicitly include the reviewed transcript.')
++  const bundle = { format: 'chief.meeting-review', version: 1, exportedAt: now.toISOString(),
++    source: { workspace: bounded(session.workspace, 200, 'Workspace'), meetingId: bounded(session.meetingId, 200, 'Meeting'), sessionId: bounded(session.id, 200, 'Session'), revision: session.revision, title: bounded(session.title, 200, 'Meeting title'), requestedAt: session.requestedAt },
++    review: { confirmed: true, reviewerPersonId: bounded(reviewerPersonId, 200, 'Reviewer'), reviewedAt: now.toISOString() }, items,
++    ...(includeTranscript ? { transcript: [...segments.values()].map(segment) } : {}) }
++  const json = JSON.stringify(bundle, null, 2)
++  if (new TextEncoder().encode(json).byteLength > 512 * 1024) throw new Error('The reviewed export exceeds 512 KiB. Select fewer items or omit the transcript.')
++  return json
++}
+diff --git a/plugins/love-resources/src/capture-state.ts b/plugins/love-resources/src/capture-state.ts
+new file mode 100644
+index 0000000..489834e
+--- /dev/null
++++ b/plugins/love-resources/src/capture-state.ts
+@@ -0,0 +1,54 @@
++// Chief meeting notes UI. Licensed under EPL-2.0.
++import { writable } from 'svelte/store'
++import { getCurrentWorkspaceUuid } from '@hcengineering/presentation'
++import { CaptureClient, type CaptureSession, type CaptureStatus } from './capture-client'
++
++export const liveCaptureStates = new Set(['pending', 'starting', 'capturing', 'stopping', 'processing'])
++export interface CaptureView { status?: CaptureStatus, history: CaptureSession[], error?: string, busy: boolean, fresh: boolean }
++export function createCaptureController (client: Pick<CaptureClient, 'call'>, meetingId: string) {
++  let value: CaptureView = { history: [], busy: false, fresh: false }
++  const store = writable(value)
++  let pending: Promise<void> | undefined
++  let generation = 0
++  const set = (next: CaptureView): void => { value = next; store.set(next) }
++  async function refresh (): Promise<void> {
++    if (pending !== undefined) return await pending
++    const run = generation
++    pending = (async () => {
++      try {
++        const status = await client.call<CaptureStatus>('/status?meetingId=' + encodeURIComponent(meetingId))
++        const history = await client.call<{ sessions: CaptureSession[] }>('/history?meetingId=' + encodeURIComponent(meetingId))
++        if (run === generation) set({ status, history: history.sessions, fresh: true, busy: value.busy })
++      } catch (error) {
++        if (run === generation) set({ history: [], fresh: false, busy: false, error: error instanceof Error ? error.message : 'Meeting notes are unavailable.' })
++      } finally { pending = undefined }
++    })()
++    await pending
++  }
++  async function mutate (path: string, body?: unknown, method = 'POST'): Promise<void> {
++    if (value.busy || !value.fresh) return
++    set({ ...value, busy: true, error: undefined })
++    try { await client.call(path, method, body) } catch (error) {
++      set({ history: [], fresh: false, busy: false, error: error instanceof Error ? error.message : 'The request failed.' })
++      return
++    }
++    set({ ...value, busy: false })
++    await refresh()
++  }
++  return {
++    subscribe: store.subscribe, refresh, mutate,
++    session: async (id: string) => (await client.call<{ session: CaptureSession }>('/session/' + encodeURIComponent(id))).session,
++    clear: () => { generation++; set({ history: [], busy: false, fresh: false }) }
++  }
++}
++
++const controllers = new Map<string, ReturnType<typeof createCaptureController>>()
++export function captureController (meetingId: string): ReturnType<typeof createCaptureController> {
++  const workspace = getCurrentWorkspaceUuid()
++  const key = workspace + ':' + meetingId
++  // Clear private transcript/status views when the application switches workspace.
++  for (const [previous, controller] of controllers) if (!previous.startsWith(workspace + ':')) { controller.clear(); controllers.delete(previous) }
++  let controller = controllers.get(key)
++  if (controller === undefined) { controller = createCaptureController(new CaptureClient(workspace), meetingId); controllers.set(key, controller) }
++  return controller
++}
+diff --git a/plugins/love-resources/src/components/CaptureNotice.svelte b/plugins/love-resources/src/components/CaptureNotice.svelte
+new file mode 100644
+index 0000000..9956b9b
+--- /dev/null
++++ b/plugins/love-resources/src/components/CaptureNotice.svelte
+@@ -0,0 +1,27 @@
++<!-- Chief meeting notes UI. Licensed under EPL-2.0. -->
++<script lang="ts">
++  import { onMount } from 'svelte'
++  import { showPopup } from '@hcengineering/ui'
++  import { captureController, liveCaptureStates } from '../capture-state'
++  import CapturePanel from './CapturePanel.svelte'
++  export let meetingId: string
++  const controller = captureController(meetingId)
++  onMount(() => {
++    void controller.refresh()
++    const timer = setInterval(() => { void controller.refresh() }, 2000)
++    return () => { clearInterval(timer) }
++  })
++  $: session = $controller.status?.session
++  $: visible = $controller.error !== undefined || (session !== undefined && liveCaptureStates.has(session.state))
++</script>
++{#if visible}
++  <aside aria-label="Meeting capture notice" class="capture-notice">
++    <span role="status">{$controller.error !== undefined ? 'Meeting capture status unavailable. Refresh to check.' : session?.state === 'pending' ? 'Meeting audio consent requested' : session?.state === 'capturing' ? 'Meeting audio capture active' : `Meeting notes: ${session?.state}`}</span>
++    <button type="button" on:click={() => showPopup(CapturePanel, { meetingId }, 'centered')}>Review consent / stop</button>
++  </aside>
++{/if}
++<style>
++  .capture-notice { position: fixed; right: 1rem; bottom: 4.5rem; z-index: 100; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; max-width: calc(100vw - 2rem); padding: .65rem; border: 1px solid var(--theme-divider-color); border-radius: .5rem; color: var(--theme-content-color); background: var(--theme-panel-color); box-shadow: 0 2px 12px #0003; }
++  button { cursor: pointer; font: inherit; color: inherit; padding: .35rem; border: 1px solid var(--theme-divider-color); border-radius: .3rem; }
++  button:focus-visible { outline: 2px solid #2f58ff; }
++</style>
+diff --git a/plugins/love-resources/src/components/CapturePanel.svelte b/plugins/love-resources/src/components/CapturePanel.svelte
+new file mode 100644
+index 0000000..1bc301f
+--- /dev/null
++++ b/plugins/love-resources/src/components/CapturePanel.svelte
+@@ -0,0 +1,162 @@
++<!-- Chief meeting notes UI. Licensed under EPL-2.0. -->
++<script lang="ts">
++  import { onDestroy, onMount } from 'svelte'
++  import { captureController, liveCaptureStates } from '../capture-state'
++  import { type CaptureSession } from '../capture-client'
++  import { reviewedBundle, type ReviewedItem } from '../capture-export'
++
++  export let meetingId: string
++  export let compact = false
++  const controller = captureController(meetingId)
++  let selected = ''
++  let reviewed: CaptureSession | undefined
++  let edits: ReviewedItem[] = []
++  let includeTranscript = false
++  let confirmed = false
++  let reviewError = ''
++  let loadingReview = false
++  let disposed = false
++  let reviewGeneration = 0
++  $: status = $controller.status
++  $: session = status?.session
++  $: own = session?.participants.find(person => person.personId === status?.selfPersonId)
++  $: active = session !== undefined && liveCaptureStates.has(session.state)
++  $: if (!$controller.fresh) { reviewed = undefined; confirmed = false; reviewGeneration++ }
++
++  const labels: Record<string, string> = {
++    pending: 'Waiting for everyone’s consent', starting: 'Starting local audio capture', capturing: 'Audio capture active',
++    stopping: 'Stopping capture', processing: 'Transcribing locally', ready: 'Transcript ready for review', failed: 'Capture failed',
++    cancelled: 'Capture cancelled', deleted: 'Capture deleted'
++  }
++  onMount(() => {
++    void controller.refresh()
++    const timer = setInterval(() => { void controller.refresh() }, 2000)
++    return () => { clearInterval(timer) }
++  })
++  onDestroy(() => { disposed = true; reviewGeneration++ })
++  async function loadReview (): Promise<void> {
++    const generation = ++reviewGeneration
++    reviewed = undefined; confirmed = false; includeTranscript = false; edits = []; reviewError = ''
++    if (selected === '') return
++    loadingReview = true
++    try {
++      const value = await controller.session(selected)
++      if (disposed || generation !== reviewGeneration) return
++      reviewed = value
++      edits = (value.suggestions ?? []).map(item => ({ id: item.id, text: item.text, selected: false }))
++    } catch (error) { reviewError = error instanceof Error ? error.message : 'Transcript unavailable.' }
++    finally { if (generation === reviewGeneration) loadingReview = false }
++  }
++  async function exportReview (): Promise<void> {
++    if (reviewed === undefined || status === undefined || !$controller.fresh) return
++    const generation = reviewGeneration
++    const sessionId = reviewed.id
++    reviewError = ''; loadingReview = true
++    try {
++      // Re-authorize at export time; no stale private transcript can bypass the server.
++      const latest = await controller.session(sessionId)
++      if (disposed || generation !== reviewGeneration || reviewed?.id !== sessionId || !$controller.fresh) return
++      if (JSON.stringify(latest) !== JSON.stringify(reviewed)) throw new Error('This session changed. Open it again and review the latest content.')
++      const json = reviewedBundle(latest, status.selfPersonId, edits, includeTranscript, confirmed)
++      const url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }))
++      const link = document.createElement('a')
++      link.href = url; link.download = 'chief-meeting-review.json'; link.click()
++      setTimeout(() => { URL.revokeObjectURL(url) }, 1000)
++    } catch (error) { reviewError = error instanceof Error ? error.message : 'Export failed.' }
++    finally { loadingReview = false }
++  }
++  async function removeReview (): Promise<void> {
++    if (reviewed === undefined || !window.confirm('Delete this meeting notes session and its private capture data?')) return
++    await controller.mutate('/session/' + encodeURIComponent(reviewed.id), undefined, 'DELETE')
++    selected = ''; reviewed = undefined; confirmed = false
++  }
++  async function retryReview (): Promise<void> {
++    if (reviewed === undefined || reviewed.state !== 'failed') return
++    await controller.mutate('/retry', { sessionId: reviewed.id, revision: reviewed.revision })
++    await loadReview()
++  }
++</script>
++
++<section class:compact class="capture-panel" aria-label="Quiet meeting notes">
++  <div class="heading"><strong>Quiet meeting notes</strong><button type="button" disabled={$controller.busy} on:click={() => controller.refresh()}>Refresh</button></div>
++  <p role="status" aria-live="polite">{!$controller.fresh ? ($controller.error ?? 'Checking availability…') : session !== undefined ? labels[session.state] : status?.available ? 'Ready to request consent' : 'Local capture unavailable'}</p>
++  {#if $controller.error}<p role="alert">{$controller.error}</p>{/if}
++  {#if status?.reason && !status.available}<p>{status.reason}</p>{/if}
++  {#if session?.reason}<p>{session.reason}</p>{/if}
++  {#if status !== undefined && $controller.fresh}
++    {#if !active}
++      <p>Audio only, transcribed on this computer. Everyone in the current meeting must agree, including the requester.</p>
++      <button type="button" disabled={!status.available || !status.joined || $controller.busy} on:click={() => controller.mutate('/request', { meetingId })}>Request everyone’s consent</button>
++      {#if !status.joined}<p>Join this meeting to request capture.</p>{/if}
++    {:else if session !== undefined}
++      <ul class="consents" aria-label="Individual consent">
++        {#each session.participants as person}<li>{person.name}{person.personId === status.selfPersonId ? ' (you)' : ''}: {person.consent}</li>{/each}
++      </ul>
++      {#if session.state === 'pending' && own?.consent === 'pending' && status.joined}
++        <p>Agree to record your published audio for local transcription and participant review. You can stop at any time.</p>
++        <div class="actions">
++          <button type="button" disabled={$controller.busy} on:click={() => controller.mutate('/consent', { sessionId: session.id, revision: session.revision, accept: true })}>I agree to audio capture</button>
++          <button type="button" disabled={$controller.busy} on:click={() => controller.mutate('/consent', { sessionId: session.id, revision: session.revision, accept: false })}>Decline</button>
++        </div>
++      {/if}
++      {#if own !== undefined && ['pending', 'starting', 'capturing'].includes(session.state)}
++        <button class="stop" type="button" disabled={$controller.busy} on:click={() => controller.mutate('/stop', { sessionId: session.id, revision: session.revision })}>Stop / withdraw consent</button>
++      {/if}
++      <p>Anyone joining, leaving or reconnecting stops this capture. A new request needs everyone’s fresh consent. Camera and microphone controls remain yours.</p>
++    {/if}
++  {/if}
++  <details open={!compact}>
++    <summary>History and review</summary>
++    <p>Only sessions the server authorizes for you appear here. Suggestions are drafts, never assignments.</p>
++    <label>Meeting notes session
++      <select aria-label="Meeting notes session" bind:value={selected} disabled={!$controller.fresh || loadingReview} on:change={loadReview}>
++        <option value="">Choose a session</option>
++        {#each $controller.history as item}<option value={item.id}>{new Date(item.requestedAt).toLocaleString()} — {labels[item.state]}</option>{/each}
++      </select>
++    </label>
++    {#if loadingReview}<p role="status">Loading…</p>{/if}
++    {#if reviewError}<p role="alert">{reviewError}</p>{/if}
++    {#if reviewed !== undefined && $controller.fresh}
++      <p>{labels[reviewed.state]} {reviewed.reason ?? ''}</p>
++      {#if reviewed.requestedBy === status?.selfPersonId}<button type="button" disabled={$controller.busy} on:click={removeReview}>Delete this session</button>{/if}
++      {#if reviewed.state === 'failed' && reviewed.requestedBy === status?.selfPersonId}
++        <button type="button" disabled={$controller.busy || !status?.available || Date.now() - reviewed.requestedAt >= 72 * 60 * 60 * 1000} on:click={retryReview}>Retry local transcription</button>
++        <p>Retries use retained audio only, when available within 72 hours. This does not start another capture.</p>
++      {/if}
++      {#if reviewed.state === 'ready'}
++        <details><summary>Read transcript ({reviewed.segments?.length ?? 0} segments)</summary>
++          {#each reviewed.segments ?? [] as utterance}<p><strong>{utterance.speaker}</strong> · {Math.floor(utterance.startMs / 1000)}s<br />{utterance.text}</p>{/each}
++        </details>
++        {#each edits as edit}
++          {@const suggestion = reviewed.suggestions?.find(item => item.id === edit.id)}
++          {@const source = reviewed.segments?.find(item => item.id === suggestion?.sourceSegmentId)}
++          <fieldset>
++            <legend>{suggestion?.kind === 'decision' ? 'Suggested decision' : 'Suggested action'}</legend>
++            <label><input type="checkbox" bind:checked={edit.selected} on:change={() => { confirmed = false }} /> Include this reviewed item</label>
++            <label>Reviewed text<textarea maxlength="4000" rows="3" bind:value={edit.text} on:input={() => { confirmed = false }} /></label>
++            {#if source}<blockquote><strong>{source.speaker}</strong> · {Math.floor(source.startMs / 1000)}s<br />{source.text}</blockquote>{/if}
++          </fieldset>
++        {/each}
++        <label><input type="checkbox" bind:checked={includeTranscript} on:change={() => { confirmed = false }} /> Include transcript in this export (off by default)</label>
++        <label><input type="checkbox" bind:checked={confirmed} /> I reviewed the selected material and want to export it to my personal Chief workspace.</label>
++        <button type="button" disabled={!confirmed || loadingReview || (!$controller.fresh)} on:click={exportReview}>Export reviewed JSON</button>
++        <p>This downloads a versioned file. Import and review it in personal Chief; nothing is sent to an agent automatically.</p>
++      {/if}
++    {/if}
++  </details>
++</section>
++
++<style>
++  .capture-panel { padding: 1rem; margin: .5rem 0; border: 1px solid var(--theme-divider-color); border-radius: .75rem; background: var(--theme-panel-color); color: var(--theme-content-color); max-width: 48rem; max-height: 80vh; overflow: auto; font-size: .875rem; }
++  .compact { padding: .75rem; }
++  .heading, .actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
++  p, details, label, fieldset { margin-top: .75rem; }
++  label { display: block; }
++  button, select, textarea { font: inherit; color: inherit; background: var(--theme-panel-color); border: 1px solid var(--theme-divider-color); border-radius: .35rem; padding: .4rem .6rem; }
++  button { cursor: pointer; } button:disabled { opacity: .5; cursor: default; }
++  button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid #2f58ff; outline-offset: 2px; }
++  select, textarea { display: block; width: 100%; box-sizing: border-box; margin-top: .3rem; }
++  .stop { margin-top: .75rem; border-color: #b74a4a; }
++  .consents { padding-left: 1.25rem; }
++  blockquote { padding-left: .75rem; margin: .5rem 0; border-left: 2px solid var(--theme-divider-color); white-space: pre-wrap; }
++</style>
+diff --git a/plugins/love-resources/src/components/EditMeetingMinutes.svelte b/plugins/love-resources/src/components/EditMeetingMinutes.svelte
+index 82ea9e6..aeab8e2 100644
+--- a/plugins/love-resources/src/components/EditMeetingMinutes.svelte
++++ b/plugins/love-resources/src/components/EditMeetingMinutes.svelte
+@@ -28,6 +28,7 @@
+   import ParticipantsPreview from './ParticipantsPreview.svelte'
+   import { openWidgetTab } from '@hcengineering/workbench-resources'
+   import { videoVisible } from '../utils'
++  import CapturePanel from './CapturePanel.svelte'
+ 
+   export let object: MeetingMinutes
+   export let readonly: boolean = false
+@@ -132,6 +133,8 @@
+   {/if}
+ </div>
+ 
++{#key object._id}<CapturePanel meetingId={object._id} />{/key}
++
+ <style lang="scss">
+   .title {
+     font-weight: 500;
+diff --git a/plugins/love-resources/src/components/LoveWidget.svelte b/plugins/love-resources/src/components/LoveWidget.svelte
+index cfad649..92d8fe6 100644
+--- a/plugins/love-resources/src/components/LoveWidget.svelte
++++ b/plugins/love-resources/src/components/LoveWidget.svelte
+@@ -16,7 +16,8 @@
+   import { AccountRole, getCurrentAccount, hasAccountRole, Ref } from '@hcengineering/core'
+   import love, { Floor, Room } from '@hcengineering/love'
+   import { Breadcrumbs, ButtonIcon, eventToHTMLElement, Header, IconAdd, Scroller, showPopup } from '@hcengineering/ui'
+-  import { floors, rooms, selectedFloor } from '../stores'
++  import { floors, rooms, selectedFloor, currentMeetingMinutes } from '../stores'
++  import CapturePanel from './CapturePanel.svelte'
+   import FloorPreview from './FloorPreview.svelte'
+   import EditFloorPopup from './EditFloorPopup.svelte'
+ 
+@@ -61,6 +62,9 @@
+ <div class="hulyModal-container noTopIndent type-aside">
+   <div class="hulyModal-content">
+     <Scroller>
++      {#if $currentMeetingMinutes !== undefined}
++        {#key $currentMeetingMinutes._id}<CapturePanel meetingId={$currentMeetingMinutes._id} compact />{/key}
++      {/if}
+       {#each $floors as _floor}
+         <FloorPreview
+           showRoomName
+diff --git a/plugins/love-resources/src/components/WorkbenchExtension.svelte b/plugins/love-resources/src/components/WorkbenchExtension.svelte
+index 7b0a9ed..39e6be2 100644
+--- a/plugins/love-resources/src/components/WorkbenchExtension.svelte
++++ b/plugins/love-resources/src/components/WorkbenchExtension.svelte
+@@ -13,7 +13,8 @@
+   import { subscribeToIncomingInvites, unsubscribeFromIncomingInvites } from '../invites'
+   import { lkIsConnecting, lkReconnected, lkSessionConnected } from '../liveKitClient'
+   import love from '../plugin'
+-  import { myConnectingSessionId } from '../stores'
++  import { myConnectingSessionId, currentMeetingMinutes } from '../stores'
++  import CaptureNotice from './CaptureNotice.svelte'
+   import { liveKitClient, lk } from '../utils'
+   import { get } from 'svelte/store'
+ 
+@@ -697,3 +698,6 @@
+ </script>
+ 
+ <div bind:this={parentElement} class="hidden"></div>
++{#if $currentMeetingMinutes !== undefined && $lkSessionConnected}
++  {#key $currentMeetingMinutes._id}<CaptureNotice meetingId={$currentMeetingMinutes._id} />{/key}
++{/if}
+diff --git a/plugins/love-resources/src/components/meeting/ControlBar.svelte b/plugins/love-resources/src/components/meeting/ControlBar.svelte
+index 96ddfb8..8b325b4 100644
+--- a/plugins/love-resources/src/components/meeting/ControlBar.svelte
++++ b/plugins/love-resources/src/components/meeting/ControlBar.svelte
+@@ -17,7 +17,8 @@
+   import { IconMaximize, ModernButton, Popup, showPopup, TooltipInstance } from '@hcengineering/ui'
+ 
+   import love from '../../plugin'
+-  import { myInfo, myOffice } from '../../stores'
++  import { myInfo, myOffice, currentMeetingMinutes } from '../../stores'
++  import CapturePanel from '../CapturePanel.svelte'
+   import { isFullScreen } from '../../utils'
+   import ControlBarContainer from './ControlBarContainer.svelte'
+   import RoomModal from '../RoomModal.svelte'
+@@ -124,6 +125,10 @@
+   </ControlBarContainer>
+ </div>
+ 
++{#if $currentMeetingMinutes !== undefined && $lkSessionConnected}
++  {#key $currentMeetingMinutes._id}<CapturePanel meetingId={$currentMeetingMinutes._id} compact />{/key}
++{/if}
++
+ <style lang="scss">
+   .control-bar {
+     width: 100%;
+diff --git a/plugins/love-resources/src/components/meeting/widget/MeetingWidget.svelte b/plugins/love-resources/src/components/meeting/widget/MeetingWidget.svelte
+index ccfbbc1..39d9bbd 100644
+--- a/plugins/love-resources/src/components/meeting/widget/MeetingWidget.svelte
++++ b/plugins/love-resources/src/components/meeting/widget/MeetingWidget.svelte
+@@ -31,6 +31,7 @@
+   import MicrophoneButton from '../controls/MicrophoneButton.svelte'
+   import CameraButton from '../controls/CameraButton.svelte'
+   import ShareScreenButton from '../controls/ShareScreenButton.svelte'
++  import CapturePanel from '../../CapturePanel.svelte'
+ 
+   export let widgetState: WidgetState | undefined
+   export let height: string
+@@ -63,6 +64,9 @@
+     <MeetingWidgetHeader doc={meetingMinutes} {room} on:close={handleClose} />
+   </div>
+   <div style="height: 100%; overflow: scroll" bind:clientHeight={contentHeight}>
++    {#if meetingMinutes !== undefined && $lkSessionConnected}
++      {#key meetingMinutes._id}<CapturePanel meetingId={meetingMinutes._id} compact />{/key}
++    {/if}
+     {#if widgetState.tab === 'video'}
+       <VideoTab {room} doc={meetingMinutes} on:close={handleClose} />
+     {:else if widgetState.tab === 'chat'}
+diff --git a/services/love/src/capture.ts b/services/love/src/capture.ts
+new file mode 100644
+index 0000000..b7612e1
+--- /dev/null
++++ b/services/love/src/capture.ts
+@@ -0,0 +1,276 @@
++// Chief explicit-consent meeting capture. EPL-2.0; see upstream LICENSE.
++import { randomUUID, createHash } from 'node:crypto'
++import { mkdirSync, readFileSync, writeFileSync, renameSync, openSync, fsyncSync, closeSync, chmodSync, lstatSync, realpathSync } from 'node:fs'
++import { join, resolve, dirname } from 'node:path'
++
++export class CaptureError extends Error {
++  constructor (readonly status: number, message: string) { super(message) }
++}
++export const captureLimits = Object.freeze({ maxParticipants: 8, maxDurationMs: 3600000, maxBytes: 256 * 1024 * 1024, leaseMs: 10000, retentionMs: 7 * 86400000 })
++export type CaptureState = 'pending' | 'starting' | 'capturing' | 'stopping' | 'processing' | 'ready' | 'failed' | 'cancelled' | 'deleted'
++export interface CapturePerson { personId: string, account: string, name: string, identity: string, sid: string }
++interface Participant extends CapturePerson { consent: 'pending' | 'accepted' | 'declined' }
++export interface Segment { id: string, personId: string, speaker: string, startMs: number, endMs: number, text: string }
++export interface CaptureSession {
++  id: string, workspace: string, meetingId: string, roomName: string, title: string, revision: number, state: CaptureState,
++  requestedBy: string, requestedAt: number, startedAt?: number, stoppedAt?: number, reason?: string,
++  participants: Participant[], workerIdentity: string, workerId?: string, expiresAt?: number,
++  durationMs?: number, bytes?: number, completionHash?: string, deletedAck?: boolean, retryQueued?: boolean,
++  segments?: Segment[], suggestions?: Array<{ id: string, kind: 'action' | 'decision', text: string, sourceSegmentId: string, personId: string }>
++}
++export interface CaptureContext { workspace: string, meetingId: string, roomName: string, title: string, personId: string }
++export interface CaptureDependencies {
++  roster: (context: Pick<CaptureContext, 'workspace' | 'meetingId' | 'roomName'>) => Promise<CapturePerson[]>
++  remove: (roomName: string, identity: string) => Promise<void>
++  token: (session: CaptureSession, expiresAt: number) => Promise<string>
++  now?: () => number
++}
++const active = new Set<CaptureState>(['pending', 'starting', 'capturing', 'stopping', 'processing'])
++const listening = new Set<CaptureState>(['pending', 'starting', 'capturing'])
++function fail (condition: unknown, status: number, message: string): asserts condition { if (!condition) throw new CaptureError(status, message) }
++export function exactBody (value: unknown, keys: string[]): asserts value is Record<string, any> {
++  fail(value != null && typeof value === 'object' && !Array.isArray(value), 400, 'Invalid request')
++  fail(Object.keys(value).every(key => keys.includes(key)), 400, 'Unexpected request field')
++}
++export function captureId (value: unknown): string {
++  fail(typeof value === 'string' && /^[a-zA-Z0-9_-]{1,160}$/.test(value), 400, 'Invalid identifier')
++  return value
++}
++export function publicSession (s: CaptureSession): Record<string, unknown> {
++  const { id, workspace, meetingId, title, revision, state, requestedBy, requestedAt, startedAt, stoppedAt, reason, segments, suggestions } = s
++  return { id, workspace, meetingId, title, revision, state, requestedBy, requestedAt, startedAt, stoppedAt, reason,
++    participants: s.participants.map(({ personId, name, consent }) => ({ personId, name, consent })), segments, suggestions }
++}
++
++/** Single-process serialized private store. Never persists bearer tokens or worker credentials. */
++export class CaptureStore {
++  sessions: CaptureSession[] = []
++  private readonly file: string
++  constructor (directory: string) {
++    directory = resolve(directory)
++    // Docker may precreate the dedicated named-volume root as 0755. Check every
++    // existing ancestor before mkdir/chmod, so a link cannot redirect this change.
++    for (let current = directory; ; current = dirname(current)) {
++      try {
++        const info = lstatSync(current)
++        fail(info.isDirectory() && !info.isSymbolicLink() && resolve(realpathSync(current)) === current, 503, 'Capture storage must be a regular directory without links')
++      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
++      if (dirname(current) === current) break
++    }
++    mkdirSync(directory, { recursive: true, mode: 0o700 })
++    fail(lstatSync(directory).isDirectory() && !lstatSync(directory).isSymbolicLink() && resolve(realpathSync(directory)) === directory, 503, 'Capture storage directory changed')
++    chmodSync(directory, 0o700)
++    this.file = join(directory, 'sessions.json')
++    try {
++      const raw = readFileSync(this.file, 'utf8')
++      fail(Buffer.byteLength(raw) <= 16 * 1024 * 1024, 503, 'Capture store exceeds limit')
++      const value = JSON.parse(raw)
++      fail(value.version === 1 && Array.isArray(value.sessions) && value.sessions.length <= 200, 503, 'Invalid capture store')
++      this.sessions = value.sessions
++    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
++  }
++  save (): void {
++    const raw = JSON.stringify({ version: 1, sessions: this.sessions })
++    fail(Buffer.byteLength(raw) <= 16 * 1024 * 1024, 503, 'Capture store exceeds limit')
++    const temporary = this.file + '.next'
++    writeFileSync(temporary, raw, { mode: 0o600 })
++    const fd = openSync(temporary, 'r+'); try { fsyncSync(fd) } finally { closeSync(fd) }
++    renameSync(temporary, this.file)
++  }
++}
++
++export class MeetingCapture {
++  private queue: Promise<unknown> = Promise.resolve()
++  private worker?: { id: string, at: number, ready: boolean, model: string }
++  private fault = false
++  private readonly now: () => number
++  constructor (readonly store: CaptureStore, private readonly deps: CaptureDependencies) { this.now = deps.now ?? Date.now }
++  async serial<T> (action: () => Promise<T>): Promise<T> {
++    const next = this.queue.then(async () => { fail(!this.fault, 503, 'Capture storage is unavailable'); return await action() })
++    this.queue = next.catch(() => {})
++    return await next
++  }
++  private persist (): void { try { this.store.save() } catch (error) { this.fault = true; throw error } }
++  private compactDeleted (): void {
++    // Keep cleanup receipts until the worker acknowledges deletion and every
++    // previously issued connection token/lease has expired. Never drop a pending cleanup.
++    const retained = this.store.sessions.filter(s => s.state !== 'deleted' || !s.deletedAck || this.now() < (s.expiresAt ?? s.requestedAt) + captureLimits.leaseMs)
++    if (retained.length !== this.store.sessions.length) { this.store.sessions = retained; this.persist() }
++  }
++  async recover (): Promise<void> {
++    for (const s of this.store.sessions) {
++      if (active.has(s.state)) { s.state = 'failed'; s.reason = 'Server restarted; capture was not resumed'; s.stoppedAt = this.now() }
++      // Remove stale listener identities even for persisted terminal sessions.
++      await this.deps.remove(s.roomName, s.workerIdentity)
++    }
++    this.persist()
++  }
++  find (id: string): CaptureSession {
++    const s = this.store.sessions.find(item => item.id === captureId(id))
++    fail(s != null && s.state !== 'deleted', 404, 'Capture is unavailable'); return s
++  }
++  authorize (s: CaptureSession, context: CaptureContext): void {
++    fail(s.workspace === context.workspace && s.meetingId === context.meetingId && s.participants.some(p => p.personId === context.personId), 403, 'This capture is not available to this member')
++  }
++  workerState (): string { return this.worker == null || this.now() - this.worker.at > captureLimits.leaseMs ? 'offline' : this.store.sessions.some(s => active.has(s.state)) ? 'busy' : this.worker.ready ? 'ready' : 'offline' }
++  private async unchanged (s: CaptureSession): Promise<boolean> {
++    try {
++      const current = await this.deps.roster(s)
++      return current.length === s.participants.length && current.every(p => s.participants.some(old => old.personId === p.personId && old.account === p.account && old.identity === p.identity && old.sid === p.sid))
++    } catch { return false }
++  }
++  private async end (s: CaptureSession, reason: string): Promise<void> {
++    if (!listening.has(s.state) && s.state !== 'stopping') return
++    const pending = s.state === 'pending'
++    if (s.state !== 'stopping') s.reason = reason
++    s.stoppedAt ??= this.now(); s.state = pending ? 'cancelled' : 'stopping'; this.persist()
++    await this.deps.remove(s.roomName, s.workerIdentity)
++    // Worker acknowledgment is required before processing; failed removal never reports a completed stop.
++  }
++  async tick (): Promise<void> {
++    for (const s of this.store.sessions) {
++      if (s.state === 'deleted') { await this.deps.remove(s.roomName, s.workerIdentity); continue }
++      if (listening.has(s.state)) {
++        if (!await this.unchanged(s)) await this.end(s, 'Attendance or room authorization changed')
++        else if (this.worker == null || this.now() - this.worker.at > captureLimits.leaseMs) await this.end(s, 'Capture worker disconnected')
++        else if (s.startedAt != null && this.now() - s.startedAt >= captureLimits.maxDurationMs) await this.end(s, 'Meeting capture reached its duration limit')
++        else if (s.state === 'pending' && this.now() - s.requestedAt > 120000) await this.end(s, 'Consent request expired')
++      }
++      if (s.state === 'stopping') {
++        await this.deps.remove(s.roomName, s.workerIdentity)
++        if (this.now() - (s.stoppedAt ?? this.now()) > captureLimits.leaseMs * 2) { s.state = 'failed'; s.reason = 'Worker did not confirm capture stopped'; this.persist() }
++      }
++      if (s.state === 'processing' && (this.worker == null || this.now() - this.worker.at > captureLimits.leaseMs)) { s.state = 'failed'; s.reason = 'Transcription worker disconnected'; this.persist() }
++      const retention = s.state === 'failed' ? 72 * 3600000 : captureLimits.retentionMs
++      if (!active.has(s.state) && this.now() - s.requestedAt > retention) { s.state = 'deleted'; delete s.segments; delete s.suggestions; this.persist() }
++    }
++  }
++  async request (context: CaptureContext): Promise<CaptureSession> {
++    await this.tick()
++    this.compactDeleted()
++    fail(this.workerState() === 'ready', 409, 'The local capture worker is unavailable or busy')
++    fail(this.store.sessions.length < 200, 409, 'Capture history limit reached')
++    const roster = await this.deps.roster(context)
++    fail(roster.length > 0 && roster.length <= captureLimits.maxParticipants && roster.some(p => p.personId === context.personId), 403, 'Join this meeting before requesting notes (maximum eight people)')
++    fail(new Set(roster.map(p => p.personId)).size === roster.length, 409, 'Participant identities are ambiguous')
++    const id = randomUUID()
++    const s: CaptureSession = { ...context, id, revision: 1, state: 'pending', requestedBy: context.personId, requestedAt: this.now(), participants: roster.map(p => ({ ...p, consent: 'pending' })), workerIdentity: 'chief-capture-' + id }
++    this.store.sessions.push(s); this.persist(); return s
++  }
++  async consent (s: CaptureSession, context: CaptureContext, revision: unknown, accept: unknown): Promise<void> {
++    this.authorize(s, context); fail(revision === s.revision && typeof accept === 'boolean', 409, 'Consent revision is stale')
++    fail(s.state === 'pending', 409, 'This consent request has ended')
++    if (!await this.unchanged(s)) { await this.end(s, 'Attendance or room authorization changed'); throw new CaptureError(409, 'Request fresh consent after attendance changed') }
++    const person = s.participants.find(p => p.personId === context.personId)!
++    const choice = accept ? 'accepted' : 'declined'
++    fail(person.consent === 'pending' || person.consent === choice, 409, 'Consent already recorded; use Stop to withdraw')
++    person.consent = choice; this.persist()
++    if (!accept) await this.end(s, 'A participant declined capture')
++    else if (s.participants.every(p => p.consent === 'accepted')) {
++      fail(this.worker != null && this.worker.ready && this.now() - this.worker.at <= captureLimits.leaseMs, 409, 'Capture worker is unavailable')
++      s.state = 'starting'; s.workerId = this.worker.id; this.persist()
++    }
++  }
++  async stop (s: CaptureSession, context: CaptureContext, revision: unknown): Promise<void> {
++    this.authorize(s, context); fail(revision === s.revision, 409, 'Capture revision is stale')
++    await this.end(s, 'A participant stopped capture')
++  }
++  async delete (s: CaptureSession, context: CaptureContext): Promise<void> {
++    this.authorize(s, context); fail(s.requestedBy === context.personId, 403, 'Only the requester can delete this capture')
++    s.state = 'deleted'; s.stoppedAt ??= this.now(); delete s.segments; delete s.suggestions; this.persist()
++    await this.deps.remove(s.roomName, s.workerIdentity)
++  }
++  async retry (s: CaptureSession, context: CaptureContext, revision: unknown): Promise<void> {
++    this.authorize(s, context)
++    fail(s.requestedBy === context.personId, 403, 'Only the requester can retry transcription')
++    fail(s.revision === revision && s.state === 'failed' && s.startedAt != null && s.durationMs != null && this.now() - s.requestedAt < 72 * 3600000, 409, 'This capture cannot be retried')
++    fail(this.workerState() === 'ready', 409, 'The local worker is unavailable or busy')
++    s.state = 'processing'; s.workerId = this.worker!.id; s.retryQueued = true; s.reason = 'Retrying retained audio transcription'; this.persist()
++  }
++  async attendance (roomName: string, event: string, identity?: string, sid?: string): Promise<void> {
++    const worker = this.store.sessions.find(s => s.roomName === roomName && s.workerIdentity === identity)
++    if (worker != null && event === 'participant_joined' && !['starting', 'capturing'].includes(worker.state)) await this.deps.remove(roomName, worker.workerIdentity)
++    for (const s of this.store.sessions.filter(s => s.roomName === roomName && listening.has(s.state))) {
++      if (identity === s.workerIdentity) {
++        if (event === 'participant_left' && s.state === 'capturing') await this.end(s, 'Capture worker disconnected')
++      } else if (event === 'room_finished' || event === 'participant_left' || (event === 'participant_joined' && !s.participants.some(p => p.identity === identity && p.sid === sid))) {
++        await this.end(s, 'Attendance changed')
++      }
++    }
++  }
++  async poll (body: Record<string, any>): Promise<Record<string, unknown>> {
++    exactBody(body, ['workerId', 'ready', 'model', 'activeSessionId', 'phase', 'durationMs', 'bytes'])
++    const workerId = captureId(body.workerId)
++    fail(typeof body.ready === 'boolean' && typeof body.model === 'string' && body.model.length <= 160, 400, 'Invalid worker state')
++    fail(this.worker == null || this.worker.id === workerId || this.now() - this.worker.at > captureLimits.leaseMs, 409, 'Another worker owns the lease')
++    // Check expiry before renewing, so a recovered worker cannot revive missed consent.
++    await this.tick()
++    this.worker = { id: workerId, ready: body.ready, model: body.model, at: this.now() }
++    for (const s of this.store.sessions.filter(s => s.workerId === workerId && s.state === 'capturing' && s.id !== body.activeSessionId)) await this.end(s, 'Worker lost its active capture')
++    const result = (command: Record<string, unknown>): Record<string, unknown> => ({ serverTime: this.now(), leaseUntil: this.now() + captureLimits.leaseMs, command })
++    const deleted = this.store.sessions.find(s => s.state === 'deleted' && !s.deletedAck)
++    if (deleted != null) return result({ kind: 'delete', sessionId: deleted.id, revision: deleted.revision })
++    if (body.activeSessionId != null) {
++      const s = this.store.sessions.find(s => s.id === body.activeSessionId)
++      if (s == null || s.workerId !== workerId || !active.has(s.state)) return result({ kind: 'stop', sessionId: captureId(body.activeSessionId), reason: 'No active authorization' })
++      if (body.bytes != null || body.durationMs != null) {
++        fail(Number.isSafeInteger(body.bytes) && body.bytes >= 0 && Number.isSafeInteger(body.durationMs) && body.durationMs >= 0, 400, 'Invalid capture counters')
++        fail(body.bytes >= (s.bytes ?? 0) && body.durationMs >= (s.durationMs ?? 0), 409, 'Capture counters cannot decrease')
++        if (s.state === 'capturing') {
++          s.bytes = Math.min(body.bytes, captureLimits.maxBytes); s.durationMs = Math.min(body.durationMs, captureLimits.maxDurationMs); this.persist()
++          if (body.bytes >= captureLimits.maxBytes || body.durationMs >= captureLimits.maxDurationMs) await this.end(s, 'Meeting capture reached its storage or duration limit')
++        }
++      }
++      if (s.state === 'stopping') return result({ kind: 'stop', sessionId: s.id, reason: s.reason })
++      return result({ kind: 'idle' })
++    }
++    const retry = this.store.sessions.find(s => s.state === 'processing' && s.retryQueued && s.workerId === workerId)
++    if (retry != null) return result({ kind: 'transcribe', sessionId: retry.id, revision: retry.revision, durationMs: retry.durationMs, participants: retry.participants.map(({ personId, name }) => ({ personId, name })), limits: captureLimits })
++    const s = this.store.sessions.find(s => s.state === 'starting' && s.workerId === workerId)
++    if (s != null) {
++      if (!await this.unchanged(s)) { await this.end(s, 'Attendance or room authorization changed'); return result({ kind: 'stop', sessionId: s.id, reason: s.reason }) }
++      s.expiresAt ??= this.now() + captureLimits.leaseMs; this.persist()
++      if (s.expiresAt <= this.now()) { await this.end(s, 'Capture connection lease expired'); return result({ kind: 'stop', sessionId: s.id, reason: s.reason }) }
++      return result({ kind: 'capture', sessionId: s.id, revision: s.revision, workspace: s.workspace, meetingId: s.meetingId, roomName: s.roomName, identity: s.workerIdentity, token: await this.deps.token(s, s.expiresAt), expiresAt: s.expiresAt, participants: s.participants.map(({ personId, name, identity, sid }) => ({ personId, name, identity, sid })), limits: captureLimits })
++    }
++    return result({ kind: 'idle' })
++  }
++  async event (body: Record<string, any>): Promise<void> {
++    exactBody(body, ['workerId', 'sessionId', 'revision', 'type', 'durationMs', 'bytes', 'segments', 'reason'])
++    const s = this.store.sessions.find(s => s.id === captureId(body.sessionId))
++    fail(s != null && s.revision === body.revision, 409, 'Capture session or revision is stale')
++    fail(this.worker != null && this.worker.id === body.workerId && this.now() - this.worker.at <= captureLimits.leaseMs, 403, 'Worker lease expired')
++    if (body.type === 'deleted') { fail(s.state === 'deleted', 409, 'Deletion was not requested'); s.deletedAck = true; this.persist(); return }
++    fail(s.workerId === body.workerId && s.state !== 'deleted', 409, 'Worker does not own this capture')
++    if (body.type === 'connected') {
++      if (s.state === 'capturing') {
++        if (!await this.unchanged(s)) { await this.end(s, 'Attendance or room authorization changed'); throw new CaptureError(409, 'Attendance changed') }
++        return
++      }
++      fail(s.state === 'starting' && (s.expiresAt ?? 0) > this.now(), 409, 'Capture cannot connect')
++      if (!await this.unchanged(s)) { await this.end(s, 'Attendance or room authorization changed'); throw new CaptureError(409, 'Attendance changed') }
++      s.startedAt = this.now(); s.state = 'capturing'; this.persist(); return
++    }
++    if (body.type === 'stopped') {
++      fail(['capturing', 'starting', 'stopping', 'processing'].includes(s.state), 409, 'Capture already ended')
++      fail(Number.isSafeInteger(body.durationMs) && body.durationMs >= 0 && body.durationMs <= captureLimits.maxDurationMs && Number.isSafeInteger(body.bytes) && body.bytes >= 0 && body.bytes <= captureLimits.maxBytes, 400, 'Invalid capture bounds')
++      if (s.state === 'processing') { fail(s.durationMs === Math.min(body.durationMs, Math.max(0, (s.stoppedAt ?? this.now()) - (s.startedAt ?? this.now()))) && s.bytes === body.bytes, 409, 'Conflicting completion'); return }
++      await this.end(s, 'Capture worker stopped listening'); await this.deps.remove(s.roomName, s.workerIdentity)
++      s.durationMs = Math.min(body.durationMs, Math.max(0, (s.stoppedAt ?? this.now()) - (s.startedAt ?? this.now()))); s.bytes = body.bytes; s.state = 'processing'; this.persist(); return
++    }
++    if (body.type === 'failed') { fail(active.has(s.state), 409, 'Capture already ended'); await this.end(s, 'Local capture or transcription failed'); await this.deps.remove(s.roomName, s.workerIdentity); s.state = 'failed'; s.reason = 'Local capture or transcription failed'; this.persist(); return }
++    fail(body.type === 'transcript' && (s.state === 'processing' || s.state === 'ready'), 409, 'Transcript is not expected')
++    fail(Array.isArray(body.segments) && body.segments.length <= 4000, 400, 'Transcript exceeds segment limit')
++    const segments: Segment[] = body.segments.map((segment: any, index: number) => {
++      exactBody(segment, ['personId', 'startMs', 'endMs', 'text'])
++      const p = s.participants.find(p => p.personId === segment.personId)
++      fail(p != null && typeof segment.text === 'string' && segment.text.length <= 4000 && Number.isSafeInteger(segment.startMs) && Number.isSafeInteger(segment.endMs) && segment.startMs >= 0 && segment.endMs >= segment.startMs && segment.endMs <= (s.durationMs ?? 0), 400, 'Invalid transcript speaker or interval')
++      return { id: `${s.id}-${index}`, personId: p.personId, speaker: p.name, startMs: segment.startMs, endMs: segment.endMs, text: segment.text }
++    })
++    fail(Buffer.byteLength(JSON.stringify(segments)) <= 512 * 1024, 400, 'Transcript is too large')
++    const hash = createHash('sha256').update(JSON.stringify(segments)).digest('hex')
++    if (s.state === 'ready') { fail(hash === s.completionHash, 409, 'Conflicting transcript completion'); return }
++    s.segments = segments; s.suggestions = segments.filter(s => /\b(?:decid(?:e|ed)|agreed|will|action item)\b/i.test(s.text)).slice(0, 100).map(seg => ({ id: 'suggestion-' + seg.id, kind: /\b(?:decid(?:e|ed)|agreed)\b/i.test(seg.text) ? 'decision' : 'action', text: seg.text, sourceSegmentId: seg.id, personId: seg.personId }))
++    s.completionHash = hash; s.state = 'ready'; this.persist()
++  }
++}
+diff --git a/services/love/src/captureRoutes.ts b/services/love/src/captureRoutes.ts
+new file mode 100644
+index 0000000..a8979be
+--- /dev/null
++++ b/services/love/src/captureRoutes.ts
+@@ -0,0 +1,154 @@
++// Chief explicit-consent meeting capture. EPL-2.0; see upstream LICENSE.
++import express, { type Request, type Response } from 'express'
++import { timingSafeEqual } from 'node:crypto'
++import { getClient as accounts, isWorkspaceLoginInfo } from '@hcengineering/account-client'
++import contact, { type Employee } from '@hcengineering/contact'
++import { AccountRole, systemAccountUuid, type AccountUuid, type WorkspaceUuid, type Ref, type MeasureContext } from '@hcengineering/core'
++import love, { RoomAccess, type MeetingMinutes, type Room, type Office } from '@hcengineering/love'
++import { generateToken } from '@hcengineering/server-token'
++import platform, { PlatformError } from '@hcengineering/platform'
++import { AccessToken, type RoomServiceClient } from 'livekit-server-sdk'
++import { MeetingAdmission, AdmissionError, readReceipt } from './admission'
++import { getClient } from './client'
++import config from './config'
++import { WorkspaceClient } from './workspaceClient'
++import { extractToken, getRoomName } from './utils'
++import { CaptureError, CaptureStore, MeetingCapture, captureLimits, captureId, exactBody, publicSession, type CaptureContext, type CapturePerson } from './capture'
++
++export async function installCapture (app: express.Express, rooms: RoomServiceClient, ctx: MeasureContext): Promise<{ check: () => Promise<void>, attendance: (room: string, event: string, identity?: string, sid?: string) => Promise<void>, close: () => Promise<void> }> {
++  const enabled = config.CaptureDirectory !== '' && config.CaptureWorkerSecret.length >= 32 && config.CaptureWorkerSecret !== config.Secret && config.CaptureWorkerSecret !== config.ApiSecret
++  const member = async (token: string): Promise<MeetingAdmission> => {
++    // Both calls resolve membership from the account database, not cached JWT role claims.
++    const ac = accounts(config.AccountsURL, token)
++    const login = await ac.getLoginInfoByToken()
++    if (!isWorkspaceLoginInfo(login) || login.account === systemAccountUuid || ![AccountRole.User, AccountRole.Maintainer, AccountRole.Owner, AccountRole.Admin, AccountRole.Guest].includes(login.role)) throw new CaptureError(403, 'A current workspace member is required')
++    const memberships = await ac.getWorkspaceMembers()
++    if (!memberships.some(m => m.person === login.account && m.role === login.role)) throw new CaptureError(403, 'Workspace membership changed')
++    const caller = await getClient(token, login.workspace)
++    const ws = await WorkspaceClient.create(login.workspace, ctx)
++    return new MeetingAdmission(login, caller, ws.getAdmissionClient(), config.Secret)
++  }
++  const context = async (admission: MeetingAdmission, meetingId: string, current: boolean): Promise<CaptureContext> => {
++    const person = await admission.actor()
++    const meeting = await admission.caller.findOne(love.class.MeetingMinutes, { _id: meetingId as Ref<MeetingMinutes> })
++    if (meeting == null) throw new CaptureError(403, 'Meeting access is unavailable')
++    const room = await admission.caller.findOne(love.class.Room, { _id: meeting.attachedTo as Ref<Room> })
++    if (room == null || room.access === RoomAccess.DND || meeting.access === RoomAccess.DND) throw new CaptureError(403, 'Room access is unavailable')
++    if (current) await admission.requireJoin(meeting._id)
++    else if (!((room as Office).person === person._id || await admission.authority(person._id, meeting, room) || (room.access === RoomAccess.Open && meeting.access === RoomAccess.Open && (admission.auth.role !== AccountRole.Guest || (room as Office).person == null)))) {
++      const invitations = await admission.system.findAll(love.class.UserMeetingInvite, { meeting: meeting._id, kind: 'invite-request', status: 'accepted' })
++      if (!invitations.some(invite => {
++        const proof = readReceipt(invite.admission, config.Secret)
++        return proof?.state === 'accepted' && proof.workspace === admission.auth.workspace && proof.request === invite._id && proof.meeting === meeting._id && proof.room === room._id && proof.from === invite.from && proof.to === invite.to && (proof.from === person._id || proof.to === person._id)
++      })) throw new CaptureError(403, 'Current room permission is required')
++    }
++    return { workspace: admission.auth.workspace, meetingId, roomName: getRoomName(admission.auth.workspace, meeting._id), title: meeting.title, personId: person._id }
++  }
++  let engine: MeetingCapture | undefined
++  const remove = async (roomName: string, identity: string): Promise<void> => {
++    if ((await rooms.listRooms([roomName])).length === 0) return
++    if ((await rooms.listParticipants(roomName)).some(p => p.identity === identity)) await rooms.removeParticipant(roomName, identity)
++  }
++  const roster = async (c: Pick<CaptureContext, 'workspace' | 'meetingId' | 'roomName'>): Promise<CapturePerson[]> => {
++    if ((await rooms.listRooms([c.roomName])).length === 0) return []
++    const participants = await rooms.listParticipants(c.roomName)
++    const system = (await WorkspaceClient.create(c.workspace as WorkspaceUuid, ctx)).getAdmissionClient()
++    const result: CapturePerson[] = []
++    for (const p of participants) {
++      const ownWorker = engine?.store.sessions.find(s => s.workspace === c.workspace && s.meetingId === c.meetingId && s.workerIdentity === p.identity)
++      if (ownWorker != null) {
++        if (!['starting', 'capturing'].includes(ownWorker.state)) await remove(c.roomName, p.identity)
++        continue
++      }
++      const person = await system.findOne(contact.mixin.Employee, { _id: p.identity as Ref<Employee>, active: true })
++      if (person?.personUuid == null || !p.sid) throw new CaptureError(403, 'Every connected participant must be a current member')
++      // A short internal person token enables the same caller-scoped ACL reads for roster revalidation.
++      // It is never persisted, returned, or passed to LiveKit/the capture worker.
++      const token = generateToken(person.personUuid as AccountUuid, c.workspace as WorkspaceUuid, {})
++      const admission = await member(token)
++      const verified = await context(admission, c.meetingId, true)
++      if (verified.personId !== person._id) throw new CaptureError(403, 'Participant identity changed')
++      result.push({ personId: person._id, account: person.personUuid, name: person.name, identity: p.identity, sid: p.sid })
++    }
++    return result.sort((a, b) => a.identity.localeCompare(b.identity))
++  }
++  if (enabled) {
++    engine = new MeetingCapture(new CaptureStore(config.CaptureDirectory), {
++      roster, remove,
++      token: async (s, expiresAt) => {
++        const token = new AccessToken(config.ApiKey, config.ApiSecret, { identity: s.workerIdentity, name: 'Meeting notes (consented)', ttl: Math.max(1, Math.floor((expiresAt - Date.now()) / 1000)) })
++        token.addGrant({ roomJoin: true, room: s.roomName, canSubscribe: true, canPublish: false, canPublishData: false, canUpdateOwnMetadata: false })
++        return await token.toJwt()
++      }
++    })
++    await engine.recover()
++  }
++  const router = express.Router()
++  router.use(express.json({ limit: '768kb', strict: true }))
++  const failure = (res: Response, e: unknown): void => {
++    if (e instanceof PlatformError) {
++      if ([platform.status.Unauthorized, platform.status.TokenExpired, platform.status.TokenNotActive].includes(e.status.code)) { res.status(401).json({ error: 'A current workspace sign-in is required' }); return }
++      if ([platform.status.Forbidden, platform.status.AccountNotFound, platform.status.WorkspaceNotFound].includes(e.status.code)) { res.status(403).json({ error: 'Workspace access is unavailable' }); return }
++    }
++    const known = e instanceof CaptureError || e instanceof AdmissionError
++    res.status(known ? e.status : 503).json({ error: known ? e.message : 'Meeting notes are temporarily unavailable' })
++  }
++  const route = (action: (req: Request, res: Response) => Promise<void>) => (req: Request, res: Response): void => { void action(req, res).catch(e => failure(res, e)) }
++  const signedIn = async (req: Request): Promise<MeetingAdmission> => { const token = extractToken(req.headers); if (token == null) throw new CaptureError(401, 'Sign in to your workspace'); return await member(token) }
++  const requireEngine = (): MeetingCapture => { if (engine == null) throw new CaptureError(503, 'Local meeting notes are not configured'); return engine }
++  const workerAuth = (req: Request): void => {
++    const supplied = Buffer.from(extractToken(req.headers) ?? '')
++    const expected = Buffer.from(config.CaptureWorkerSecret)
++    if (!enabled || supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw new CaptureError(401, 'Worker authentication required')
++  }
++  router.post('/worker/poll', route(async (req, res) => { workerAuth(req); const e = requireEngine(); res.json(await e.serial(async () => await e.poll(req.body))) }))
++  router.post('/worker/event', route(async (req, res) => { workerAuth(req); const e = requireEngine(); await e.serial(async () => { await e.event(req.body); res.json({ ok: true, durationMs: req.body.type === 'stopped' ? e.find(req.body.sessionId).durationMs : undefined }) }) }))
++  router.get('/status', route(async (req, res) => {
++    const a = await signedIn(req); const c = await context(a, captureId(req.query.meetingId), false)
++    if (engine == null) { res.json({ available: false, reason: 'Local meeting notes are not configured', worker: { state: 'offline' }, selfPersonId: c.personId, joined: false, limits: captureLimits }); return }
++    const e = engine
++    await e.serial(async () => {
++      await e.tick()
++      let joined = false; try { joined = (await roster(c)).some(p => p.personId === c.personId) } catch {}
++      const sessions = e.store.sessions.filter(s => s.state !== 'deleted' && s.workspace === c.workspace && s.meetingId === c.meetingId && s.participants.some(p => p.personId === c.personId))
++      const latest = sessions[sessions.length - 1]
++      const state = e.workerState()
++      res.json({ available: state !== 'offline', reason: state === 'offline' ? 'The local notes worker is offline' : undefined, worker: { state }, selfPersonId: c.personId, joined, session: latest == null ? undefined : publicSession(latest), limits: captureLimits })
++    })
++  }))
++  router.get('/history', route(async (req, res) => {
++    const a = await signedIn(req); const c = await context(a, captureId(req.query.meetingId), false); const e = requireEngine()
++    await e.serial(async () => { res.json({ sessions: e.store.sessions.filter(s => s.state !== 'deleted' && s.workspace === c.workspace && s.meetingId === c.meetingId && s.participants.some(p => p.personId === c.personId)).map(s => { const view = publicSession(s); delete view.segments; delete view.suggestions; return view }) }) })
++  }))
++  router.post('/request', route(async (req, res) => {
++    exactBody(req.body, ['meetingId']); const a = await signedIn(req); const c = await context(a, captureId(req.body.meetingId), true); const e = requireEngine()
++    res.json(await e.serial(async () => ({ session: publicSession(await e.request(c)) })))
++  }))
++  for (const operation of ['consent', 'stop', 'retry', 'read', 'delete']) {
++    const handler = route(async (req, res) => {
++      if (!['read', 'delete'].includes(operation)) exactBody(req.body, operation === 'consent' ? ['sessionId', 'revision', 'accept'] : ['sessionId', 'revision'])
++      const a = await signedIn(req); const e = requireEngine()
++      await e.serial(async () => {
++        const s = e.find(captureId(['read', 'delete'].includes(operation) ? req.params.sessionId : req.body.sessionId))
++        if (s.workspace !== a.auth.workspace) throw new CaptureError(403, 'Capture workspace mismatch')
++        const c = await context(a, s.meetingId, operation === 'consent'); e.authorize(s, c)
++        if (operation === 'consent') await e.consent(s, c, req.body.revision, req.body.accept)
++        if (operation === 'stop') await e.stop(s, c, req.body.revision)
++        if (operation === 'retry') await e.retry(s, c, req.body.revision)
++        if (operation === 'delete') await e.delete(s, c)
++        res.json({ session: publicSession(s) })
++      })
++    })
++    if (operation === 'read') router.get('/session/:sessionId', handler)
++    else if (operation === 'delete') router.delete('/session/:sessionId', handler)
++    else router.post('/' + operation, handler)
++  }
++  app.use('/capture', router)
++  const check = async (): Promise<void> => { if (engine != null) await engine.serial(async () => { await engine!.tick() }) }
++  const timer = setInterval(() => { void check().catch(() => { ctx.warn('Meeting capture safety check failed') }) }, 2000)
++  timer.unref()
++  return { check, attendance: async (room, event, identity, sid) => { if (engine != null) await engine.serial(async () => { await engine!.attendance(room, event, identity, sid) }) }, close: async () => {
++    clearInterval(timer)
++    if (engine != null) await engine.serial(async () => { await engine!.recover() })
++  } }
++}
+diff --git a/services/love/src/config.ts b/services/love/src/config.ts
+index a060d05..dbcc146 100644
+--- a/services/love/src/config.ts
++++ b/services/love/src/config.ts
+@@ -14,6 +14,8 @@
+ //
+ 
+ interface Config {
++  CaptureDirectory: string
++  CaptureWorkerSecret: string
+   MemberMeetingsOnly: boolean
+   AccountsURL: string
+   Port: number
+@@ -47,6 +49,8 @@ interface Config {
+ }
+ 
+ const envMap: { [key in keyof Config]: string } = {
++  CaptureDirectory: 'CHIEF_CAPTURE_DIRECTORY',
++  CaptureWorkerSecret: 'CHIEF_CAPTURE_WORKER_SECRET',
+   MemberMeetingsOnly: 'CHIEF_MEMBER_MEETINGS_ONLY',
+   AccountsURL: 'ACCOUNTS_URL',
+   Port: 'PORT',
+@@ -79,6 +83,8 @@ const parseNumber = (str: string | undefined): number | undefined => (str !== un
+ 
+ const config: Config = (() => {
+   const params: Partial<Config> = {
++    CaptureDirectory: process.env[envMap.CaptureDirectory] ?? '',
++    CaptureWorkerSecret: process.env[envMap.CaptureWorkerSecret] ?? '',
+     MemberMeetingsOnly: process.env[envMap.MemberMeetingsOnly] !== 'false',
+     AccountsURL: process.env[envMap.AccountsURL],
+     Port: parseNumber(process.env[envMap.Port]) ?? 8096,
+diff --git a/services/love/src/main.ts b/services/love/src/main.ts
+index 8d862b7..430c429 100644
+--- a/services/love/src/main.ts
++++ b/services/love/src/main.ts
+@@ -53,6 +53,7 @@ import { RecordingProcessor } from './recordings'
+ import { WebhookProcessor } from './webhook'
+ import { WorkspaceClient } from './workspaceClient'
+ import { AdmissionError, MeetingAdmission } from './admission'
++import { installCapture } from './captureRoutes'
+ import { getClient as getWorkspaceRestClient } from './client'
+ import { GuestManager } from './guests'
+ import { createToken, decodeMeetingToken, extractToken, getRoomName, parseMetadata } from './utils'
+@@ -124,7 +125,7 @@ export const main = async (): Promise<void> => {
+   const port = config.Port
+   app.use(cors())
+   app.use(express.raw({ type: 'application/webhook+json' }))
+-  app.use(express.json())
++  app.use((req, res, next) => { if (req.path.startsWith('/capture')) next(); else express.json()(req, res, next) })
+ 
+   // Day-one member meetings: external guests and capture require their own consent/admission increment.
+   app.use((req, res, next) => {
+@@ -166,6 +167,7 @@ export const main = async (): Promise<void> => {
+   })
+ 
+   const roomClient = new RoomServiceClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
++  const capture = await installCapture(app, roomClient, ctx)
+   const egressClient = new EgressClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
+ 
+   const eventProducer = queue.getProducer<QueueMeetingMessage>(ctx, QueueTopic.LoveQueue)
+@@ -279,6 +281,7 @@ export const main = async (): Promise<void> => {
+         return
+       }
+ 
++      await capture.attendance(roomStr, event.event, event.participant?.identity, event.participant?.sid)
+       await eventProducer.send(ctx, roomName.workspace, [queueEvents.webhook(roomName.meetingId, event)])
+     } catch (e) {
+       ctx.error('Failed to process webhook event', { error: e })
+@@ -501,7 +504,7 @@ export const main = async (): Promise<void> => {
+     void queue.shutdown()
+     pollingService.stop()
+     void WorkspaceClient.closeAll()
+-    server.close(() => process.exit())
++    server.close(() => { void capture.close().finally(() => process.exit()) })
+   }
+ 
+   process.on('SIGINT', shutdown)

@@ -466,6 +466,9 @@ export function resolveRequestAuth(req: IncomingMessage, options: ResolveOptions
   // A presented session credential wins over the loopback rule so the served
   // web UI behaves the same on 127.0.0.1 and on a public domain.
   const bearer = bearerToken(req.headers.authorization);
+  // Chief human-office credentials carry no authority over private agent APIs.
+  // Never let these fall back to the machine-owner loopback shortcut.
+  if (bearer?.startsWith("chief_office_")) return deny(401, "Office credentials cannot access private agent APIs");
   const cookie = parseCookies(headerValue(req.headers.cookie)).get(options.cookieName);
   const ticket = path === options.streamPath ? options.url.searchParams.get("ticket") : null;
   let session: SessionRecord | null = null;

@@ -1,0 +1,67 @@
+{
+  "platformRelease": "s0.7.426",
+  "platformSourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "selfhostSourceRevision": "42fdd73311843cea76fb7f9dade9d7397b358368",
+  "images": {
+    "nginx": {
+      "tag": "nginx:1.21.3",
+      "digest": "nginx@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36"
+    },
+    "cockroach": {
+      "tag": "cockroachdb/cockroach:latest-v24.2",
+      "digest": "cockroachdb/cockroach@sha256:885d9b0e3243f262976763717e547dbbe75ca999548f7a4ea95fcd30a9aee66c"
+    },
+    "redpanda": {
+      "tag": "docker.redpanda.com/redpandadata/redpanda:v24.3.6",
+      "digest": "docker.redpanda.com/redpandadata/redpanda@sha256:04baa40ed34edf86028396f762be802f3b6b0acaab65e9de696a3f15d54c550f"
+    },
+    "minio": {
+      "tag": "pgsty/silo:RELEASE.2026-09-16T00-00-00Z",
+      "digest": "pgsty/silo@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46"
+    },
+    "elastic": {
+      "tag": "elasticsearch:7.14.2",
+      "digest": "elasticsearch@sha256:f05ab7f4d2aa5040813a0ea4eb76fa99bb31459937a4539efe2f2c2dbb2109fb"
+    },
+    "rekoni": {
+      "tag": "platformcollective/rekoni-service:s0.7.426",
+      "digest": "platformcollective/rekoni-service@sha256:13099c41001b368ec887f2c52efb4a5d6be767b43f007be988893c21c1a5451d"
+    },
+    "print": {
+      "tag": "platformcollective/print:s0.7.426",
+      "digest": "platformcollective/print@sha256:545e72ee2c896da1d264ef38d843488c04768cf807997cf3ffcc1f5e4ccc43c9"
+    },
+    "transactor": {
+      "tag": "platformcollective/transactor:s0.7.426",
+      "digest": "platformcollective/transactor@sha256:87f6076880cf79cd28efdd74a04162a728be012e0931b6a30b8dfe6f7ec15173"
+    },
+    "collaborator": {
+      "tag": "platformcollective/collaborator:s0.7.426",
+      "digest": "platformcollective/collaborator@sha256:3c79023e3510d898b6ecaf4f63d1a4cea3a1e75bf6a67fd500cdaeaf902edb57"
+    },
+    "account": {
+      "tag": "platformcollective/account:s0.7.426",
+      "digest": "platformcollective/account@sha256:39715cb2edd146393ce3151ad90e6e62e3a30c7937038696670145281cc4f131"
+    },
+    "workspace": {
+      "tag": "platformcollective/workspace:s0.7.426",
+      "digest": "platformcollective/workspace@sha256:d3728e7a3eda3b0653627bcc7d82bb6308bc4debd665075af5fba270a3c12d88"
+    },
+    "front": {
+      "tag": "platformcollective/front:s0.7.426",
+      "digest": "platformcollective/front@sha256:03c16b1ab7ab590f988d781cea345bb2ba06b7f792b819cdb0dd0b39bf14bebe"
+    },
+    "fulltext": {
+      "tag": "platformcollective/fulltext:s0.7.426",
+      "digest": "platformcollective/fulltext@sha256:5a442c2f4aeafca27a4fa975c63b02f0283252af08b4ca32ffe86dd0ce136d00"
+    },
+    "stats": {
+      "tag": "platformcollective/stats:s0.7.426",
+      "digest": "platformcollective/stats@sha256:940dae1aeaebc41b3a9123cab68c630bf1e6b21bbf520ba29921bf72f4aa27c3"
+    },
+    "kvs": {
+      "tag": "platformcollective/hulykvs:s0.7.426",
+      "digest": "platformcollective/hulykvs@sha256:765ca15bb643e4f8d42dba9bc0bf0d0e668ee5ced8fb1c432abb142946b09d4f"
+    }
+  }
+}

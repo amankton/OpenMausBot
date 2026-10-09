@@ -15,6 +15,7 @@ import { EngineSetup } from "@/components/EngineSetup";
 import { engineReady } from "@/components/EngineLibrary";
 import { InstanceProviderMark } from "@/components/ProviderIcons";
 import { cn } from "@/lib/cn";
+import { upstreamServicesAvailable } from "@/lib/release-profile";
 import { t } from "@/lib/i18n";
 import { engineSummary, organisationSignIn } from "@/lib/onboarding";
 import { api, useStore, type InstanceInfo } from "@/state/store";
@@ -61,7 +62,7 @@ export function EnginesBeat({
   onOpenOrganisation?: () => void;
 }) {
   const { state, dispatch } = useStore();
-  const organisation = organisationSignIn(window.ogb, { hosted });
+  const organisation = upstreamServicesAvailable ? organisationSignIn(window.ogb, { hosted }) : null;
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const latestRequest = useRef(0);

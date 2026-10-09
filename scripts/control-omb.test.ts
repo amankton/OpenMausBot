@@ -5,9 +5,24 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
-import { verificationServerEnvironment } from "./control-omb.ts";
+import { verificationPlatformUrl, verificationServerEnvironment } from "./control-omb.ts";
 
 const childEnv = (parentEnv: NodeJS.ProcessEnv) => verificationServerEnvironment(parentEnv, join(tmpdir(), "omb-fixture-env"), 9100);
+
+describe("explicit retained-workspace fixture grant", () => {
+  it("never inherits live Platform configuration from the launching shell", () => {
+    const env = childEnv({ CHIEF_PLATFORM_URL: "http://localhost:18087", CHIEF_PLATFORM_MANIFEST: "C:/private/live.json" });
+    expect(env).not.toHaveProperty("CHIEF_PLATFORM_URL");
+    expect(env).not.toHaveProperty("CHIEF_PLATFORM_MANIFEST");
+  });
+  it("accepts only an explicit local HTTP fixture without credentials", () => {
+    expect(verificationPlatformUrl("http://localhost:4100/workbench/fixture/contact/persons")).toBe("http://localhost:4100/workbench/fixture/contact/persons");
+    expect(verificationPlatformUrl("http://127.0.0.1:4100")).toBe("http://127.0.0.1:4100/");
+    for (const raw of ["http://example.test:4100", "http://localhost", "http://localhost:99999", "http://user:secret@localhost:4100", "http://localhost:4100/?token=fixture", "http://localhost:4100/#token", "http://localhost:4100/config.json", "http://127.1:4100", "https://localhost:4100"]) {
+      expect(() => verificationPlatformUrl(raw), raw).toThrow();
+    }
+  });
+});
 
 describe("the fixture's Live call environment", () => {
   it("passes a loopback fake GPT-Live and its key through", () => {

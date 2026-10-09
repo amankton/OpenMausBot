@@ -1,0 +1,449 @@
+diff --git a/plugins/love-assets/lang/en.json b/plugins/love-assets/lang/en.json
+index f97eb8fbf..0e3987671 100644
+--- a/plugins/love-assets/lang/en.json
++++ b/plugins/love-assets/lang/en.json
+@@ -159,6 +159,6 @@
+     "GroupByStatus": "By status",
+     "GroupByDate": "By date",
+     "SpeakingWhileMuted": "You are muted - others can't hear you",
+-    "SpeakingWhileMutedAlert": "Alert me when I speak while muted"
++    "SpeakingWhileMutedAlert": "Use my microphone while muted for speech alerts during this connection"
+   }
+ }
+diff --git a/plugins/love-resources/src/components/guest/GuestJoinPopup.svelte b/plugins/love-resources/src/components/guest/GuestJoinPopup.svelte
+index f9369913b..716fbcd0d 100644
+--- a/plugins/love-resources/src/components/guest/GuestJoinPopup.svelte
++++ b/plugins/love-resources/src/components/guest/GuestJoinPopup.svelte
+@@ -43,26 +43,32 @@
+   let videoContainer: HTMLDivElement | null = null
+ 
+   // Local media state
+-  let micEnabled = true
+-  let camEnabled = true
++  let micEnabled = false
++  let camEnabled = false
+ 
+   // Start-with options (controls whether we join with video/audio enabled)
+-  let startWithVideo: boolean = true
+-  let startWithAudio: boolean = true
+-  let acceptRecording: boolean = true
++  let startWithVideo: boolean = false
++  let startWithAudio: boolean = false
++  let acceptRecording: boolean = false
+ 
+   // Local preview state (preview shown before join)
+   let localStream: MediaStream | null = null
+   let localVideoEl: HTMLVideoElement | null = null
+   let previewError: IntlString | null = null
+   let previewStarting: boolean = false
++  let previewRequest = 0
+ 
+   async function startLocalPreview (): Promise<void> {
+     if (previewStarting || localStream != null) return
++    const request = ++previewRequest
+     previewStarting = true
+     previewError = null
+     try {
+       const stream = await navigator.mediaDevices?.getUserMedia({ video: true, audio: false })
++      if (request !== previewRequest || !startWithVideo) {
++        stream?.getTracks().forEach((track) => track.stop())
++        return
++      }
+       localStream = stream
+       if (localVideoEl != null) {
+         localVideoEl.srcObject = stream
+@@ -78,11 +84,12 @@
+       // Use localized message for camera permission if available
+       previewError = love.string.CamPermission ?? getEmbeddedLabel(err?.message ?? String(err))
+     } finally {
+-      previewStarting = false
++      if (request === previewRequest) previewStarting = false
+     }
+   }
+ 
+   function stopLocalPreview (): void {
++    previewRequest++
+     if (localStream != null) {
+       for (const t of localStream.getTracks()) {
+         try {
+@@ -308,10 +315,7 @@
+       console.error('Failed to load guest info from storage', err)
+     }
+ 
+-    // Start local preview automatically if user chose video and not already connected
+-    if (startWithVideo && !$lkSessionConnected) {
+-      void startLocalPreview()
+-    }
++    // Preview capture starts only from the explicit video control.
+   })
+ 
+   onDestroy(() => {
+diff --git a/plugins/love-resources/src/components/meeting/CamSettingPopup.svelte b/plugins/love-resources/src/components/meeting/CamSettingPopup.svelte
+index dbb2aa975..7e8fc2779 100644
+--- a/plugins/love-resources/src/components/meeting/CamSettingPopup.svelte
++++ b/plugins/love-resources/src/components/meeting/CamSettingPopup.svelte
+@@ -9,7 +9,7 @@
+ </script>
+ 
+ <div class="antiPopup mediaPopup">
+-  {#await getMediaDevices(false, true)}
++  {#await getMediaDevices(false, false)}
+     <div class="p-4">
+       <Loading />
+     </div>
+diff --git a/plugins/love-resources/src/components/meeting/MicSettingPopup.svelte b/plugins/love-resources/src/components/meeting/MicSettingPopup.svelte
+index 8c3745f90..9307f1235 100644
+--- a/plugins/love-resources/src/components/meeting/MicSettingPopup.svelte
++++ b/plugins/love-resources/src/components/meeting/MicSettingPopup.svelte
+@@ -6,6 +6,7 @@
+   import love from '../../plugin'
+   import { myPreferences } from '../../stores'
+   import { liveKitClient } from '../../utils'
++  import { mutedDetectionEnabled } from '../../liveKitClient'
+   import mediaPlugin, { getMediaDevices } from '@hcengineering/media'
+ 
+   const client = getClient()
+@@ -42,6 +43,7 @@
+     myPreferences: DevicesPreference | undefined,
+     value: boolean
+   ): Promise<void> {
++    mutedDetectionEnabled.set(value)
+     if (myPreferences !== undefined) {
+       await client.update(myPreferences, { speakingWhileMutedAlert: value })
+     } else {
+@@ -59,7 +61,7 @@
+ </script>
+ 
+ <div class="antiPopup mediaPopup">
+-  {#await getMediaDevices(true, false)}
++  {#await getMediaDevices(false, false)}
+     <div class="p-4">
+       <Loading />
+     </div>
+@@ -78,7 +80,7 @@
+       {/if}
+       <Label label={love.string.SpeakingWhileMutedAlert} />
+       <Toggle
+-        on={$myPreferences?.speakingWhileMutedAlert ?? true}
++        on={$mutedDetectionEnabled}
+         on:change={(e) => {
+           void saveSpeakingWhileMutedPreference($myPreferences, e.detail)
+         }}
+diff --git a/plugins/love-resources/src/components/meeting/SpeakingWhileMutedIndicator.svelte b/plugins/love-resources/src/components/meeting/SpeakingWhileMutedIndicator.svelte
+index e42d76a86..3b6b7a88c 100644
+--- a/plugins/love-resources/src/components/meeting/SpeakingWhileMutedIndicator.svelte
++++ b/plugins/love-resources/src/components/meeting/SpeakingWhileMutedIndicator.svelte
+@@ -19,7 +19,7 @@
+   import { speakingWhileMuted } from '../../stores'
+   import { acquireSpeakingWhileMutedWatch } from '../../speakingWhileMuted'
+ 
+-  // Local analyser only — never published to LiveKit/server. Opt-out via preference.
++  // Local analyser only; requires an explicit microphone-settings choice each connection.
+   // The watch is shared across all mounted indicators (topbar + fullscreen).
+   let release: (() => void) | undefined
+   onMount(() => {
+diff --git a/plugins/love-resources/src/liveKitClient.ts b/plugins/love-resources/src/liveKitClient.ts
+index bbdf1aadf..2024aac7f 100644
+--- a/plugins/love-resources/src/liveKitClient.ts
++++ b/plugins/love-resources/src/liveKitClient.ts
+@@ -36,6 +36,8 @@ export const lkSessionConnected = writable<boolean>(false)
+ export const lkReconnected = writable<number>(0)
+ 
+ export const lkIsConnecting = writable<boolean>(false)
++// A fresh explicit choice is required for private microphone capture while muted.
++export const mutedDetectionEnabled = writable<boolean>(false)
+ 
+ const LAST_PARTICIPANT_NOTIFICATION_DELAY_MS = 15 * 1000
+ const AUTO_DISCONNECT_DELAY_MS = 60 * 1000
+@@ -111,6 +113,7 @@ export class LiveKitClient {
+     }
+ 
+     lkIsConnecting.set(true)
++    mutedDetectionEnabled.set(false)
+     this.currentSessionSupportsVideo = withVideo
+     const ncEnabled = $myPreferences?.noiseCancellation ?? true
+     this.liveKitRoom.options.audioCaptureDefaults = {
+@@ -123,8 +126,8 @@ export class LiveKitClient {
+       const setupMediaSession = async (): Promise<void> => {
+         this.currentMediaSession = await useMedia({
+           state: {
+-            camera: this.currentSessionSupportsVideo ? { enabled: $myPreferences?.camEnabled ?? true } : undefined,
+-            microphone: { enabled: $myPreferences?.micEnabled ?? this.liveKitRoom.remoteParticipants.size < 16 }
++            camera: this.currentSessionSupportsVideo ? { enabled: false } : undefined,
++            microphone: { enabled: false }
+           },
+           autoDestroy: false
+         })
+@@ -171,6 +174,7 @@ export class LiveKitClient {
+   }
+ 
+   async disconnect (): Promise<void> {
++    mutedDetectionEnabled.set(false)
+     console.log('[LiveKitClient.disconnect] Disconnecting...', { state: this.liveKitRoom.state })
+     screenSharingState.set(ScreenSharingState.Inactive)
+     clearTimeout(this.lastParticipantNotificationTimeout)
+@@ -221,6 +225,7 @@ export class LiveKitClient {
+   }
+ 
+   onDisconnected = (): void => {
++    mutedDetectionEnabled.set(false)
+     console.log('[LiveKitClient.onDisconnected] Disconnected event fired')
+     lkSessionConnected.set(false)
+     lkIsConnecting.set(false)
+diff --git a/plugins/love-resources/src/speakingWhileMuted.ts b/plugins/love-resources/src/speakingWhileMuted.ts
+index 921980f7f..31d117b36 100644
+--- a/plugins/love-resources/src/speakingWhileMuted.ts
++++ b/plugins/love-resources/src/speakingWhileMuted.ts
+@@ -16,8 +16,8 @@
+ import { getSelectedMicId, releaseStream } from '@hcengineering/media'
+ import { get } from 'svelte/store'
+ import { state as mediaState } from '@hcengineering/media-resources'
+-import { lkSessionConnected } from './liveKitClient'
+-import { myPreferences, speakingWhileMuted } from './stores'
++import { lkSessionConnected, mutedDetectionEnabled } from './liveKitClient'
++import { speakingWhileMuted } from './stores'
+ 
+ const RMS_THRESHOLD = 0.02 // ~ -34 dBFS; above room noise, below normal speech
+ const POLL_MS = 100
+@@ -46,17 +46,22 @@ export class SpeakingWhileMutedWatch {
+   private clearTimer: ReturnType<typeof setTimeout> | undefined
+   private score = 0
+   private running = false // whole lifetime of an active watch (incl. async start)
++  private requestVersion = 0
+ 
+   async start (): Promise<void> {
+-    if (this.running) return
++    if (this.running || !get(mutedDetectionEnabled)) return
+     this.running = true
++    const requestVersion = ++this.requestVersion
+     try {
+       const micId = getSelectedMicId()
+       const stream = await navigator.mediaDevices.getUserMedia({
+         audio: micId != null && micId !== '' ? { deviceId: { ideal: micId } } : true
+       })
+       // Watch may have been stopped (unmute / destroy) while getUserMedia resolved.
+-      if (!this.running || get(mediaState).microphone?.enabled !== false || !get(lkSessionConnected)) {
++      if (
++        requestVersion !== this.requestVersion || !this.running || !get(mutedDetectionEnabled) ||
++        get(mediaState).microphone?.enabled !== false || !get(lkSessionConnected)
++      ) {
+         releaseStream(stream)
+         return
+       }
+@@ -99,6 +104,7 @@ export class SpeakingWhileMutedWatch {
+   }
+ 
+   stop (): void {
++    this.requestVersion++
+     this.running = false
+     if (this.pollInterval != null) {
+       clearInterval(this.pollInterval)
+@@ -131,7 +137,7 @@ let mountedIndicators = 0
+ let unsubStores: Array<() => void> = []
+ 
+ function evaluateSharedWatch (): void {
+-  const enabled = get(myPreferences)?.speakingWhileMutedAlert !== false
++  const enabled = get(mutedDetectionEnabled)
+   if (mountedIndicators > 0 && enabled && get(mediaState).microphone?.enabled === false && get(lkSessionConnected)) {
+     void sharedWatch.start()
+   } else {
+@@ -145,7 +151,7 @@ export function acquireSpeakingWhileMutedWatch (): () => void {
+     unsubStores = [
+       mediaState.subscribe(evaluateSharedWatch),
+       lkSessionConnected.subscribe(evaluateSharedWatch),
+-      myPreferences.subscribe(evaluateSharedWatch)
++      mutedDetectionEnabled.subscribe(evaluateSharedWatch)
+     ]
+   } else {
+     evaluateSharedWatch()
+diff --git a/plugins/media-resources/src/components/MediaPopup.svelte b/plugins/media-resources/src/components/MediaPopup.svelte
+index e0f5de63e..e2647fabe 100644
+--- a/plugins/media-resources/src/components/MediaPopup.svelte
++++ b/plugins/media-resources/src/components/MediaPopup.svelte
+@@ -54,7 +54,7 @@
+ 
+ <div class="antiPopup mediaPopup">
+   <ComponentExtensions extension={media.extension.StateContext} on:close />
+-  {#await getMediaDevices(true, true)}
++  {#await getMediaDevices(false, false)}
+     <div class="p-4">
+       <Loading />
+     </div>
+diff --git a/plugins/media-resources/src/components/MediaPopupCamPreview.svelte b/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
+index f98eacb1e..eb9731316 100644
+--- a/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
++++ b/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
+@@ -15,41 +15,50 @@
+ <script lang="ts">
+   import { releaseStream } from '@hcengineering/media'
+   import { onDestroy } from 'svelte'
++  import { ModernButton } from '@hcengineering/ui'
++  import media from '../plugin'
+ 
+   export let selected: MediaDeviceInfo
+ 
+-  let streamUpdatePromise = Promise.resolve()
++  let previewEnabled = false
++  let requestVersion = 0
+   let stream: MediaStream | null = null
+   let video: HTMLVideoElement | null = null
+ 
+-  async function updateStream (device: MediaDeviceInfo): Promise<void> {
++  async function updateStream (device: MediaDeviceInfo, enabled: boolean): Promise<void> {
++    const request = ++requestVersion
++    releaseStream(stream)
++    stream = null
++    if (!enabled) return
+     const constraints =
+       device !== null
+         ? { video: { deviceId: { exact: device.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+         : { video: { width: { ideal: 1280 }, height: { ideal: 720 } } }
+ 
+-    releaseStream(stream)
+-
+     try {
+       const newStream = await navigator.mediaDevices.getUserMedia(constraints)
+-      if (selected.deviceId === device.deviceId) {
++      if (request === requestVersion && previewEnabled) {
+         stream = newStream
+       } else {
+-        // Device changed while we were waiting the stream
++        // Preview may have been stopped, closed or switched while permission was pending.
+         releaseStream(newStream)
+       }
+     } catch (err) {
+       console.warn(err)
+-      stream = null
++      if (request === requestVersion) {
++        stream = null
++        previewEnabled = false
++      }
+     }
+   }
+ 
+-  onDestroy(async () => {
+-    await streamUpdatePromise
++  onDestroy(() => {
++    requestVersion++
+     releaseStream(stream)
++    stream = null
+   })
+ 
+-  $: streamUpdatePromise = updateStream(selected)
++  $: void updateStream(selected, previewEnabled)
+ 
+   $: if (video !== null && stream !== null) {
+     video.srcObject = stream
+@@ -61,6 +70,11 @@
+ </script>
+ 
+ <div class="container">
++  <ModernButton
++    label={previewEnabled ? media.string.TurnOffCam : media.string.TurnOnCam}
++    size={'small'}
++    on:click={() => (previewEnabled = !previewEnabled)}
++  />
+   {#if stream !== null}
+     <!-- svelte-ignore a11y-media-has-caption -->
+     <video bind:this={video} width="100%" height="100%" autoplay muted disablepictureinpicture />
+diff --git a/plugins/recorder-resources/src/components/RecordingPopup.svelte b/plugins/recorder-resources/src/components/RecordingPopup.svelte
+index cfae32d18..5db976486 100644
+--- a/plugins/recorder-resources/src/components/RecordingPopup.svelte
++++ b/plugins/recorder-resources/src/components/RecordingPopup.svelte
+@@ -196,7 +196,7 @@
+   }
+ 
+   async function handleCamSetting (e: MouseEvent): Promise<void> {
+-    const mediaDevices = await getMediaDevices(false, true)
++    const mediaDevices = await getMediaDevices(false, false)
+     const devices = mediaDevices.devices.filter((d) => d.kind === 'videoinput')
+ 
+     if (devices.length === 0) {
+@@ -217,7 +217,7 @@
+   }
+ 
+   async function handleMicSetting (e: MouseEvent): Promise<void> {
+-    const mediaDevices = await getMediaDevices(true, false)
++    const mediaDevices = await getMediaDevices(false, false)
+     const devices = mediaDevices.devices.filter((d) => d.kind === 'audioinput')
+ 
+     if (devices.length === 0) {
+diff --git a/plugins/recorder-resources/src/stores/manager.ts b/plugins/recorder-resources/src/stores/manager.ts
+index cd38f0acb..3595f19e9 100644
+--- a/plugins/recorder-resources/src/stores/manager.ts
++++ b/plugins/recorder-resources/src/stores/manager.ts
+@@ -90,8 +90,8 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+   })
+ 
+   const $state = writable<StreamManagerState>({
+-    camEnabled: true,
+-    micEnabled: true,
++    camEnabled: false,
++    micEnabled: false,
+     camDeviceId: undefined,
+     micDeviceId: undefined,
+ 
+@@ -124,8 +124,8 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+ 
+       $state.update((state) => ({
+         ...state,
+-        camEnabled: true,
+-        micEnabled: true,
++        camEnabled: false,
++        micEnabled: false,
+         camDeviceId,
+         micDeviceId,
+ 
+@@ -135,7 +135,7 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+         screenStream: null
+       }))
+ 
+-      void updateMediaStreams()
++      // Opening the recorder is not consent to camera or microphone capture.
+     },
+ 
+     toggleCam (): void {
+@@ -229,6 +229,7 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+     },
+ 
+     async shareScreen (): Promise<void> {
++      const shareVersion = ++screenRequestVersion
+       const state = get($state)
+       const config = get($config)
+       const oldScreenStream = state.screenStream
+@@ -241,6 +242,11 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+           audio: config.useScreenShareSound
+         })
+ 
++        if (shareVersion !== screenRequestVersion) {
++          releaseStream(screenStream)
++          return
++        }
++
+         $state.update((state) => ({
+           ...state,
+           screenStream
+@@ -266,6 +272,7 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+     },
+ 
+     async stopScreenShare (): Promise<void> {
++      screenRequestVersion++
+       const state = get($state)
+ 
+       releaseStream(state.screenStream)
+@@ -279,6 +286,7 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+     cleanup (): void {
+       // Cancel any pending media stream updates
+       requestVersion++
++      screenRequestVersion++
+ 
+       $state.update((state) => {
+         releaseStream(state.camStream)
+@@ -302,6 +310,7 @@ function createStreamManager (): Readable<StreamManagerStore> & StreamManagerMet
+   let callbacks: StreamManagerCallbacks = {}
+ 
+   let requestVersion = 0
++  let screenRequestVersion = 0
+   let currentRequest: Promise<void> = Promise.resolve()
+ 
+   const updateMediaStreams = async (): Promise<void> => {

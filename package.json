@@ -1,8 +1,8 @@
 {
-  "name": "openmausbot",
+  "name": "chief-executive-suite",
   "private": true,
   "version": "0.1.96",
-  "description": "A local-first chat app for running a team of AI agents.",
+  "description": "A shared office for people and their personal agents.",
   "homepage": "https://github.com/milind-soni/OpenMausBot",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "email": "46266943+milind-soni@users.noreply.github.com"
   },
   "license": "Apache-2.0",
-  "desktopName": "com.openmausbot.app.desktop",
+  "desktopName": "com.chiefexecutivesuite.app.desktop",
   "type": "module",
   "main": "electron/main.mjs",
   "engines": {
@@ -64,8 +64,8 @@
     "build:cua:linux:offline": "node scripts/prepare-cua-linux.mjs --offline",
     "build:updater": "node scripts/bundle-updater.mjs",
     "package:prepare": "pnpm build && pnpm build:server && pnpm build:companion && pnpm build:updater && pnpm build:android-tools && pnpm build:cloudflared && pnpm build:browser",
-    "package:mac": "pnpm package:prepare && pnpm build:speech && pnpm build:cua && electron-builder --mac --publish never",
-    "package:win": "pnpm package:prepare && pnpm build:cua:win && electron-builder --win --publish never",
+    "package:mac": "node scripts/package-chief.mjs mac",
+    "package:win": "node scripts/package-chief.mjs win",
     "package:linux": "pnpm package:prepare && pnpm build:cua:linux && electron-builder --linux --x64 --publish never",
     "package:linux:offline": "pnpm package:prepare && pnpm build:cua:linux:offline && electron-builder --linux --x64 --publish never",
     "smoke:deb-command": "node scripts/smoke-deb-command.mjs",
@@ -82,7 +82,9 @@
     "control-plane:types": "pnpm --filter @openmausbot/control-plane types",
     "control-plane:check": "pnpm --filter @openmausbot/control-plane check",
     "control-plane:test": "pnpm --filter @openmausbot/control-plane test",
-    "control-plane:dry-run": "pnpm --filter @openmausbot/control-plane dry-run"
+    "control-plane:dry-run": "pnpm --filter @openmausbot/control-plane dry-run",
+    "chief:preview": "node --experimental-strip-types scripts/chief-preview.ts",
+    "chief:verify-media": "node --experimental-strip-types scripts/verify-chief-media.ts"
   },
   "dependencies": {
     "@clack/prompts": "1.7.0",
@@ -95,6 +97,8 @@
     "croner": "10.0.1",
     "jose": "6.2.10",
     "katex": "^0.16.47",
+    "livekit-client": "^2.22.3",
+    "livekit-server-sdk": "^2.19.1",
     "lucide-react": "^0.539.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mermaid": "^12.0.0",
@@ -114,6 +118,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.11",
     "@types/node": "^26.2.0",
     "@types/novnc__novnc": "1.6.0",
@@ -135,5 +140,6 @@
     "vitest": "^4.1.10",
     "wrangler": "4.123.0",
     "ws": "8.22.0"
-  }
+  },
+  "productName": "Chief Executive Suite"
 }

@@ -7,14 +7,14 @@
 // identify(), so PostHog's Persons tab doubles as the collected-email list.
 import posthog from "posthog-js";
 
-const TOKEN = "phc_m2hP39w8y2gLPvHgDvSXAu6xcZ3agjf4ruL56rGcMZEe";
+const TOKEN = import.meta.env.VITE_CHIEF_POSTHOG_KEY ?? "";
 
 // Analytics are on by default; Settings → General turns them off. The choice
 // lives in localStorage because it has to be readable BEFORE init() runs: an
 // opted-out install must never call posthog.init(), so no request — not even
 // the library's own — leaves the machine. Once running, opting out routes
 // through opt_out_capturing(), which also drops anything already queued.
-const OPT_OUT_KEY = "omb-analytics-opt-out";
+const OPT_OUT_KEY = "chief-analytics-opt-out";
 
 let ready = false;
 
@@ -26,12 +26,14 @@ let ready = false;
 let choice: boolean | undefined;
 
 /** False once the user has opted out on this machine. */
+export function analyticsConfigured(): boolean { return Boolean(TOKEN); }
+
 export function analyticsEnabled(): boolean {
-  if (choice !== undefined) return choice;
+  if (choice !== undefined) return Boolean(TOKEN) && choice;
   try {
-    return localStorage.getItem(OPT_OUT_KEY) !== "1";
+    return Boolean(TOKEN) && localStorage.getItem(OPT_OUT_KEY) === "0";
   } catch {
-    return true; // storage unreadable → behave like a fresh install
+    return false; // explicit opt-in is required
   }
 }
 
@@ -68,7 +70,7 @@ export function setAnalyticsEnabled(enabled: boolean) {
 }
 
 export function initAnalytics() {
-  if (ready || !analyticsEnabled()) return;
+  if (ready || !TOKEN || !analyticsEnabled()) return;
   posthog.init(TOKEN, {
     api_host: "https://us.i.posthog.com",
     autocapture: false, // never capture clicked-element text (conversation leak)
@@ -86,8 +88,8 @@ export function initAnalytics() {
   // one-time install marker — app_first_open counts installs (the closest
   // truth to "downloads that mattered"; raw download counts live on the
   // GitHub release assets)
-  if (!localStorage.getItem("omb-installed")) {
-    localStorage.setItem("omb-installed", new Date().toISOString());
+  if (!localStorage.getItem("chief-installed")) {
+    localStorage.setItem("chief-installed", new Date().toISOString());
     posthog.capture("app_first_open", { platform });
   }
   posthog.capture("app_opened", { platform });
@@ -109,7 +111,7 @@ export function identifyEmail(email: string) {
 }
 
 // first-run email gate state
-const GATE_KEY = "omb-email-gate";
+const GATE_KEY = "chief-email-gate";
 export function emailGateDone(): boolean {
   return Boolean(localStorage.getItem(GATE_KEY));
 }

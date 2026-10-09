@@ -40,8 +40,8 @@ describe("optAction", () => {
 });
 
 describe("the stored choice", () => {
-  it("is on for a fresh install", () => {
-    expect(analyticsEnabled()).toBe(true);
+  it("is off for a fresh install", () => {
+    expect(analyticsEnabled()).toBe(false);
   });
 
   it("survives a restart once opted out", () => {
@@ -49,10 +49,10 @@ describe("the stored choice", () => {
     expect(analyticsEnabled()).toBe(false); // same read a later launch performs
   });
 
-  it("can be turned back on", () => {
+  it("cannot collect without a Chief project key", () => {
     setAnalyticsEnabled(false);
     setAnalyticsEnabled(true);
-    expect(analyticsEnabled()).toBe(true);
+    expect(analyticsEnabled()).toBe(false);
   });
 
   it("holds an opt-out for the session even when the write is rejected", async () => {
@@ -71,7 +71,7 @@ describe("the stored choice", () => {
     fresh.setAnalyticsEnabled(false);
     expect(fresh.analyticsEnabled()).toBe(false);
     fresh.initAnalytics();
-    expect(store.get("omb-installed")).toBeUndefined();
+    expect(store.get("chief-installed")).toBeUndefined();
   });
 
   it("treats unusable storage as a fresh install rather than failing", () => {
@@ -83,7 +83,7 @@ describe("the stored choice", () => {
         throw new Error("denied");
       },
     });
-    expect(analyticsEnabled()).toBe(true);
+    expect(analyticsEnabled()).toBe(false);
     expect(() => setAnalyticsEnabled(false)).not.toThrow();
   });
 });
@@ -95,7 +95,7 @@ describe("initAnalytics while opted out", () => {
     // the opt-out. resetModules is not module mocking — nothing is replaced,
     // the real module is simply loaded again.
     vi.resetModules();
-    store.set("omb-analytics-opt-out", "1"); // as a previous session left it
+    store.set("chief-analytics-opt-out", "1"); // as a previous session left it
     const fresh = await import("./analytics");
 
     expect(fresh.analyticsEnabled()).toBe(false);
@@ -104,6 +104,6 @@ describe("initAnalytics while opted out", () => {
     // No client is stubbed on purpose: if init() got past the guard it would
     // reach the real posthog-js and set this marker. Its absence is the
     // proof — and it also means opting back in later still counts the install.
-    expect(store.get("omb-installed")).toBeUndefined();
+    expect(store.get("chief-installed")).toBeUndefined();
   });
 });

@@ -608,7 +608,7 @@ export async function listManagedBoats(
     try {
       recoveries = boatCreateRecoverySnapshot();
     } catch {
-      return invalidInventory("OpenMausBot could not safely read its cloud computer recovery records");
+      return invalidInventory("Chief Executive Suite could not safely read its cloud computer recovery records");
     }
     for (const recovery of recoveries) {
       if (!recovery.resolved || !recovery.boxId) continue;
@@ -617,12 +617,12 @@ export async function listManagedBoats(
 
       const matchingRows = candidates.filter((candidate) => candidate?.id === recovery.boxId);
       if (matchingRows.length > 1) {
-        return invalidInventory("boat.dev returned a conflicting id for an OpenMaus-managed cloud computer — refresh or repair it in boat.dev");
+        return invalidInventory("boat.dev returned a conflicting id for a Chief-managed cloud computer — refresh or repair it in boat.dev");
       }
       if (matchingRows.length === 1) {
         const listedName = typeof matchingRows[0]?.name === "string" ? matchingRows[0].name : "";
         if (listedName !== namedOwner.currentName && listedName !== namedOwner.legacyName) {
-          return invalidInventory("A remembered cloud computer no longer has its OpenMausBot owner name — repair it in boat.dev before continuing");
+          return invalidInventory("A remembered cloud computer no longer has its Chief Executive Suite owner name — repair it in boat.dev before continuing");
         }
         continue;
       }
@@ -641,7 +641,7 @@ export async function listManagedBoats(
         inspected.identity.name !== namedOwner.currentName
         && inspected.identity.name !== namedOwner.legacyName
       ) {
-        return invalidInventory("A remembered cloud computer no longer has its OpenMausBot owner name — repair it in boat.dev before continuing");
+        return invalidInventory("A remembered cloud computer no longer has its Chief Executive Suite owner name — repair it in boat.dev before continuing");
       }
       const directCandidate = {
         id: inspected.identity.boxId,
@@ -655,7 +655,7 @@ export async function listManagedBoats(
     try {
       deletions = boatDeletionSnapshot();
     } catch {
-      return invalidInventory("OpenMausBot could not safely read its cloud computer deletion records");
+      return invalidInventory("Chief Executive Suite could not safely read its cloud computer deletion records");
     }
     for (const deletion of deletions) {
       let state: BoatDeletionReconciliation;
@@ -721,11 +721,11 @@ export async function listManagedBoats(
     if (!owner) continue;
     const boxId = typeof candidate.id === "string" ? candidate.id : "";
     if (!BOAT_ID.test(boxId)) {
-      return invalidInventory("boat.dev returned an invalid id for an OpenMaus-managed cloud computer — refresh or repair it in boat.dev");
+      return invalidInventory("boat.dev returned an invalid id for a Chief-managed cloud computer — refresh or repair it in boat.dev");
     }
     const existing = ownedBoatByBot.get(owner.botId);
     if (existing && existing !== boxId) {
-      return invalidInventory("boat.dev returned conflicting cloud computers for one OpenMaus bot — repair them in boat.dev before continuing");
+      return invalidInventory("boat.dev returned conflicting cloud computers for one Chief bot — repair them in boat.dev before continuing");
     }
     ownedBoatByBot.set(owner.botId, boxId);
   }
@@ -757,16 +757,16 @@ export async function listManagedBoats(
     // deterministic name), silently skipping a malformed/duplicated identity
     // could let bot deletion mistake provider corruption for absence.
     if (!BOAT_ID.test(boxId)) {
-      return invalidInventory("boat.dev returned an invalid id for an OpenMaus-managed cloud computer — refresh or repair it in boat.dev");
+      return invalidInventory("boat.dev returned an invalid id for a Chief-managed cloud computer — refresh or repair it in boat.dev");
     }
     if ((boatIdCounts.get(boxId) ?? 0) !== 1 || seenBoatIds.has(boxId)) {
-      return invalidInventory("boat.dev returned a conflicting id for an OpenMaus-managed cloud computer — refresh or repair it in boat.dev");
+      return invalidInventory("boat.dev returned a conflicting id for a Chief-managed cloud computer — refresh or repair it in boat.dev");
     }
     if (legacyOwner && owner && options.adoptLegacy !== false) {
       try {
         adoptResolvedBoat(owner.botId, boxId);
       } catch {
-        return invalidInventory("OpenMausBot could not safely remember this legacy cloud computer's owner — repair it in boat.dev before continuing");
+        return invalidInventory("Chief Executive Suite could not safely remember this legacy cloud computer's owner — repair it in boat.dev before continuing");
       }
     }
     seenBoatIds.add(boxId);
@@ -856,7 +856,7 @@ async function revalidateManagedBoat(
   if (!inventory.available) throw inventoryFailure(inventory);
   const instance = inventory.instances.find((candidate) => candidate.boxId === boxId);
   if (!instance) {
-    throw Object.assign(new Error("that OpenMaus-managed cloud computer no longer exists"), { status: 404 });
+    throw Object.assign(new Error("that Chief-managed cloud computer no longer exists"), { status: 404 });
   }
   return instance;
 }

@@ -1,0 +1,683 @@
+diff --git a/models/love/src/index.ts b/models/love/src/index.ts
+index e3ae2d995..ca64c04dd 100644
+--- a/models/love/src/index.ts
++++ b/models/love/src/index.ts
+@@ -313,6 +313,14 @@ export const DOMAIN_USER_MEETING_INVITE = 'user-meeting-invite' as Domain
+ @Model(love.class.UserMeetingInvite, core.class.Doc, DOMAIN_USER_MEETING_INVITE)
+ @UX(love.string.MeetingRequest, love.icon.Invite)
+ export class TUserMeetingInvite extends TDoc implements UserMeetingInvite {
++  @Prop(TypeString(), love.string.Status)
++  @Hidden()
++    admission?: string
++
++  @Prop(TypeBoolean(), love.string.Status)
++  @Hidden()
++    joined?: boolean
++
+   @Prop(TypeString(), love.string.Kind)
+   @Index(IndexKind.Indexed)
+     kind!: 'invite-request' | 'invite-response'
+diff --git a/plugins/love-resources/src/invites.ts b/plugins/love-resources/src/invites.ts
+index 04ef515eb..45507df84 100644
+--- a/plugins/love-resources/src/invites.ts
++++ b/plugins/love-resources/src/invites.ts
+@@ -21,6 +21,7 @@ import { type PopupResult } from '@hcengineering/ui'
+ import { derived, get, writable, type Writable } from 'svelte/store'
+ import { createMeeting, joinOrCreateMeetingByInvite } from './meetings'
+ import { currentMeetingMinutes } from './stores'
++import { loveClient } from './utils'
+ 
+ export const inviteRequestSecondsToLive = 30
+ 
+@@ -98,27 +99,8 @@ export async function sendInvites (persons: Array<Ref<Person>>, meeting?: Ref<Me
+     return
+   }
+ 
+-  const expiresAt = Date.now() + inviteRequestSecondsToLive * 1000
+-
+-  const client = getClient()
+   for (const person of validPersons) {
+-    // Use per-person apply with notMatch to prevent duplicate pending invites
+-    const apply = client.apply('create-invite:' + currentPerson + ':' + person)
+-    apply.notMatch(love.class.UserMeetingInvite, {
+-      kind: 'invite-request',
+-      from: currentPerson,
+-      to: person,
+-      status: 'pending'
+-    })
+-    await apply.createDoc(love.class.UserMeetingInvite, mySpace, {
+-      kind: 'invite-request',
+-      from: currentPerson,
+-      to: person,
+-      expiresAt,
+-      status: 'pending',
+-      ...(meetingId !== undefined && { meeting: meetingId })
+-    })
+-    await apply.commit()
++    await loveClient.inviteMeeting(person, meetingId)
+   }
+ }
+ 
+@@ -192,8 +174,8 @@ export async function responseToInviteRequest (invite: UserMeetingInvite, accept
+       // Check if this is an invite to an existing meeting
+       if (invite.meeting !== undefined) {
+         // Join existing meeting
++        await loveClient.respondToMeetingInvite(invite._id, true, invite.meeting)
+         await joinOrCreateMeetingByInvite(invite.meeting)
+-        await client.update(invite, { status: 'accepted' })
+       } else {
+         // Create new meeting in MY office (the recipient's office)
+         const myOffice = await client.findOne(love.class.Office, {
+@@ -206,19 +188,16 @@ export async function responseToInviteRequest (invite: UserMeetingInvite, accept
+ 
+           if (meeting !== undefined) {
+             // Update invite-response with meeting reference
+-            await client.update(invite, {
+-              status: 'accepted',
+-              meeting: meeting._id
+-            })
++            await loveClient.respondToMeetingInvite(invite._id, true, meeting._id)
+           } else {
+             // If meeting creation failed, decline the invite
+-            await client.update(invite, { status: 'declined' })
++            await loveClient.respondToMeetingInvite(invite._id, false)
+           }
+         }
+       }
+     } else {
+       // Just decline the invite
+-      await client.update(invite, { status: 'declined' })
++      await loveClient.respondToMeetingInvite(invite._id, false)
+     }
+   } catch (error) {
+     console.warn('Failed to respond to invite:', error)
+@@ -264,17 +243,15 @@ export async function checkAndJoinIfRecipientJoined (invites: UserMeetingInvite[
+ 
+   // Use cached outgoing invite-requests instead of querying
+   for (const invite of invites) {
+-    if (invite.status === 'accepted' && invite.meeting !== undefined) {
++    if (invite.status === 'accepted' && invite.meeting !== undefined && invite.joined !== true) {
+       // Check if we're already in this meeting
+       const currentMeeting = get(currentMeetingMinutes)
+       if (currentMeeting?._id === invite.meeting) {
+-        // Already joined, delete the invite request
+-        await client.remove(invite)
++        await client.update(invite, { joined: true })
+       } else {
+         // Try to join the meeting
+         await joinOrCreateMeetingByInvite(invite.meeting)
+-        // After successful join, delete the invite
+-        await client.removeDoc(love.class.UserMeetingInvite, invite.space, invite._id)
++        await client.update(invite, { joined: true })
+       }
+     } else if (invite.status === 'declined') {
+       // Remove declined or expired invites
+diff --git a/plugins/love-resources/src/loveClient.ts b/plugins/love-resources/src/loveClient.ts
+index c78b1e6cb..d2d707366 100644
+--- a/plugins/love-resources/src/loveClient.ts
++++ b/plugins/love-resources/src/loveClient.ts
+@@ -1,8 +1,8 @@
+-import { concatLink } from '@hcengineering/core'
+-import love, { RecordingState, type MeetingMinutes, type Room } from '@hcengineering/love'
++import { concatLink, type Ref } from '@hcengineering/core'
++import love, { RecordingState, type MeetingMinutes, type Room, type UserMeetingInvite } from '@hcengineering/love'
+ import { getMetadata } from '@hcengineering/platform'
+ import { getPlatformToken } from './utils'
+-import { getCurrentEmployee } from '@hcengineering/contact'
++import { getCurrentEmployee, type Person } from '@hcengineering/contact'
+ import { getPersonByPersonRef } from '@hcengineering/contact-resources'
+ import { Analytics } from '@hcengineering/analytics'
+ import { selectedRoomPlace } from './stores'
+@@ -13,6 +13,19 @@ export function getLoveClient (): LoveClient {
+ }
+ 
+ export class LoveClient {
++  private async admissionRequest (path: string, body: unknown): Promise<void> {
++    const result = await fetch(concatLink(this.getLoveEndpoint(), path), {
++      method: 'POST', headers: { Authorization: 'Bearer ' + getPlatformToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(body)
++    })
++    if (!result.ok) throw new Error('The meeting invitation could not be confirmed. Please try again.')
++  }
++  async inviteMeeting (to: Ref<Person>, meetingId?: Ref<MeetingMinutes>): Promise<void> {
++    await this.admissionRequest('/inviteMeeting', { to, meetingId })
++  }
++  async respondToMeetingInvite (inviteId: Ref<UserMeetingInvite>, accept: boolean, meetingId?: Ref<MeetingMinutes>): Promise<void> {
++    await this.admissionRequest('/respondToMeetingInvite', { inviteId, accept, meetingId })
++  }
++
+   async getRoomToken (meetingMinutes: MeetingMinutes): Promise<string> {
+     return await this.refreshRoomToken(meetingMinutes)
+   }
+@@ -118,6 +131,7 @@ export class LoveClient {
+         y
+       })
+     })
++    if (!res.ok) throw new Error('Meeting admission was denied. Accept an invitation before joining this room.')
+     return await res.text()
+   }
+ 
+diff --git a/plugins/love-resources/src/meetings.ts b/plugins/love-resources/src/meetings.ts
+index b89444073..faf6896c8 100644
+--- a/plugins/love-resources/src/meetings.ts
++++ b/plugins/love-resources/src/meetings.ts
+@@ -187,7 +187,6 @@ async function connectToMeeting (mm: MeetingMinutes, room?: Room): Promise<void>
+     }
+ 
+     await navigateToOfficeDoc(mm) // TODO: Select room?
+-    await moveToMeetingRoom(mm, room)
+ 
+     // Resolve current person so we can cleanup pending entries after connect
+     const me = getCurrentEmployee()
+@@ -206,6 +205,7 @@ async function connectToMeeting (mm: MeetingMinutes, room?: Room): Promise<void>
+     myConnectingSessionId.set(sessionId)
+ 
+     await liveKitClient.connect(wsURL, token, room?.type === RoomType.Video)
++    await moveToMeetingRoom(mm, room)
+     await navigateToMeetingMinutes(mm)
+ 
+     // Connection completed successfully: clear connecting flag
+@@ -229,10 +229,13 @@ async function moveToMeetingRoom (mm: MeetingMinutes, room?: Room): Promise<void
+   const myParticipation = get(myInfo)
+   if (mm === undefined || currentPerson == null) return
+ 
+-  if (myParticipation?.meeting === mm._id) return
++  if (myParticipation?.meeting === mm._id && myParticipation.room === room?._id && room !== undefined &&
++      Number.isInteger(myParticipation.x) && Number.isInteger(myParticipation.y) &&
++      myParticipation.x >= 0 && myParticipation.y >= 0 &&
++      myParticipation.x < room.width && myParticipation.y < room.height) return
+   if (mm.attachedTo === undefined) return
+ 
+-  const roomParticipants = get(infos).filter((p) => p.meeting === mm._id)
++  const roomParticipants = get(infos).filter((p) => p.meeting === mm._id && p._id !== myParticipation?._id)
+   let place: { x: number, y: number } | undefined
+   if (room !== undefined) {
+     place = getFreeRoomPlace(room, roomParticipants, me)
+@@ -255,7 +258,7 @@ async function moveToMeetingRoom (mm: MeetingMinutes, room?: Room): Promise<void
+   // position/room if ParticipantInfo already exists.
+ }
+ 
+-async function createMeetingDocument (room: Room): Promise<MeetingMinutes> {
++export async function createMeetingDocument (room: Room): Promise<MeetingMinutes> {
+   const client = getClient()
+ 
+   while (true) {
+diff --git a/plugins/love/src/types.ts b/plugins/love/src/types.ts
+index b724d3381..d3e5f978d 100644
+--- a/plugins/love/src/types.ts
++++ b/plugins/love/src/types.ts
+@@ -248,6 +248,9 @@ export interface PendingRecording extends AttachedDoc {
+  * kind: 'invite-response' - created in recipient's space by server trigger, used for display
+  */
+ export interface UserMeetingInvite extends Doc {
++  /** Love-service signature binding this invitation and its explicit acceptance. */
++  admission?: string
++  joined?: boolean
+   /** Type of invite record */
+   kind: 'invite-request' | 'invite-response'
+   /** Person who sent the invite */
+diff --git a/plugins/love/src/utils.ts b/plugins/love/src/utils.ts
+index 3299f7bb9..e7abc9e72 100644
+--- a/plugins/love/src/utils.ts
++++ b/plugins/love/src/utils.ts
+@@ -265,7 +265,8 @@ export function getFreeRoomPlace (
+   pref?: { x: number, y: number }
+ ): { x: number, y: number } {
+   let y = 0
+-  if (pref !== undefined) {
++  if (pref !== undefined && Number.isInteger(pref.x) && Number.isInteger(pref.y) &&
++      pref.x >= 0 && pref.y >= 0 && pref.x < room.width && pref.y < room.height) {
+     if (isOffice(room) && room.person === person) {
+       return { x: 0, y: 0 }
+     }
+diff --git a/server-plugins/love-resources/src/index.ts b/server-plugins/love-resources/src/index.ts
+index 8a294dca6..95dae1999 100644
+--- a/server-plugins/love-resources/src/index.ts
++++ b/server-plugins/love-resources/src/index.ts
+@@ -357,6 +357,7 @@ export async function OnUserMeetingInvite (txes: Tx[], control: TriggerControl):
+           recipientSpace._id,
+           {
+             kind: 'invite-response',
++            admission: invite.admission,
+             from: invite.from,
+             to: invite.to,
+             meeting: invite.meeting,
+diff --git a/services/love/src/admission.ts b/services/love/src/admission.ts
+new file mode 100644
+index 000000000..54ef64859
+--- /dev/null
++++ b/services/love/src/admission.ts
+@@ -0,0 +1,184 @@
++// Chief retained Platform admission increment. EPL-2.0; see upstream LICENSE.
++import { createHmac, timingSafeEqual } from 'node:crypto'
++import { type WorkspaceLoginInfo } from '@hcengineering/account-client'
++import { type RestClient } from '@hcengineering/api-client'
++import contact, { type Employee, type Person, type SocialIdentityRef } from '@hcengineering/contact'
++import { AccountRole, generateId, TxFactory, type Ref } from '@hcengineering/core'
++import love, { MeetingStatus, RoomAccess, type MeetingMinutes, type Office, type Room, type UserMeetingInvite } from '@hcengineering/love'
++
++export class AdmissionError extends Error {
++  constructor (readonly status: number, message: string) { super(message) }
++}
++interface Receipt {
++  purpose: 'chief-meeting-invite-v1'
++  state: 'pending' | 'accepted'
++  workspace: string
++  request: string
++  from: string
++  to: string
++  meeting?: string
++  room?: string
++  expires: number
++}
++export function signReceipt (receipt: Receipt, secret: string): string {
++  const body = Buffer.from(JSON.stringify(receipt)).toString('base64url')
++  return `${body}.${createHmac('sha256', secret).update(body).digest('base64url')}`
++}
++export function readReceipt (value: unknown, secret: string, now = Date.now()): Receipt | undefined {
++  if (typeof value !== 'string' || value.length > 4096) return
++  const [body, signature, extra] = value.split('.')
++  if (extra !== undefined || !body || !signature) return
++  const expected = createHmac('sha256', secret).update(body).digest()
++  const supplied = Buffer.from(signature, 'base64url')
++  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return
++  try {
++    const receipt = JSON.parse(Buffer.from(body, 'base64url').toString()) as Receipt
++    if (receipt.purpose !== 'chief-meeting-invite-v1' || !Number.isFinite(receipt.expires) || receipt.expires <= now) return
++    return receipt
++  } catch { return undefined }
++}
++
++/** Uses existing Platform documents; no Chief identity, room or invitation store. */
++export class MeetingAdmission {
++  private static readonly responses = new Map<string, Promise<void>>()
++  constructor (
++    readonly auth: WorkspaceLoginInfo,
++    readonly caller: RestClient,
++    readonly system: RestClient,
++    readonly secret: string
++  ) {}
++
++  async actor (): Promise<Employee> {
++    if (this.auth.role === AccountRole.ReadOnlyGuest || this.auth.account == null || this.auth.workspace == null) {
++      throw new AdmissionError(403, 'A workspace member sign-in is required')
++    }
++    const person = await this.caller.findOne(contact.mixin.Employee, { personUuid: this.auth.account, active: true })
++    if (person == null) throw new AdmissionError(403, 'No active person belongs to this sign-in')
++    return person
++  }
++
++  async context (meetingId: Ref<MeetingMinutes>): Promise<{ meeting: MeetingMinutes, room: Room }> {
++    // Caller-scoped reads retain Platform space ACLs even though writes use the service identity.
++    const meeting = await this.caller.findOne(love.class.MeetingMinutes, { _id: meetingId })
++    if (meeting == null || ![MeetingStatus.Active, MeetingStatus.Pending].includes(meeting.status)) {
++      throw new AdmissionError(403, 'This meeting is not available')
++    }
++    const room = await this.caller.findOne(love.class.Room, { _id: meeting.attachedTo as Ref<Room> })
++    if (room == null || room.access === RoomAccess.DND || meeting.access === RoomAccess.DND) {
++      throw new AdmissionError(403, 'This room is not available')
++    }
++    return { meeting, room }
++  }
++
++  async authority (person: Ref<Person>, meeting: MeetingMinutes, room: Room): Promise<boolean> {
++    if ((room as Office).person != null) return (room as Office).person === person
++    const author = meeting.createdBy
++    if (author == null) return false
++    const identity = await this.system.findOne(contact.class.SocialIdentity, { _id: author as SocialIdentityRef })
++    return identity?.attachedTo === person
++  }
++
++  async requireJoin (meetingId: Ref<MeetingMinutes>): Promise<Employee> {
++    const person = await this.actor()
++    const { meeting, room } = await this.context(meetingId)
++    if ((room as Office).person === person._id) return person
++    if ((room as Office).person == null && await this.authority(person._id, meeting, room)) return person
++    if (room.access === RoomAccess.Open && meeting.access === RoomAccess.Open && (this.auth.role !== AccountRole.Guest || (room as Office).person == null)) return person
++    const invites = await this.system.findAll(love.class.UserMeetingInvite, { kind: 'invite-request', meeting: meetingId, status: 'accepted' })
++    const accepted = invites.some(invite => {
++      const proof = readReceipt(invite.admission, this.secret)
++      return proof?.state === 'accepted' && proof.workspace === this.auth.workspace && proof.request === invite._id &&
++        proof.meeting === meetingId && proof.room === room._id && proof.from === invite.from && proof.to === invite.to &&
++        (proof.from === person._id || proof.to === person._id)
++    })
++    if (!accepted) throw new AdmissionError(403, 'Accept a room invitation before joining')
++    return person
++  }
++
++  async invite (to: Ref<Person>, meetingId?: Ref<MeetingMinutes>): Promise<void> {
++    const person = await this.actor()
++    if (meetingId != null && typeof meetingId !== 'string') throw new AdmissionError(400, 'Invalid meeting')
++    if (typeof to !== 'string' || to === person._id) throw new AdmissionError(400, 'Choose another person')
++    const recipient = await this.caller.findOne(contact.mixin.Employee, { _id: to as Ref<Employee>, active: true })
++    const space = await this.system.findOne(contact.class.PersonSpace, { person: person._id })
++    if (recipient == null || space == null) throw new AdmissionError(403, 'Person is not available')
++    if (meetingId != null) {
++      const { meeting, room } = await this.context(meetingId)
++      // A knock goes to the room host. Other invitations require current admission.
++      if (!await this.authority(to, meeting, room)) await this.requireJoin(meetingId)
++    }
++    const id = generateId<UserMeetingInvite>()
++    const expiresAt = Date.now() + 30_000
++    const admission = signReceipt({ purpose: 'chief-meeting-invite-v1', state: 'pending', workspace: this.auth.workspace,
++      request: id, from: person._id, to, meeting: meetingId, expires: expiresAt }, this.secret)
++    const account = await this.caller.getAccount()
++    if (account.uuid !== this.auth.account || account.primarySocialId == null) {
++      throw new AdmissionError(403, 'The workspace identity could not be confirmed')
++    }
++    // Direct REST create is system-only. The member transaction path retains space ACLs.
++    const factory = new TxFactory(account.primarySocialId)
++    await this.caller.tx(factory.createTxCreateDoc(love.class.UserMeetingInvite, space._id, {
++      kind: 'invite-request', from: person._id, to, meeting: meetingId, status: 'pending', expiresAt, admission
++    }, id))
++  }
++
++  async respond (responseId: Ref<UserMeetingInvite>, accept: boolean, meetingId?: Ref<MeetingMinutes>): Promise<void> {
++    const initial = await this.caller.findOne(love.class.UserMeetingInvite, { _id: responseId })
++    const proof = readReceipt(initial?.admission, this.secret)
++    if (proof == null) throw new AdmissionError(403, 'Invitation is unavailable or expired')
++    const key = this.auth.workspace + ':' + proof.request
++    const previous = MeetingAdmission.responses.get(key) ?? Promise.resolve()
++    let release!: () => void
++    const done = new Promise<void>((resolve) => { release = resolve })
++    const queued = previous.then(async () => { await done })
++    MeetingAdmission.responses.set(key, queued)
++    await previous
++    try { await this.respondOnce(responseId, accept, meetingId) } finally {
++      release()
++      if (MeetingAdmission.responses.get(key) === queued) MeetingAdmission.responses.delete(key)
++    }
++  }
++
++  private async respondOnce (responseId: Ref<UserMeetingInvite>, accept: boolean, meetingId?: Ref<MeetingMinutes>): Promise<void> {
++    const person = await this.actor()
++    const response = await this.caller.findOne(love.class.UserMeetingInvite, { _id: responseId })
++    const pending = readReceipt(response?.admission, this.secret)
++    if (response?.kind !== 'invite-response' || response.to !== person._id || !['pending', 'accepted'].includes(response.status) ||
++        !['pending', 'accepted'].includes(pending?.state ?? '') || pending == null || pending.workspace !== this.auth.workspace || pending.from !== response.from || pending.to !== response.to) {
++      throw new AdmissionError(403, 'Invitation is unavailable or expired')
++    }
++    const request = await this.system.findOne(love.class.UserMeetingInvite, { _id: pending.request as Ref<UserMeetingInvite> })
++    const granted = readReceipt(request?.admission, this.secret)
++    if (request?.status === 'accepted' && granted?.state === 'accepted' && granted.workspace === this.auth.workspace &&
++        granted.request === request._id && granted.from === pending.from && granted.to === pending.to &&
++        typeof granted.meeting === 'string' && (meetingId == null || granted.meeting === meetingId)) {
++      if (!accept) throw new AdmissionError(409, 'Invitation was already accepted')
++      await this.context(granted.meeting as Ref<MeetingMinutes>)
++      await this.system.update(response, { status: 'accepted', meeting: granted.meeting as Ref<MeetingMinutes>, admission: request.admission })
++      return
++    }
++    if (pending.state !== 'pending' || request == null || request.kind !== 'invite-request' || request.status !== 'pending' || request.admission !== response.admission) {
++      throw new AdmissionError(403, 'Invitation was cancelled or already answered')
++    }
++    if (!accept) {
++      await this.system.update(request, { status: 'declined', admission: '' })
++      await this.system.update(response, { status: 'declined', admission: '' })
++      return
++    }
++    const target = pending.meeting ?? meetingId
++    if (typeof target !== 'string' || (pending.meeting != null && meetingId != null && pending.meeting !== meetingId)) {
++      throw new AdmissionError(400, 'Invitation does not match this meeting')
++    }
++    const { meeting, room } = await this.context(target as Ref<MeetingMinutes>)
++    const from = pending.from as Ref<Person>
++    if (!await this.authority(person._id, meeting, room) && !await this.authority(from, meeting, room) &&
++        (room.access !== RoomAccess.Open || meeting.access !== RoomAccess.Open)) {
++      throw new AdmissionError(403, 'Only the room host can approve a restricted-room invitation')
++    }
++    // A request without a meeting means a knock on the recipient's own office.
++    if (pending.meeting == null && (room as Office).person !== person._id) throw new AdmissionError(403, 'Choose your own office')
++    const admission = signReceipt({ ...pending, state: 'accepted', meeting: target, room: room._id, expires: Date.now() + 8 * 60 * 60 * 1000 }, this.secret)
++    await this.system.update(request, { status: 'accepted', meeting: target as Ref<MeetingMinutes>, admission })
++    await this.system.update(response, { status: 'accepted', meeting: target as Ref<MeetingMinutes>, admission })
++  }
++}
+diff --git a/services/love/src/config.ts b/services/love/src/config.ts
+index dc9073579..a060d0534 100644
+--- a/services/love/src/config.ts
++++ b/services/love/src/config.ts
+@@ -14,6 +14,7 @@
+ //
+ 
+ interface Config {
++  MemberMeetingsOnly: boolean
+   AccountsURL: string
+   Port: number
+   ServiceID: string
+@@ -46,6 +47,7 @@ interface Config {
+ }
+ 
+ const envMap: { [key in keyof Config]: string } = {
++  MemberMeetingsOnly: 'CHIEF_MEMBER_MEETINGS_ONLY',
+   AccountsURL: 'ACCOUNTS_URL',
+   Port: 'PORT',
+ 
+@@ -77,6 +79,7 @@ const parseNumber = (str: string | undefined): number | undefined => (str !== un
+ 
+ const config: Config = (() => {
+   const params: Partial<Config> = {
++    MemberMeetingsOnly: process.env[envMap.MemberMeetingsOnly] !== 'false',
+     AccountsURL: process.env[envMap.AccountsURL],
+     Port: parseNumber(process.env[envMap.Port]) ?? 8096,
+     LiveKitProject: process.env[envMap.LiveKitProject],
+diff --git a/services/love/src/main.ts b/services/love/src/main.ts
+index 5086b0103..8d862b763 100644
+--- a/services/love/src/main.ts
++++ b/services/love/src/main.ts
+@@ -52,6 +52,8 @@ import { LiveKitPollingService } from './polling'
+ import { RecordingProcessor } from './recordings'
+ import { WebhookProcessor } from './webhook'
+ import { WorkspaceClient } from './workspaceClient'
++import { AdmissionError, MeetingAdmission } from './admission'
++import { getClient as getWorkspaceRestClient } from './client'
+ import { GuestManager } from './guests'
+ import { createToken, decodeMeetingToken, extractToken, getRoomName, parseMetadata } from './utils'
+ /**
+@@ -124,6 +126,45 @@ export const main = async (): Promise<void> => {
+   app.use(express.raw({ type: 'application/webhook+json' }))
+   app.use(express.json())
+ 
++  // Day-one member meetings: external guests and capture require their own consent/admission increment.
++  app.use((req, res, next) => {
++    if (config.MemberMeetingsOnly && ['/guestToken', '/guestInfo', '/guestJoin', '/startRecord', '/stopRecord', '/transcription'].includes(req.path)) {
++      res.status(403).send({ error: 'This operation is not enabled for member meetings' })
++      return
++    }
++    next()
++  })
++
++  const admissionFor = async (req: Request): Promise<MeetingAdmission> => {
++    const token = extractToken(req.headers)
++    if (token == null) throw new AdmissionError(401, 'A workspace sign-in is required')
++    const login = await getAccountClient(token).getLoginInfoByToken()
++    if (!isWorkspaceLoginInfo(login)) throw new AdmissionError(401, 'A workspace sign-in is required')
++    const caller = await getWorkspaceRestClient(token, login.workspace)
++    const workspace = await WorkspaceClient.create(login.workspace, ctx)
++    return new MeetingAdmission(login, caller, workspace.getAdmissionClient(), config.Secret)
++  }
++  const admissionError = (res: express.Response, error: unknown): void => {
++    res.status(error instanceof AdmissionError ? error.status : 503).send({ error: error instanceof AdmissionError ? error.message : 'Meeting admission is temporarily unavailable' })
++  }
++  // eslint-disable-next-line @typescript-eslint/no-misused-promises
++  app.post('/inviteMeeting', async (req, res) => {
++    try {
++      const admission = await admissionFor(req)
++      await admission.invite(req.body.to, req.body.meetingId)
++      res.status(204).send()
++    } catch (error) { admissionError(res, error) }
++  })
++  // eslint-disable-next-line @typescript-eslint/no-misused-promises
++  app.post('/respondToMeetingInvite', async (req, res) => {
++    try {
++      if (typeof req.body.accept !== 'boolean' || typeof req.body.inviteId !== 'string') throw new AdmissionError(400, 'Invalid invitation response')
++      const admission = await admissionFor(req)
++      await admission.respond(req.body.inviteId, req.body.accept, req.body.meetingId)
++      res.status(204).send()
++    } catch (error) { admissionError(res, error) }
++  })
++
+   const roomClient = new RoomServiceClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
+   const egressClient = new EgressClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
+ 
+@@ -187,7 +228,7 @@ export const main = async (): Promise<void> => {
+       case QueueMeetingEvent.started: {
+         const wsClient = await WorkspaceClient.create(msg.workspace, ctx)
+         const mm = await wsClient.findMeetingById(queueMsg.meetingId)
+-        if (mm !== undefined && mm.startWithRecording === true) {
++        if (!config.MemberMeetingsOnly && mm !== undefined && mm.startWithRecording === true) {
+           const sysToken = generateToken(systemAccountUuid, msg.workspace, { service: 'love' })
+           const wsLoginInfo = await getAccountClient(sysToken).getLoginInfoByToken()
+           if (!isWorkspaceLoginInfo(wsLoginInfo)) {
+@@ -253,43 +294,48 @@ export const main = async (): Promise<void> => {
+       return
+     }
+ 
+-    const _id = req.body._id
+-    const participantName = req.body.participantName
+-    const x = req.body.x ?? -1
+-    const y = req.body.y ?? -1
+-    const roomName = getRoomName(workspaceId, meetingId)
+-
+-    const room = await roomClient.listRooms([roomName])
+-    // TODO: Retry creation
+-    if (room === undefined || room.length === 0) {
+-      ctx.info('Creating room', { roomName })
+-      try {
+-        await roomClient.createRoom({
+-          metadata: JSON.stringify({
+-            projectKey: config.LiveKitProject,
+-            workspaceId,
+-            meetingId
+-          } satisfies RoomMetadata),
+-          departureTimeout: 3,
+-          name: roomName,
+-          agents: config.Agents.map((it) => new RoomAgentDispatch({ agentName: it }))
+-        })
+-      } catch (err: any) {
+-        console.error('Error creating room:', err)
++    try {
++      const admission = await admissionFor(req)
++      if (admission.auth.workspace !== workspaceId) throw new AdmissionError(403, 'Workspace mismatch')
++      const person = await admission.requireJoin(meetingId)
++      const _id = person._id
++      const participantName = person.name
++      const x = req.body.x ?? -1
++      const y = req.body.y ?? -1
++      const roomName = getRoomName(workspaceId, meetingId)
++
++      const room = await roomClient.listRooms([roomName])
++      // TODO: Retry creation
++      if (room === undefined || room.length === 0) {
++        ctx.info('Creating room', { roomName })
++        try {
++          await roomClient.createRoom({
++            metadata: JSON.stringify({
++              projectKey: config.LiveKitProject,
++              workspaceId,
++              meetingId
++            } satisfies RoomMetadata),
++            departureTimeout: 3,
++            name: roomName,
++            agents: config.MemberMeetingsOnly ? [] : config.Agents.filter(Boolean).map((it) => new RoomAgentDispatch({ agentName: it }))
++          })
++        } catch (err: any) {
++          console.error('Error creating room:', err)
++        }
+       }
+-    }
+ 
+-    res.send(
+-      await createToken(
+-        roomName,
+-        _id,
+-        participantName,
+-        JSON.stringify({
+-          x,
+-          y
+-        } satisfies ParticipantMetadata)
++      res.send(
++        await createToken(
++          roomName,
++          _id,
++          participantName,
++          JSON.stringify({
++            x,
++            y
++          } satisfies ParticipantMetadata)
++        )
+       )
+-    )
++    } catch (error) { admissionError(res, error) }
+   })
+ 
+   // eslint-disable-next-line @typescript-eslint/no-misused-promises
+@@ -309,7 +355,7 @@ export const main = async (): Promise<void> => {
+ 
+   // eslint-disable-next-line @typescript-eslint/no-misused-promises
+   app.get('/checkRecordAvailable', async (_req, res) => {
+-    res.send(await checkRecordAvailable(ctx, storageConfig, s3storageConfig))
++    res.send(!config.MemberMeetingsOnly && await checkRecordAvailable(ctx, storageConfig, s3storageConfig))
+   })
+ 
+   // eslint-disable-next-line @typescript-eslint/no-misused-promises
+@@ -409,6 +455,8 @@ export const main = async (): Promise<void> => {
+     const language = req.body.language
+ 
+     try {
++      const admission = await admissionFor(req)
++      await admission.requireJoin(meetingId)
+       await eventProducer.send(ctx, workspaceId, [
+         queueEvents.updateMetadata(meetingId, roomName, {
+           language
+diff --git a/services/love/src/utils.ts b/services/love/src/utils.ts
+index 0a4f3c02b..8b82123fb 100644
+--- a/services/love/src/utils.ts
++++ b/services/love/src/utils.ts
+@@ -8,7 +8,7 @@ import config from './config'
+ 
+ export function extractToken (header: IncomingHttpHeaders): string | undefined {
+   try {
+-    return header.authorization?.slice(7) ?? ''
++    return /^Bearer [^\s]+$/i.test(header.authorization ?? '') ? header.authorization!.slice(7) : undefined
+   } catch {
+     return undefined
+   }
+diff --git a/services/love/src/workspaceClient.ts b/services/love/src/workspaceClient.ts
+index a8ce68395..8dd941d09 100644
+--- a/services/love/src/workspaceClient.ts
++++ b/services/love/src/workspaceClient.ts
+@@ -65,6 +65,8 @@ export class WorkspaceClient {
+ 
+   async close (): Promise<void> {}
+ 
++  getAdmissionClient (): RestClient { return this.client }
++
+   private static async initWorkspaceClient (workspace: WorkspaceUuid, ctx: MeasureContext): Promise<void> {
+     if (WorkspaceClient.connectingWorkspaces.has(workspace)) {
+       return await WorkspaceClient.connectingWorkspaces.get(workspace)
+@@ -401,6 +403,16 @@ export class WorkspaceClient {
+ 
+       if (infos.length === 1) {
+         const info = infos[0]
++        const roomDoc = attachedRoom != null
++          ? await this.client.findOne(love.class.Room, { _id: attachedRoom })
++          : undefined
++        const validPlace = roomDoc !== undefined && info.room === attachedRoom &&
++          Number.isInteger(info.x) && Number.isInteger(info.y) && info.x >= 0 && info.y >= 0 &&
++          info.x < roomDoc.width && info.y < roomDoc.height
++        const place = roomDoc !== undefined && !validPlace
++          ? getFreeRoomPlace(roomDoc, (await this.client.findAll(love.class.ParticipantInfo, { meeting }))
++            .filter((p) => p._id !== info._id), person)
++          : undefined
+         // ParticipantInfo already exists - update it with new meeting/session info
+         this.ctx.info('[WorkspaceClient.upsertParticipantFromLivekit] Updating existing ParticipantInfo', {
+           infoId: info._id,
+@@ -414,7 +426,8 @@ export class WorkspaceClient {
+           room: attachedRoom ?? info.room,
+           name: name ?? info.name,
+           sessionId,
+-          account: account ?? info.account
++          account: account ?? info.account,
++          ...(place !== undefined ? place : {})
+         })
+         this.ctx.info('[WorkspaceClient.upsertParticipantFromLivekit] Updated ParticipantInfo', {
+           infoId: info._id,

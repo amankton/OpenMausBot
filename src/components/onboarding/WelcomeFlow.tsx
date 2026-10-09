@@ -210,7 +210,7 @@ export function WelcomeFlow({
 
   const hello = beat === "hello";
   const title = beatTitle(beat);
-  const logo = hello ? brand().logo : undefined;
+  const logo = brand().logo;
   const beatProps = { onNext: advance, onSkip: advance, setMascot, bump };
   const current = beats.indexOf(beat) + 1;
 

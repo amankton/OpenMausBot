@@ -60,7 +60,7 @@ export async function runPhoneSetup(
     return false;
   };
   for (;;) {
-    const device = await io.choose("Use OpenMausBot on your phone?", [
+    const device = await io.choose("Use Chief Executive Suite on your phone?", [
       "Skip for now",
       "iPhone / iPad — native app or Safari",
       "Android — app or browser",
@@ -91,14 +91,14 @@ export async function runPhoneSetup(
       if (route === 3) { back = true; continue; }
       if (route === 0) {
         io.log("This creates a public HTTPS endpoint through Cloudflare. Chat and settings require device pairing; the sign-in page and basic server identity are public.");
-        io.log("Starting it may download the Cloudflare connector. It stays active while OpenMausBot runs; stop OpenMausBot to close the connection.");
+        io.log("Starting it may download the Cloudflare connector. It stays active while Chief Executive Suite runs; stop Chief Executive Suite to close the connection.");
         if (!await io.confirm("Allow this managed public endpoint and connector download?", false)) continue;
         if (!await signIn()) return skip();
         return selected(phone, { tunnel: true, tailscale: false, publicUrl: undefined });
       }
       if (route === 1) {
         io.log("Tailscale must already be installed and signed in on this computer and phone, with HTTPS certificates enabled for the tailnet.");
-        if (!await io.confirm("Allow OpenMausBot to serve HTTPS to your tailnet while it runs?", false)) continue;
+        if (!await io.confirm("Allow Chief Executive Suite to serve HTTPS to your tailnet while it runs?", false)) continue;
         return selected(phone, { tailscale: true, tunnel: false, publicUrl: undefined });
       }
       io.log("Use an HTTPS reverse proxy you already configured for this server. Enter only its origin, without a password, pairing code, path, query or fragment.");
@@ -124,7 +124,7 @@ export function phonePairingInstructions(
   const origin = input.origin ? normalizePhoneOrigin(input.origin) : null;
   if (!input.ready || !origin) {
     return ["Phone access is not ready yet. No phone QR should be shown until the HTTPS connection is verified.",
-      "Your local OpenMausBot can still be used on this computer."];
+      "Your local Chief Executive Suite can still be used on this computer."];
   }
   return [
     phone === "ios"

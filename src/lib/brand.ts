@@ -19,7 +19,7 @@ export interface BrandStatus {
   notice?: string;
 }
 
-export const DEFAULT_BRAND: Brand = { name: "OpenMausBot" };
+export const DEFAULT_BRAND: Brand = { name: "Chief Executive Suite", tagline: "Your personal team of AI agents.", accent: "#2F58FF", logo: "/brand/chief-avatar-ink.svg", favicon: "/app-icon.svg" };
 
 let current: BrandStatus = { brand: DEFAULT_BRAND, source: "default", file: "" };
 

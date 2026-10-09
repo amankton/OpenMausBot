@@ -230,7 +230,7 @@ export function claudeInheritWarning(env: NodeJS.ProcessEnv): ProviderSnapshot["
   return {
     title: "Bots inherit this machine's Claude Code setup",
     message:
-      "OMB_CLAUDE_INHERIT_USER_CONFIG=1 is set on the OpenMausBot process, so every Claude bot also loads this " +
+      "OMB_CLAUDE_INHERIT_USER_CONFIG=1 is set on the Chief Executive Suite process, so every Claude bot also loads this " +
       "computer's own MCP servers, connectors, skills, hooks and personal CLAUDE.md on every turn — often thousands " +
       "of extra tokens per model call, and tools nobody gave the bot. Unless a bot genuinely needs a server from " +
       "your user-scope Claude config, remove the variable and restart; add the server under Settings → MCP servers " +
@@ -397,7 +397,7 @@ export function claudeCliUpdate(version: string | null, cli: string): ProviderSn
   const missing = (Object.keys(CLAUDE_FLAG_FLOORS) as (keyof typeof CLAUDE_FLAG_FLOORS)[])
     .filter((flag) => !claudeCliSupports(parsed, flag));
   const effects = [
-    ...(missing.includes("--autocompact") ? ["no compaction window picked by OpenMausBot"] : []),
+    ...(missing.includes("--autocompact") ? ["no compaction window picked by Chief Executive Suite"] : []),
     ...(missing.includes("--setting-sources") ? ["bots still see this machine's own Claude Code setup"] : []),
     ...(missing.includes("--system-prompt-snapshot") ? ["resumed turns cannot refresh stale system prompts"] : []),
   ];
@@ -555,17 +555,17 @@ type AskBehavior = "allow" | "deny" | "answer";
 type AskResolutionSource = "user" | "timeout" | "system";
 
 const DENY_TIMEOUT_NOTE =
-  "OpenMausBot: nobody answered this permission request in time. Skip this action and finish what you can without it.";
-const QUESTION_TIMEOUT_NOTE = "OpenMausBot: nobody answered in time. Use your best judgment and continue.";
-const DUPLICATE_ASK_ID_NOTE = "OpenMausBot: duplicate ask id — skipping this request.";
+  "Chief Executive Suite: nobody answered this permission request in time. Skip this action and finish what you can without it.";
+const QUESTION_TIMEOUT_NOTE = "Chief Executive Suite: nobody answered in time. Use your best judgment and continue.";
+const DUPLICATE_ASK_ID_NOTE = "Chief Executive Suite: duplicate ask id — skipping this request.";
 
 /** The system-source reply for an ask that outlives the turn — used both to
  * drain in-flight `pending` asks on close() and to answer one that arrives
  * on an already-closed broker (see the `closed` branch below). */
 function systemEndedReply(kind: Ask["kind"]): { behavior: AskBehavior; message: string } {
   return kind === "question"
-    ? { behavior: "answer", message: "OpenMausBot: the turn is ending — wrap up." }
-    : { behavior: "deny", message: "OpenMausBot: the turn ended" };
+    ? { behavior: "answer", message: "Chief Executive Suite: the turn is ending — wrap up." }
+    : { behavior: "deny", message: "Chief Executive Suite: the turn ended" };
 }
 
 /** The structured questions behind an ask, when it is one. Claude's own
@@ -1415,6 +1415,8 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
       const sessionId = !turn.sessionReset && typeof turn.resumeCursor === "string" ? turn.resumeCursor : null;
       const newSessionId = sessionId ? null : newId();
 
+      const crewframeIsolated = process.env.OMB_CREWFRAME_ISOLATE_CLAUDE === '1';
+      const legacyDiscovery = crewframeIsolated && (process.env.OMB_CREWFRAME_DISCOVERY_BOTS ?? '').split(',').includes(botId ?? '');
       const args = [
         "-p",
         "--output-format", "stream-json",
@@ -1431,6 +1433,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
         throw new Error("A guest's turn on this Cloud runs only in Ask.");
       }
       if (turn.guestConfined) args.push("--restricted", "--tools", GUEST_CLAUDE_TOOLS.join(","));
+      else if (legacyDiscovery) args.push('--tools', 'Read,Write,Edit,Glob,Grep,WebSearch,WebFetch');
       else if (config.tools !== undefined) args.push("--tools", config.tools.join(","));
       if (config.disallowedTools?.length) {
         args.push("--disallowedTools", config.disallowedTools.join(","));
@@ -1472,6 +1475,10 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
         if (!turn.mcpFromUserConfig && claudeCliSupports(cliVersion, "--strict-mcp-config")) args.push("--strict-mcp-config");
         if (claudeCliSupports(cliVersion, "--setting-sources")) args.push("--setting-sources", "project");
       }
+      if (crewframeIsolated) {
+        args.push('--disable-slash-commands');
+        if (!args.includes('--strict-mcp-config')) args.push('--strict-mcp-config');
+      }
       const compactWindow = autoCompactWindow(turnEnvironment);
       if (compactWindow && cliHasAutocompact === true) {
         args.push("--autocompact", compactWindow);
@@ -1512,7 +1519,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
           env: local.env,
         };
         // The isolated Local VM preserves the established pre-allow behavior.
-        // Host tools always route through OpenMausBot's permission broker.
+        // Host tools always route through Chief Executive Suite's permission broker.
         if (!controlsHost) allowed.push("mcp__computer");
       }
       // peer-agent comms (list_bots/ask_bot) — the harness builds the whole
@@ -1636,6 +1643,10 @@ export const ClaudeDriver: ProviderDriver<ClaudeConfig> = {
         if (process.versions.electron) env.ELECTRON_RUN_AS_NODE = "1";
       }
       const settings: Record<string, unknown> = { ...authSettings };
+      if (crewframeIsolated) {
+        env.ENABLE_CLAUDEAI_MCP_SERVERS = 'false';
+        settings.enabledPlugins = { 'superpowers@claude-plugins-official': false, 'data-agent-kit-starter-pack@data-agent-kit-starter-pack-marketplace': false };
+      }
       if (hooks) settings.hooks = claudeHookSettings(HOOK_HELPER_PATH);
       if (turn.guestConfined) settings.permissions = GUEST_CLAUDE_PERMISSIONS;
       const authSettingsPath = mcpConfigPath && Object.keys(settings).length

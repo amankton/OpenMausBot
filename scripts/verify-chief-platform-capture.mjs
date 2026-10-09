@@ -1,0 +1,184 @@
+// Two synthetic members only; generated audio, isolated Chrome, no physical devices.
+import {chromium,expect,request} from '@playwright/test';
+import {readFile,writeFile,stat} from 'node:fs/promises';
+import {join,resolve,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+import {AccessToken} from 'livekit-server-sdk';
+import {execFileSync} from 'node:child_process';
+const root=fileURLToPath(new URL('..',import.meta.url));
+const origin='http://localhost:18087',workspace='b3ece3dc-e200-41c7-a9d8-2cb86c8c9fdb';
+const local=join(root,'.chief-local/platform'),logs=join(root,'.chief-local/platform-build-logs');
+const dist=join(root,'.chief-local/platform-source/dev/prod/dist');
+const sha=data=>createHash('sha256').update(data).digest('hex');
+const json=async path=>JSON.parse(await readFile(path,'utf8'));
+const mode=process.argv.includes('--mode=deployed')?'deployed':'compiled';
+if(process.argv.slice(2).some(value=>!['--mode=compiled','--mode=deployed'].includes(value)))throw Error('Unsupported capture acceptance flag');
+const manifest=await json(join(local,'manifest.json'));
+if(manifest.project!=='chief-platform'||manifest.url!==origin||manifest.status!=='ready')throw Error('Verified independent Chief runtime required');
+const buildBytes=await readFile(join(logs,'production-build-receipt.json')),build=JSON.parse(buildBytes);
+const provenance=await json(join(root,'integrations/platform/patches/meeting-capture-provenance.json'));
+const loveImage=await json(join(local,'love-image.json'));
+const actualLoveImage=execFileSync('docker',['inspect','chief-platform-love-1','--format','{{.Image}}'],{encoding:'utf8',windowsHide:true}).trim();
+if(actualLoveImage!==loveImage.image||loveImage.capture?.patchSha256!==provenance.patchSha256)throw Error('Expected reviewed deployed capture backend');
+const workerInputs={};for(const name of ['worker.py','worker_core.py'])workerInputs[name]=sha(await readFile(join(root,'integrations/meeting-capture',name)));
+for(const input of provenance.inputs.filter(input=>input.file.startsWith('plugins/')))if(build.inputs[input.file]!==input.sha256)throw Error('Capture UI build does not match reviewed source');
+const states=await Promise.all(['acceptance-state.json','acceptance-partner-state.json','acceptance-outsider-state.json'].map(name=>json(join(local,name))));
+for(const [index,state] of states.entries()){
+ const slug=index===2?'chiefrecordingoutsider':'chiefacceptance';
+ if(JSON.stringify(state).includes('chiefexecutivesuite')||!state.origins.some(item=>item.origin===origin&&item.localStorage.some(entry=>entry.name.includes(slug))))throw Error('Only synthetic browser states are allowed');
+}
+const outsider=await json(join(local,'acceptance-outsider.json'));
+if(outsider.slug!=='chiefrecordingoutsider'||outsider.workspace===workspace||!/^[-a-f0-9]{36}$/.test(outsider.workspace))throw Error('Independent synthetic outsider required');
+function token(state,expected){const cookie=state.cookies.find(item=>item.name==='presentation-metadata-Token'&&item.domain==='localhost'&&item.path==='/files/'+expected);if(!cookie)throw Error('Synthetic token missing');return decodeURIComponent(cookie.value);}
+const tokens=states.map((state,index)=>token(state,index===2?outsider.workspace:workspace)),checks=[],served=new Set(),sessions=[];
+const api=await request.newContext({baseURL:origin,extraHTTPHeaders:{Cookie:''},timeout:15000});
+const call=async(index,path,method='GET',data)=>{const response=await api.fetch('/_love/capture'+path,{method,headers:{Authorization:'Bearer '+tokens[index]},data});if(!response.ok())throw Error('Capture fixture API '+method+' '+path.split('?')[0]+' failed with '+response.status());return response.json();};
+const wav=join(root,'.chief-local/capture-synthetic-speech.wav');
+if((await stat(wav)).size!==209006||sha(await readFile(wav))!=='0b875c650d3827e5670f7941d368ba6dacf1be3e6c49653f2ab8c2ecb440f205')throw Error('Expected exact generated speech fixture');
+const privateMeeting=Object.fromEntries((await readFile(join(local,'meetings.env'),'utf8')).trim().split(/\r?\n/).map(line=>{const at=line.indexOf('=');return [line.slice(0,at),line.slice(at+1)];}));
+const rtcParticipants=async room=>{
+ const credential=new AccessToken(privateMeeting.CHIEF_PLATFORM_LIVEKIT_KEY,privateMeeting.CHIEF_PLATFORM_LIVEKIT_SECRET,{ttl:30});
+ credential.addGrant({roomAdmin:true,room});
+ const result=await api.post('/_livekit/twirp/livekit.RoomService/ListParticipants',{headers:{Authorization:'Bearer '+await credential.toJwt()},data:{room}});
+ if(!result.ok())throw Error('Fixture participant read failed: '+result.status());
+ return (await result.json()).participants??[];
+};
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream',`--use-file-for-fake-audio-capture=${wav}`]});
+let pages=[],meetingId,activeSession;
+const pageErrors=[],captureRequests=[];
+try{
+ for(const state of states.slice(0,2)){
+  const context=await browser.newContext({storageState:state,serviceWorkers:'block',viewport:{width:1600,height:1000},acceptDownloads:true});
+  await context.grantPermissions(['camera','microphone','local-network-access'],{origin});
+  await context.addInitScript(()=>{
+   window.__captureFixture={calls:[],streams:[],connections:[]};
+   const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+   navigator.mediaDevices.getUserMedia=async constraints=>{
+    const devices=(await navigator.mediaDevices.enumerateDevices()).filter(item=>['audioinput','videoinput'].includes(item.kind));
+    if(!devices.length||devices.some(item=>!/fake/i.test(item.label)))throw Error('Physical devices refused');
+    window.__captureFixture.calls.push({audio:Boolean(constraints.audio),video:Boolean(constraints.video)});
+    const stream=await get(constraints);window.__captureFixture.streams.push(stream);return stream;
+   };
+   window.RTCPeerConnection=new Proxy(window.RTCPeerConnection,{construct(target,args){const pc=new target(...args);window.__captureFixture.connections.push(pc);return pc;}});
+  });
+  if(mode==='compiled')await context.route(origin+'/**',async route=>{
+   const req=route.request();if(req.method()!=='GET')return route.continue();
+   const pathname=decodeURIComponent(new URL(req.url()).pathname);
+   const candidate=req.isNavigationRequest()?join(dist,'index.html'):resolve(dist,'.'+pathname);
+   if(!candidate.startsWith(dist+sep)||!(await stat(candidate).catch(()=>null))?.isFile())return route.continue();
+   const name=candidate.slice(dist.length+1).split(sep).join('/');
+   if(sha(await readFile(candidate))!==build.assets[name]?.sha256)throw Error('Unreviewed compiled asset');
+   served.add(name);return route.fulfill({path:candidate});
+  });
+  const page=await context.newPage();page.setDefaultTimeout(30000);
+  page.on('pageerror',error=>pageErrors.push(error.message.replace(/eyJ[A-Za-z0-9_.%-]+/g,'[redacted]').slice(0,500)));
+  page.on('response',response=>{if(new URL(response.url()).pathname.startsWith('/_love/capture'))captureRequests.push({path:new URL(response.url()).pathname,status:response.status()});});
+  page.on('request',req=>{if(new URL(req.url()).pathname==='/_love/getToken'&&req.method()==='POST'){const body=req.postDataJSON();if(body.meetingId)meetingId=body.meetingId;}});
+  pages.push(page);
+ }
+ const [primary,partner]=pages;
+ const cardUrl=origin+'/workbench/chiefacceptance/card/6ac6aa185b1567fb393c76f2';
+ await primary.goto(cardUrl,{waitUntil:'networkidle'});
+ await partner.goto(origin+'/workbench/chiefacceptance/love',{waitUntil:'networkidle'});
+ if(!await primary.locator('.floorGrid-room').count())await primary.locator('button.app.small').filter({has:primary.locator('use[href$="#office"]')}).click();
+ const room=primary.getByRole('group',{name:/^Meeting room 1$/i});
+ const tile=primary.locator('.floorGrid-room.myOffice .floorGrid-room__field[draggable="true"]').first();
+ await tile.hover();await tile.dragTo(room);
+ const connected=page=>page.evaluate(()=>window.__captureFixture.connections.some(pc=>pc.connectionState==='connected'));
+ await expect.poll(()=>connected(primary)).toBe(true);
+ await expect.poll(()=>meetingId).toBeTruthy();
+ const status=async()=>call(0,'/status?meetingId='+encodeURIComponent(meetingId));
+ await expect.poll(async()=>(await status()).worker.state,{timeout:20000}).toBe('ready');
+ expect(await primary.evaluate(()=>window.__captureFixture.calls)).toEqual([]);
+ const openPanel=async page=>{
+  const panel=page.getByRole('region',{name:'Quiet meeting notes'}).filter({visible:true}).first();
+  if(!await panel.isVisible())await panel.waitFor({state:'visible',timeout:30000}).catch(()=>{});
+  if(!await panel.isVisible())await page.locator('button[id="app-love:string:Meeting"]').click();
+  await expect(panel).toBeVisible({timeout:30000});return panel;
+ };
+ let panel=await openPanel(primary);
+ await panel.getByRole('button',{name:'Request everyone’s consent',exact:true}).click();
+ await expect.poll(async()=>(await status()).session?.state).toBe('pending');
+ let session=(await status()).session;sessions.push(session.id);activeSession=session;
+ expect(session.participants.every(person=>person.consent==='pending')).toBe(true);
+ await panel.getByRole('button',{name:'I agree to audio capture',exact:true}).click();
+ await expect.poll(async()=>(await status()).session?.state,{timeout:20000}).toBe('capturing');
+ expect(await primary.evaluate(()=>window.__captureFixture.calls)).toEqual([]);
+ checks.push('Opening and requesting notes never acquires media; requester must explicitly consent before listen-only worker connects');
+ await primary.keyboard.press('Escape');
+ const other=primary.getByRole('group',{name:/Partner/i}).locator('.floorGrid-room__field[draggable="true"]').first();
+ await other.hover();await other.dragTo(room);
+ await partner.getByRole('button',{name:/^You are inviting to join/}).click();
+ await partner.locator('.invite-popup').getByRole('button',{name:'Join',exact:true}).click();
+ await expect.poll(()=>connected(partner)).toBe(true);
+ await partner.keyboard.press('Escape');
+ await expect.poll(async()=>(await call(0,'/session/'+session.id)).session.state,{timeout:30000}).toMatch(/ready|failed/);
+ const priorDenied=await api.get('/_love/capture/session/'+session.id,{headers:{Authorization:'Bearer '+tokens[1]}});
+ expect(priorDenied.status()).toBe(403);
+ checks.push('Late participant joining stops the first capture and receives no access to its prior transcript');
+ await expect.poll(async()=>(await status()).worker.state,{timeout:20000}).toBe('ready');
+ session=(await call(0,'/request','POST',{meetingId})).session;sessions.push(session.id);activeSession=session;
+ await call(0,'/consent','POST',{sessionId:session.id,revision:session.revision,accept:true});
+ const partnerPanel=await openPanel(partner);
+ await partnerPanel.getByRole('button',{name:'Decline',exact:true}).click();
+ await expect.poll(async()=>(await call(0,'/session/'+session.id)).session.state).toBe('cancelled');
+ expect((await call(0,'/session/'+session.id)).session.state).toBe('cancelled');
+ checks.push('One member declining cancels the two-member request without starting audio capture');
+ session=(await call(0,'/request','POST',{meetingId})).session;sessions.push(session.id);activeSession=session;
+ await call(0,'/consent','POST',{sessionId:session.id,revision:session.revision,accept:true});
+ expect((await status()).session.state).toBe('pending');
+ await partnerPanel.getByRole('button',{name:'I agree to audio capture',exact:true}).click();
+ await expect.poll(async()=>(await status()).session.state,{timeout:20000}).toBe('capturing');
+ const control=(page,icon)=>page.locator('.bar button').filter({has:page.locator(`use[href$="#${icon}"]`)}).filter({visible:true}).first();
+ if(!await control(primary,'micOff').isVisible())await primary.locator('button[id="app-love:string:Meeting"]').click();
+ await control(primary,'micOff').click();
+ await primary.waitForTimeout(8500);
+ await partnerPanel.getByRole('button',{name:'Stop / withdraw consent',exact:true}).click();
+ await control(primary,'micOn').click();
+ await expect.poll(async()=>(await call(0,'/session/'+session.id)).session.state,{timeout:45000}).toBe('ready');
+ const completed=(await call(0,'/session/'+session.id)).session;
+ await expect.poll(async()=>Boolean(await stat(join(root,'.chief-local/meeting-capture/audio',session.id)).catch(()=>null)),{timeout:10000}).toBe(false);
+ const remainingParticipants=await rtcParticipants(workspace+'_'+meetingId);
+ expect(remainingParticipants).toHaveLength(2);
+ expect(remainingParticipants.some(person=>person.identity==='chief-capture-'+session.id)).toBe(false);
+ const transcript=completed.segments.map(segment=>segment.text).join(' ').toLowerCase();
+ expect(transcript).toContain('report');expect(transcript).toContain('draft');
+ expect(completed.segments.every(segment=>segment.personId===completed.requestedBy)).toBe(true);
+ expect((await call(1,'/session/'+session.id)).session.segments).toEqual(completed.segments);
+ expect(JSON.stringify(completed)).not.toMatch(/"(?:token|sid|workerSecret|rawPath)"/);
+ checks.push('Unanimous consent permits real generated microphone audio over LiveKit; partner Stop removes exact listener; local ASR preserves speaker, both participants can review, and acknowledged raw audio is deleted');
+ for(const bearer of ['', 'chief-invalid',tokens[2]]){
+  const denied=await api.get('/_love/capture/session/'+session.id,{headers:{Authorization:bearer?'Bearer '+bearer:''}});
+  expect([401,403,404]).toContain(denied.status());
+ }
+ checks.push('Anonymous, invalid-token and independent-workspace users cannot read the transcript');
+ expect(primary.url()).toBe(cardUrl);
+ await expect(primary.getByPlaceholder('Card',{exact:true})).toHaveValue('Chief Synthetic Card');
+ panel=await openPanel(primary);
+ await panel.getByText('History and review',{exact:true}).click();
+ await panel.getByLabel('Meeting notes session',{exact:true}).selectOption(session.id);
+ await expect(panel.getByRole('button',{name:'Export reviewed JSON'})).toBeDisabled();
+ const selected=panel.getByLabel('Include this reviewed item',{exact:true});
+ expect(await selected.count()).toBeGreaterThan(0);await selected.first().check();
+ await panel.getByLabel('I reviewed the selected material and want to export it to my personal Chief workspace.',{exact:true}).check();
+ const downloadEvent=primary.waitForEvent('download');
+ await panel.getByRole('button',{name:'Export reviewed JSON'}).click();
+ const download=await downloadEvent;const exportedPath=join(root,'.chief-local/capture-reviewed-fixture.json');await download.saveAs(exportedPath);
+ const bundle=await json(exportedPath);expect(bundle.format).toBe('chief.meeting-review');expect(bundle.review.confirmed).toBe(true);expect(bundle.items.length).toBe(1);expect(bundle.transcript).toBeUndefined();
+ checks.push('Reviewed JSON export requires selection and confirmation; transcript remains excluded by default; Card stays open');
+ await primary.screenshot({path:join(root,'docs/verification/evidence/chief-platform-capture.png')});
+ for(const [name,expected] of Object.entries(workerInputs))if(sha(await readFile(join(root,'integrations/meeting-capture',name)))!==expected)throw Error('Worker changed during acceptance');
+ const receipt={passed:true,mode,verifiedAt:new Date().toISOString(),syntheticOnly:true,fakeInputsOnly:true,sourceRevision:build.sourceRevision,buildReceiptSha256:sha(buildBytes),capturePatchSha256:provenance.patchSha256,loveImage:actualLoveImage,workerInputs,compiledAssets:served.size,checks,localAsr:'tiny.en CPU int8',exportedFixtureSha256:sha(await readFile(exportedPath))};
+ await writeFile(join(root,'docs/verification/evidence/chief-platform-capture.json'),JSON.stringify(receipt,null,2)+'\n');
+ console.log(JSON.stringify(receipt));
+}catch(error){
+ const panels=await pages[0]?.evaluate(()=>[...document.querySelectorAll('[aria-label="Quiet meeting notes"]')].map(node=>({text:node.textContent?.slice(0,500),rect:node.getBoundingClientRect().toJSON(),display:getComputedStyle(node).display}))).catch(()=>[]);
+ await writeFile(join(root,'.chief-local/capture-browser-diagnostic.json'),JSON.stringify({served:[...served],pageErrors,captureRequests,panels,meetingId},null,2));
+ await pages[0]?.screenshot({path:join(root,'docs/verification/evidence/chief-platform-capture-failure.png')}).catch(()=>{});
+ console.error(String(error.message).replace(/eyJ[A-Za-z0-9_.%-]+/g,'[redacted]').slice(0,2000));process.exitCode=1;
+}finally{
+ if(activeSession)await call(0,'/stop','POST',{sessionId:activeSession.id,revision:activeSession.revision}).catch(()=>{});
+ for(const id of sessions)await call(0,'/session/'+id,'DELETE').catch(()=>{});
+ await browser.close();await api.dispose();
+}

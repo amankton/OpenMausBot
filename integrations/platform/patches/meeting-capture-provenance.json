@@ -1,0 +1,85 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-07T23:57:22.460Z",
+  "patch": "0005-consented-meeting-capture.patch",
+  "patchSha256": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d"
+  },
+  "inputs": [
+    {
+      "file": "plugins/love-resources/src/components/LoveWidget.svelte",
+      "beforeSha256": "3c77c3ac4bc26f799c724aafd0088b1ccc8ec52724cdbe8e9ece8684e5b67dc1",
+      "sha256": "644eebe1d8bf5d329a81a4805f97e7cc82abff08fa07b89f190f367838d1fbb3"
+    },
+    {
+      "file": "plugins/love-resources/src/components/meeting/ControlBar.svelte",
+      "beforeSha256": "624d2465486713593008f9179ac0623d18a1c00caaccc86129d0410ba1727276",
+      "sha256": "bbc069d53948d6c89e09b0907ab9648ff2bf0e1409a351f55dd0d0191bfa340b"
+    },
+    {
+      "file": "plugins/love-resources/src/components/EditMeetingMinutes.svelte",
+      "beforeSha256": "fc6cb1b75a1e2f5edcc5e86e6d3467d52daf5cf87af774e78e6a47c32b5f4847",
+      "sha256": "8b92e1abef4fcea9aaa4cb9f642cf983609ce3552f1df3b948dbe737116d43d4"
+    },
+    {
+      "file": "plugins/love-resources/src/components/WorkbenchExtension.svelte",
+      "beforeSha256": "5080f2725a833565c4fa9f6fb175f807fd934c124bef30abb4c0ff5eb2876ff0",
+      "sha256": "ed98e5b5c83dd8da5f3ed8affcfe2b3354c55d30f9875087866a6b6a16af12cf"
+    },
+    {
+      "file": "plugins/love-resources/src/components/meeting/widget/MeetingWidget.svelte",
+      "beforeSha256": "b305c7b675b7627202de9813080e6ac0656f80da118bf673c0b21baf36f4278e",
+      "sha256": "0ab68fcd0ab0319691ee198be604aa240fc3b3f9925044dda183d8f0fe16a0f4"
+    },
+    {
+      "file": "services/love/src/main.ts",
+      "beforeSha256": "0c007a4169babc491a432c501270b0fb65ca1684ace4b500953bcbdff6097d6c",
+      "sha256": "f4d1612f4b95f88c6c7d89b2805db4bdcdf414f00e336308bc187a14b582cf76"
+    },
+    {
+      "file": "services/love/src/config.ts",
+      "beforeSha256": "afcfa2298b81ffa1cf59fba3f729a702ce40d580918b059430f120808db59b13",
+      "sha256": "12f73a8d3a77bc5dc44873fc28a4e0fe83898242e270eca5b9948062fea94bca"
+    },
+    {
+      "file": "services/love/src/capture.ts",
+      "beforeSha256": null,
+      "sha256": "e97825e793af1aa70b5943b34d4a752407396a87e949185931c00e15cb83ed25"
+    },
+    {
+      "file": "services/love/src/captureRoutes.ts",
+      "beforeSha256": null,
+      "sha256": "97399b5f7403fa6526135912a10f4244a4237791edb8f4b5366ac40de6607a2c"
+    },
+    {
+      "file": "plugins/love-resources/src/capture-client.ts",
+      "beforeSha256": null,
+      "sha256": "1cf68dae7fa49a3a5d499ab1f51a3e9134563c404c2815fd9a937735a8016bed"
+    },
+    {
+      "file": "plugins/love-resources/src/capture-state.ts",
+      "beforeSha256": null,
+      "sha256": "350e40073d5083b22ee39d9953165480903c6c85b7ab96f3cb3344b792803308"
+    },
+    {
+      "file": "plugins/love-resources/src/capture-export.ts",
+      "beforeSha256": null,
+      "sha256": "31fdbedfe32d54683c60aa2ae36a794f5bdef35bbe0cfe5802b11da68d6d209f"
+    },
+    {
+      "file": "plugins/love-resources/src/components/CapturePanel.svelte",
+      "beforeSha256": null,
+      "sha256": "7bc3d46759e88fead4588969ed4f19ae1f20f39ba2af44131bfe0434580c09c8"
+    },
+    {
+      "file": "plugins/love-resources/src/components/CaptureNotice.svelte",
+      "beforeSha256": null,
+      "sha256": "cefbed4bf2c240dd1955ee9ef10ca6ba20048ed0c53afd69046ea46992ee421d"
+    }
+  ],
+  "deployed": false
+}

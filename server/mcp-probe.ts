@@ -92,7 +92,7 @@ async function probeRemoteMcpServer(
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
   const client = new RemoteMcpClient(server);
   try {
-    await client.initialize("OpenMausBot", combined);
+    await client.initialize("Chief Executive Suite", combined);
     const result = await client.request("tools/list", {}, combined);
     const tools = result && typeof result === "object" ? (result as { tools?: unknown }).tools : undefined;
     if (!Array.isArray(tools)) return { ok: false, error: "The server did not return a valid MCP tools list." };
@@ -223,7 +223,7 @@ function probeStdioMcpServer(
       params: {
         protocolVersion: "2025-06-18",
         capabilities: {},
-        clientInfo: { name: "OpenMausBot", version: "probe" },
+        clientInfo: { name: "Chief Executive Suite", version: "probe" },
       },
     });
   });

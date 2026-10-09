@@ -1,0 +1,58 @@
+{
+  "baseRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "release": "s0.7.426",
+  "patch": "0002-member-meeting-admission.patch",
+  "patchSha256": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+  "files": [
+    {
+      "path": "services/love/src/admission.ts",
+      "sha256": "64324c918761693814b56547e1abf4146e42738e94c23d50aa9a73274c21dd99"
+    },
+    {
+      "path": "services/love/src/main.ts",
+      "sha256": "0c007a4169babc491a432c501270b0fb65ca1684ace4b500953bcbdff6097d6c"
+    },
+    {
+      "path": "services/love/src/config.ts",
+      "sha256": "afcfa2298b81ffa1cf59fba3f729a702ce40d580918b059430f120808db59b13"
+    },
+    {
+      "path": "services/love/src/utils.ts",
+      "sha256": "0d15b5efca0b57ff13faeefde6166dc5c6d9255d635994503b167aad309a5dc9"
+    },
+    {
+      "path": "services/love/src/workspaceClient.ts",
+      "sha256": "9baa128c1d51a7563dcbf741c529cb74daa01e6476db69bef14db6a0be5b7e5c"
+    },
+    {
+      "path": "plugins/love/src/types.ts",
+      "sha256": "e41561e1672d915d5f3fa99fdcf2601080f447476f6c9fa308a7f8d52ef0ceb6"
+    },
+    {
+      "path": "plugins/love/src/utils.ts",
+      "sha256": "6a801f508c025ac0aba3c45da1aa80c54c982b4f78b2bb252edda91ab82bc7cd"
+    },
+    {
+      "path": "models/love/src/index.ts",
+      "sha256": "918ea6576b17ddcc8c90a9f983f86767c89105ea043c096b84c805feeb3bba22"
+    },
+    {
+      "path": "server-plugins/love-resources/src/index.ts",
+      "sha256": "c6933a3bebf0343cc7115d8e11942f26fbb8fb96626ec2f8bbfaaaa112faea8a"
+    },
+    {
+      "path": "plugins/love-resources/src/invites.ts",
+      "sha256": "f00e348ca412ba07764a7871adb2fbe3c68f207c2131677cd79d78939ddfe16b"
+    },
+    {
+      "path": "plugins/love-resources/src/loveClient.ts",
+      "sha256": "9ad910fb19a660bd030f6a57ef2a18f1e1dad54c9c90aced644738a2899a3f8c"
+    },
+    {
+      "path": "plugins/love-resources/src/meetings.ts",
+      "sha256": "203a98a13fb905d1280b34e1cbab3e915737d42f6fb81c5da345ed9264822f23"
+    }
+  ],
+  "license": "EPL-2.0",
+  "deployed": false
+}

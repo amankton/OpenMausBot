@@ -238,9 +238,9 @@ function gitEnv(shadow: string, cwd: string): NodeJS.ProcessEnv {
   env.GIT_WORK_TREE = resolve(cwd);
   env.GIT_CONFIG_GLOBAL = join(shadow, "gitconfig");
   env.GIT_CONFIG_SYSTEM = join(shadow, "gitconfig_empty");
-  env.GIT_AUTHOR_NAME = "OpenMausBot Checkpoint";
+  env.GIT_AUTHOR_NAME = "Chief Executive Suite Checkpoint";
   env.GIT_AUTHOR_EMAIL = "checkpoint@openmausbot.local";
-  env.GIT_COMMITTER_NAME = "OpenMausBot Checkpoint";
+  env.GIT_COMMITTER_NAME = "Chief Executive Suite Checkpoint";
   env.GIT_COMMITTER_EMAIL = "checkpoint@openmausbot.local";
   return env;
 }

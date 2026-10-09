@@ -6,7 +6,7 @@
 //
 //   openmausbot setup [--data-dir ~/.openmausbot]
 //   openmausbot start [serve options]
-//   openmausbot serve [--port 8799] [--data-dir ~/.openmausbot] [--label "cab mini"]
+//   openmausbot serve [--port 8899] [--data-dir ~/.openmausbot] [--label "cab mini"]
 //                     [--public-url https://host] [--tailscale | --tunnel | --domain HOST] [--no-pair]
 //   openmausbot pair  [--label "My MacBook"] [--client] [--public-url https://host]
 //   openmausbot sessions [revoke <id>]
@@ -128,8 +128,8 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env):
   }
   const options: CliOptions = {
     command: command === "--help" || command === "-h" ? "help" : (command as CliOptions["command"]),
-    port: Number(env.OMB_PORT || 8799),
-    dataDir: env.OMB_DATA_DIR || join(homedir(), ".openmausbot"),
+    port: Number(env.OMB_PORT || 8899),
+    dataDir: env.OMB_DATA_DIR || join(homedir(), ".chief-executive-suite"),
     tailscale: false,
     tunnel: false,
     client: false,
@@ -426,7 +426,7 @@ function startupPreferences(options: CliOptions): NonNullable<AppConfig["cliStar
 async function showPhonePairing(options: CliOptions, origin: string | undefined, log: (line: string) => void): Promise<boolean> {
   const ready = !!origin && await verifyPhoneEndpoint(options.port, origin);
   if (!ready) {
-    log("Phone access is not reachable yet. OpenMausBot is ready on this computer; no phone pairing code was created.");
+    log("Phone access is not reachable yet. Chief Executive Suite is ready on this computer; no phone pairing code was created.");
     log("Check the HTTPS connection, then run openmausbot pair again with the same --data-dir and --port.");
     return false;
   }
@@ -625,7 +625,7 @@ export async function runStatus(options: CliOptions, io: CliIo = defaultIo()): P
   try {
     const res = await fetch(`http://127.0.0.1:${options.port}/.well-known/openmausbot/environment`);
     const body: any = await res.json();
-    io.log(options.json ? JSON.stringify(body, null, 2) : `${body.label} · OpenMausBot ${body.version} on ${body.platform} · id ${body.environmentId}`);
+    io.log(options.json ? JSON.stringify(body, null, 2) : `${body.label} · Chief Executive Suite ${body.version} on ${body.platform} · id ${body.environmentId}`);
   } catch {
     io.error(`no OpenMausBot server on http://127.0.0.1:${options.port}`);
     code = 1;
@@ -1036,12 +1036,12 @@ export async function runServe(options: CliOptions, log: (line: string) => void 
       await new Promise((r) => setTimeout(r, 250));
     }
     if (exited !== null) {
-      if (exited !== 0) log(`OpenMausBot could not start.${logPath ? ` Details: ${logPath}` : " See the output above."}`);
+      if (exited !== 0) log(`Chief Executive Suite could not start.${logPath ? ` Details: ${logPath}` : " See the output above."}`);
       return exited;
     }
     if (stopping) return await childExit;
     if (!(await serverUp(options.port, child.pid))) {
-      console.error(`OpenMausBot did not become ready within a minute.${logPath ? ` Details: ${logPath}` : " See its output above."}`);
+      console.error(`Chief Executive Suite did not become ready within a minute.${logPath ? ` Details: ${logPath}` : " See its output above."}`);
       await stop();
       return 1;
     }
@@ -1130,7 +1130,7 @@ export async function serveUntilStopped(options: CliOptions, run: (options: CliO
   for (;;) {
     const code = await run(launch);
     if (!policy.again(code)) return code;
-    console.log("\nOpenMausBot is starting again to finish installing a copy from the desktop app…");
+    console.log("\nChief Executive Suite is starting again to finish installing a copy from the desktop app…");
     launch = { ...options, pair: false, open: false };
   }
 }
@@ -1190,7 +1190,7 @@ export async function runOnboardingCommand(
     }
     if (options.command === "setup") {
       io.log("\nAll set. Start with: openmausbot (or npx openmausbot without a global install).");
-      if (options.dataDir !== join(homedir(), ".openmausbot") || options.port !== 8799) {
+      if (options.dataDir !== join(homedir(), ".chief-executive-suite") || options.port !== 8899) {
         io.log(`Use the same --data-dir (${options.dataDir}) and --port (${options.port}) options when starting.`);
       }
       return 0;

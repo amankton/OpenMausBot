@@ -41,7 +41,7 @@ export const brandSchema = z
 
 export type Brand = z.infer<typeof brandSchema>;
 
-export const DEFAULT_BRAND: Brand = { name: "OpenMausBot" };
+export const DEFAULT_BRAND: Brand = { name: "Chief Executive Suite", tagline: "Your personal team of AI agents.", accent: "#2F58FF", logo: "/brand/chief-avatar-ink.svg", favicon: "/app-icon.svg" };
 
 export interface BrandStatus {
   brand: Brand;

@@ -1,0 +1,1133 @@
+diff --git a/plugins/recorder-resources/src/uploader.ts b/plugins/recorder-resources/src/uploader.ts
+index efd043b..022272b 100644
+--- a/plugins/recorder-resources/src/uploader.ts
++++ b/plugins/recorder-resources/src/uploader.ts
+@@ -13,9 +13,16 @@
+ // limitations under the License.
+ //
+ 
+-import * as tus from 'tus-js-client'
+-import type { RecordingResult } from './types'
+-import type { ChunkReader } from './stream'
++import { type Blob as PlatformBlob, type Ref, type WorkspaceUuid } from '@hcengineering/core'
++import { fixWebmDuration } from '@fix-webm-duration/fix'
++import { getMetadata } from '@hcengineering/platform'
++import presentation, { generateFileId, getCurrentWorkspaceUuid, getFileStorage, uploadFile } from '@hcengineering/presentation'
++import { type ChunkReader } from './stream'
++import { type RecordingResult } from './types'
++
++export const MAX_RECORDING_BYTES = 64 * 1024 * 1024
++export const MAX_RECORDING_MS = 120_000
++export const RECORDING_LIMIT_LABEL = 'Up to 2 minutes or 64 MiB. Recording stops automatically.'
+ 
+ export interface Uploader {
+   start: () => void
+@@ -23,79 +30,116 @@ export interface Uploader {
+   wait: () => Promise<RecordingResult>
+ }
+ 
+-export interface TusUploaderOptions {
+-  endpoint: string
+-  workspace: string
+-  token: string
+-  contentType: string
+-  width: number
+-  height: number
+-}
+-
+-export class TusUploader implements Uploader {
+-  private readonly upload: tus.Upload
+-  private readonly waiterPromise: Promise<RecordingResult>
+-  private waiterResolve: (value: RecordingResult) => void = () => {}
+-  private waiterReject: (reason?: any) => void = () => {}
+-  private bytesSent = 0
++export class FileStorageUploader implements Uploader {
++  private readonly abort = new AbortController()
++  private result: Promise<RecordingResult> | undefined
++  private attempted = false
++  private removed = false
++  private readonly uuid = generateFileId() as Ref<PlatformBlob>
++  private readonly storage = getFileStorage()
++  private readonly token = getMetadata(presentation.metadata.Token) ?? ''
+ 
+-  constructor (reader: ChunkReader, options: TusUploaderOptions) {
+-    const { endpoint, workspace, token, width, height, contentType } = options
++  constructor (
++    private readonly reader: ChunkReader,
++    private readonly options: { workspace: WorkspaceUuid, width: number, height: number, contentType: string, durationMs: () => number }
++  ) {}
+ 
+-    this.waiterPromise = new Promise<RecordingResult>((resolve, reject) => {
+-      this.waiterResolve = resolve
+-      this.waiterReject = reject
+-    })
+-
+-    console.debug('TusUploader: uploading', workspace, endpoint)
++  public start (): void {
++    this.result ??= this.collectAndUpload()
++    // The consumer may still be recording when cancellation or a read error occurs.
++    void this.result.catch(() => {})
++  }
+ 
+-    this.upload = new tus.Upload(reader, {
+-      retryDelays: [0, 1000, 1500, 2000, 2500, 3000],
+-      chunkSize: 2 * 1024 * 1024,
+-      uploadLengthDeferred: true,
+-      endpoint,
+-      metadata: {
+-        width: width.toString(),
+-        height: height.toString(),
+-        contentType,
+-        token,
+-        workspace
+-      },
+-      onProgress: (bytesSent) => {
+-        this.bytesSent = bytesSent
+-      },
+-      onSuccess: () => {
+-        const uuid = this.upload.url?.split('/').pop()
+-        console.debug('TusUploader: upload success:', uuid)
+-        if (uuid === undefined) {
+-          console.error('TusUploader: upload URL does not contain upload ID')
+-          return
+-        }
++  public assertWorkspace (): void {
++    if (getCurrentWorkspaceUuid() !== this.options.workspace) throw new Error('Return to the original workspace to save this recording.')
++  }
+ 
+-        const size = this.bytesSent
+-        const type = contentType.split(';')[0]
+-        this.waiterResolve({ uuid, type, width, height, size })
+-      },
+-      onError: (error) => {
+-        console.error('TusUploader: upload failed:', error)
+-        this.waiterReject(error)
+-      }
+-    })
++  private async remove (): Promise<void> {
++    if (!this.attempted || this.removed) return
++    let timeout: ReturnType<typeof setTimeout> | undefined
++    try {
++      await Promise.race([
++        this.storage.deleteFile(this.token, this.options.workspace, this.uuid).then(() => { this.removed = true }),
++        new Promise<never>((resolve, reject) => {
++          timeout = setTimeout(() => { reject(new Error('Recording cleanup timed out. An unattached recording may remain in this workspace.')) }, 5000)
++        })
++      ])
++    } finally {
++      clearTimeout(timeout)
++    }
+   }
+ 
+-  public start (): void {
+-    this.upload.start()
++  private async collectAndUpload (): Promise<RecordingResult> {
++    const chunks: Blob[] = []
++    let size = 0
++    let timeout: ReturnType<typeof setTimeout> | undefined
++    try {
++      for (;;) {
++        const { done, value } = await this.reader.read()
++        if (done) break
++        if (value === undefined || value.size === 0) continue
++        if (size + value.size > MAX_RECORDING_BYTES) throw new Error('Recording exceeded 64 MiB. Please record a shorter clip.')
++        chunks.push(value)
++        size += value.size
++      }
++      this.abort.signal.throwIfAborted()
++      if (size === 0) throw new Error('The recording is empty. Please try again.')
++      this.assertWorkspace()
++      const type = this.options.contentType.split(';')[0]
++      const duration = this.options.durationMs()
++      if (!Number.isFinite(duration) || duration <= 0) throw new Error('The recording has no valid duration. Please try again.')
++      const raw = new Blob(chunks, { type })
++      chunks.length = 0
++      // MediaRecorder WebM omits Duration; the retained native player cannot seek it.
++      // Bound the asynchronous repair wait. Parsing itself is synchronous inside the library.
++      timeout = setTimeout(() => { this.abort.abort(new Error('Recording processing timed out. Please try a shorter clip.')) }, 10_000)
++      let aborted: (() => void) | undefined
++      let fixed: Blob
++      try {
++        fixed = await Promise.race([
++          fixWebmDuration(raw, duration, { logger: false }),
++          new Promise<never>((resolve, reject) => {
++            aborted = () => { reject(this.abort.signal.reason) }
++            this.abort.signal.addEventListener('abort', aborted, { once: true })
++          })
++        ])
++      } finally {
++        if (aborted !== undefined) this.abort.signal.removeEventListener('abort', aborted)
++        clearTimeout(timeout)
++      }
++      this.abort.signal.throwIfAborted()
++      this.assertWorkspace()
++      if (fixed.size > MAX_RECORDING_BYTES) throw new Error('Recording exceeded 64 MiB. Please record a shorter clip.')
++      const file = new File([fixed], 'Recording.webm', { type })
++      timeout = setTimeout(() => { this.abort.abort(new Error('Recording upload timed out. Please try again.')) }, 120_000)
++      this.attempted = true
++      await uploadFile(file, this.uuid, { signal: this.abort.signal, expectedWorkspace: this.options.workspace })
++      this.abort.signal.throwIfAborted()
++      this.assertWorkspace()
++      return {
++        uuid: this.uuid, type, size: file.size, file,
++        width: this.options.width, height: this.options.height,
++        discard: async () => { await this.remove() },
++        assertWorkspace: () => { this.assertWorkspace() }
++      }
++    } catch (error) {
++      await this.remove().catch(() => { console.warn('Recording upload cleanup failed; the workspace may contain an unattached recording.') })
++      throw error
++    } finally {
++      clearTimeout(timeout)
++      chunks.length = 0
++    }
+   }
+ 
+   public async wait (): Promise<RecordingResult> {
+-    return await this.waiterPromise
++    this.start()
++    return await (this.result as Promise<RecordingResult>)
+   }
+ 
+   public async cancel (): Promise<void> {
+-    try {
+-      await this.upload.abort()
+-    } catch (error) {
+-      console.error('TusUploader: abort failed:', error)
+-    }
++    this.abort.abort(new Error('Recording cancelled'))
++    this.reader.fail(new Error('Recording cancelled'))
++    await this.result?.catch(() => {})
++    await this.remove()
+   }
+ }
+diff --git a/plugins/recorder-resources/src/screen-recorder.ts b/plugins/recorder-resources/src/screen-recorder.ts
+index 3aa5356..4ccef14 100644
+--- a/plugins/recorder-resources/src/screen-recorder.ts
++++ b/plugins/recorder-resources/src/screen-recorder.ts
+@@ -13,18 +13,20 @@
+ // limitations under the License.
+ //
+ 
+-import { getMetadata } from '@hcengineering/platform'
+-import presentation from '@hcengineering/presentation'
++import { type WorkspaceUuid } from '@hcengineering/core'
++import { getCurrentWorkspaceUuid } from '@hcengineering/presentation'
+ 
+ import { DefaultAudioBps, DefaultChunkIntervalMs, DefaultVideoBps } from './const'
+ import { Recorder } from './recorder'
+ import { type RecordingResult } from './types'
+-import { type Uploader, TusUploader } from './uploader'
++import { type Uploader, FileStorageUploader, MAX_RECORDING_MS } from './uploader'
+ import { getVideoDimensions } from './utils'
+ 
+-import plugin from './plugin'
+ 
+ export interface ScreenRecorderOptions {
++  workspace?: WorkspaceUuid
++  onAutoStop?: () => void
++  onCaptureStopped?: () => void
+   audioBps?: number
+   videoBps?: number
+   videoRes?: 720 | 1080 | 1440 | 2160 | number
+@@ -41,28 +43,23 @@ export async function createScreenRecorder (
+ 
+   const { width, height } = await getVideoDimensions(stream)
+ 
+-  const token = getMetadata(presentation.metadata.Token) ?? ''
+-  const workspace = getMetadata(presentation.metadata.WorkspaceUuid) ?? ''
+-  const endpoint = getMetadata(plugin.metadata.StreamUrl) ?? ''
+-
+-  const recorder = new Recorder(stream, { chunkIntervalMs, audioBps, videoBps })
+-  const contentType = recorder.mimeType
+-  const uploader = new TusUploader(recorder.asStream(), {
+-    token,
+-    workspace,
+-    endpoint,
+-    width,
+-    height,
+-    contentType
++  const workspace = options.workspace ?? getCurrentWorkspaceUuid()
++  if (workspace !== getCurrentWorkspaceUuid()) throw new Error('Return to the original workspace before recording.')
++  const recorder = new Recorder(stream, { chunkIntervalMs, audioBps, videoBps, onAutoStop: options.onAutoStop })
++  const uploader = new FileStorageUploader(recorder.asStream(), {
++    workspace, width, height, contentType: recorder.mimeType, durationMs: () => recorder.getRecordedTimeMs()
+   })
+-  return new ScreenRecorder(stream, recorder, uploader)
++  return new ScreenRecorder(stream, recorder, uploader, options.onAutoStop, options.onCaptureStopped)
+ }
+ 
+ export class ScreenRecorder {
++  private limitTimer: ReturnType<typeof setTimeout> | undefined
+   constructor (
+     readonly stream: MediaStream,
+     private readonly recorder: Recorder,
+-    private readonly uploader: Uploader
++    private readonly uploader: Uploader,
++    private readonly onAutoStop?: () => void,
++    private readonly onCaptureStopped?: () => void
+   ) {}
+ 
+   get elapsedTime (): number {
+@@ -72,6 +69,7 @@ export class ScreenRecorder {
+   public async start (): Promise<void> {
+     this.uploader.start()
+     this.recorder.start()
++    this.limitTimer = setTimeout(() => { this.onAutoStop?.() }, MAX_RECORDING_MS)
+   }
+ 
+   public async pause (): Promise<void> {
+@@ -83,12 +81,24 @@ export class ScreenRecorder {
+   }
+ 
+   public async stop (): Promise<RecordingResult> {
+-    await this.recorder.stop()
++    clearTimeout(this.limitTimer)
++    try {
++      await this.recorder.stop()
++    } finally {
++      this.onCaptureStopped?.()
++    }
+     return await this.uploader.wait()
+   }
+ 
+   public async cancel (): Promise<void> {
+-    await this.recorder.stop()
+-    await this.uploader.cancel()
++    clearTimeout(this.limitTimer)
++    // Abort collection first so stopping cannot initiate an unwanted upload.
++    const cancelled = this.uploader.cancel()
++    try {
++      await this.recorder.stop()
++    } finally {
++      this.onCaptureStopped?.()
++    }
++    await cancelled
+   }
+ }
+diff --git a/plugins/recorder-resources/src/stream.ts b/plugins/recorder-resources/src/stream.ts
+index 179a9b6..1005bf1 100644
+--- a/plugins/recorder-resources/src/stream.ts
++++ b/plugins/recorder-resources/src/stream.ts
+@@ -20,43 +20,36 @@ export interface ChunkReadResult {
+ 
+ export class ChunkReader {
+   private readonly chunks: Blob[] = []
+-  private done: boolean = false
+-  private awaitingResolve: ((val: ChunkReadResult | Promise<ChunkReadResult>) => void) | null = null
++  private done = false
++  private failure: Error | undefined
++  private pending: { resolve: (value: ChunkReadResult) => void, reject: (error: Error) => void } | undefined
+ 
+   public async read (): Promise<ChunkReadResult> {
+-    if (this.done && this.chunks.length === 0) {
+-      return { done: true, value: undefined }
+-    }
+-    if (this.chunks.length === 0) {
+-      return await new Promise<ChunkReadResult>((resolve) => {
+-        this.awaitingResolve = resolve
+-      })
+-    }
+-    return { done: false, value: this.chunks.shift() }
++    if (this.failure !== undefined) throw this.failure
++    if (this.chunks.length > 0) return { done: false, value: this.chunks.shift() }
++    if (this.done) return { done: true, value: undefined }
++    return await new Promise((resolve, reject) => { this.pending = { resolve, reject } })
+   }
+ 
+   public push (blob: Blob): void {
+-    if (this.done) {
+-      console.warn('ChunkReader: push into closed stream')
+-      // close just in case someone is waiting for a chunk
+-      if (this.awaitingResolve !== null) {
+-        this.awaitingResolve({ done: true, value: undefined })
+-      }
+-      return
+-    }
+-
+-    this.chunks.push(blob)
+-    if (this.awaitingResolve !== null) {
+-      this.awaitingResolve(this.read())
+-      this.awaitingResolve = null
+-    }
++    if (this.done) return
++    if (this.pending !== undefined) {
++      this.pending.resolve({ done: false, value: blob })
++      this.pending = undefined
++    } else this.chunks.push(blob)
+   }
+ 
+   public close (): void {
+     this.done = true
+-    if (this.awaitingResolve !== null) {
+-      this.awaitingResolve(this.read())
+-      this.awaitingResolve = null
+-    }
++    this.pending?.resolve({ done: true, value: undefined })
++    this.pending = undefined
++  }
++
++  public fail (error: Error): void {
++    this.failure = error
++    this.done = true
++    this.chunks.length = 0
++    this.pending?.reject(error)
++    this.pending = undefined
+   }
+ }
+diff --git a/plugins/recorder-resources/src/recorder.ts b/plugins/recorder-resources/src/recorder.ts
+index d38bd6f..59a3962 100644
+--- a/plugins/recorder-resources/src/recorder.ts
++++ b/plugins/recorder-resources/src/recorder.ts
+@@ -16,6 +16,7 @@
+ import { releaseStream } from '@hcengineering/media'
+ import { ChunkReader } from './stream'
+ import { formatElapsedTime } from './utils'
++import { MAX_RECORDING_BYTES } from './uploader'
+ 
+ const chunkIntervalMs = 1000
+ 
+@@ -23,6 +24,7 @@ export interface RecorderOptions {
+   chunkIntervalMs?: number
+   audioBps?: number
+   videoBps?: number
++  onAutoStop?: () => void
+ }
+ 
+ export class Recorder {
+@@ -31,6 +33,8 @@ export class Recorder {
+   private readonly chunkStream: ChunkReader
+   private readonly chunkInterval: number
+   // Total elapsed recording time in milliseconds (excluding pauses)
++  private bytes = 0
++  private stopping: Promise<void> | undefined
+   private elapsedMs: number = 0
+   // Timestamp when recording or resuming started; null if paused or not started
+   private lastStartTime: number | null = null
+@@ -59,7 +63,14 @@ export class Recorder {
+     this.mediaRecorder.ondataavailable = async (e) => {
+       const kb = Math.floor(e.data.size / 1024)
+       console.debug('Recorder: MediaRecorder data available', formatElapsedTime(e.timecode), `${kb}KB`)
++      if (this.bytes + e.data.size > MAX_RECORDING_BYTES) {
++        this.chunkStream.fail(new Error('Recording exceeded 64 MiB. Please record a shorter clip.'))
++        this.options.onAutoStop?.()
++        return
++      }
++      this.bytes += e.data.size
+       this.chunkStream.push(e.data)
++      if (this.bytes >= MAX_RECORDING_BYTES - 2 * 1024 * 1024) this.options.onAutoStop?.()
+     }
+     this.mediaRecorder.onstart = () => {
+       console.debug('Recorder: MediaRecorder started', new Date().toISOString())
+@@ -76,7 +87,8 @@ export class Recorder {
+     }
+     this.mediaRecorder.onerror = (ev) => {
+       console.error('Recorder: MediaRecorder error:', ev)
+-      this.chunkStream.close()
++      this.chunkStream.fail(new Error('The browser could not finish this recording. Please try again.'))
++      this.options.onAutoStop?.()
+     }
+   }
+ 
+@@ -102,6 +114,11 @@ export class Recorder {
+   }
+ 
+   public async stop (): Promise<void> {
++    this.stopping ??= this.finish()
++    await this.stopping
++  }
++
++  private async finish (): Promise<void> {
+     if (this.lastStartTime !== null) {
+       this.elapsedMs += Date.now() - this.lastStartTime
+       this.lastStartTime = null
+@@ -151,9 +168,20 @@ export class Recorder {
+ 
+     try {
+       // After requesting data, we can safely stop the recorder
+-      this.mediaRecorder.stop()
++      if (this.mediaRecorder.state !== 'inactive') {
++        const stopped = new Promise<void>((resolve) => {
++          const timeout = setTimeout(() => {
++            this.chunkStream.fail(new Error('The browser did not finish the recording.'))
++            resolve()
++          }, 5000)
++          this.mediaRecorder.addEventListener('stop', () => { clearTimeout(timeout); resolve() }, { once: true })
++        })
++        this.mediaRecorder.stop()
++        releaseStream(this.mediaStream)
++        await stopped
++      } else this.chunkStream.close()
+     } catch (err) {
+-      console.error('Recorder: error stopping MediaRecorder:', err)
++      this.chunkStream.fail(new Error('The browser could not stop the recording.'))
+     } finally {
+       releaseStream(this.mediaStream)
+     }
+@@ -176,7 +204,7 @@ export class Recorder {
+ }
+ 
+ function getSupportedMimeTypes (): string[] {
+-  const containers = ['mp4', 'webm', 'ogg', 'x-matroska']
++  const containers = ['webm']
+   const codecs = [
+     'vp9,opus',
+     'vp8,opus',
+diff --git a/plugins/recorder-resources/src/stores/recorder.ts b/plugins/recorder-resources/src/stores/recorder.ts
+index 32c1f12..89e4059 100644
+--- a/plugins/recorder-resources/src/stores/recorder.ts
++++ b/plugins/recorder-resources/src/stores/recorder.ts
+@@ -21,17 +21,19 @@ import { type ScreenRecorder, createScreenRecorder } from '../screen-recorder'
+ import { composer } from '../stores/composer'
+ import { camStream, manager, screenStream } from '../stores/manager'
+ import type { RecordingResult } from '../types'
+-import { deleteFile } from '@hcengineering/presentation'
++import { getCurrentWorkspaceUuid } from '@hcengineering/presentation'
+ 
+-export type RecorderState = 'idle' | 'ready' | 'recording' | 'paused' | 'stopping' | 'stopped'
++export type RecorderState = 'idle' | 'ready' | 'recording' | 'paused' | 'stopping' | 'stopped' | 'error'
+ 
+ export interface RecorderConfig {
+   onFileUploaded?: FileUploadCallback
+   target?: FileUploadTarget
++  onStopped?: () => void
+ }
+ 
+ export interface RecorderStore {
+   state: RecorderState
++  error?: string
+   config: RecorderConfig
+   elapsedTime: number
+   result: RecordingResult | null
+@@ -65,6 +67,9 @@ function createRecorder (): Readable<RecorderStore> & Recorder {
+     result: null
+   })
+ 
++  let sourceWorkspace = getCurrentWorkspaceUuid()
++  let generation = 0
++  let startPending: number | undefined
+   let elapsedTimeInterval: number | undefined
+   let screenRecorder: ScreenRecorder | null = null
+ 
+@@ -114,10 +119,12 @@ function createRecorder (): Readable<RecorderStore> & Recorder {
+         return
+       }
+ 
++      sourceWorkspace = getCurrentWorkspaceUuid()
++      generation++
+       manager.initialize()
+       composer.initialize()
+ 
+-      updateStore({ state: 'ready', config })
++      updateStore({ state: 'ready', config, error: undefined })
+     },
+ 
+     async start (): Promise<void> {
+@@ -126,26 +133,52 @@ function createRecorder (): Readable<RecorderStore> & Recorder {
+       if (state !== 'ready' && state !== 'stopped') {
+         throw new Error(`Cannot start recording from state: ${state}`)
+       }
++      if (startPending === generation) return
++      const startedGeneration = generation
++      startPending = startedGeneration
+ 
+       const { screenStream, micStream } = get(manager)
+       const canvasStream = composer.getStream()
+       const stream = combineStreams(canvasStream, micStream, screenStream)
+ 
+       // Create and start screen recorder
+-      screenRecorder = await createScreenRecorder(stream)
+-
+-      await screenRecorder.start()
+-
+-      startElapsedTimer()
+-      updateStore({ state: 'recording' })
++      try {
++        const active = await createScreenRecorder(stream, {
++          workspace: sourceWorkspace,
++          onAutoStop: () => { if (generation === startedGeneration) void recorder.stop() },
++          onCaptureStopped: () => {
++            if (generation !== startedGeneration) return
++            manager.cleanup()
++            composer.cleanup()
++            if (get(store).state === 'stopping') get(store).config.onStopped?.()
++          }
++        })
++        if (generation !== startedGeneration) {
++          await active.cancel()
++          return
++        }
++        screenRecorder = active
++        await screenRecorder.start()
++        startElapsedTimer()
++        updateStore({ state: 'recording' })
++      } catch (error) {
++        stream.getTracks().forEach((track) => { track.stop() })
++        if (generation !== startedGeneration) return
++        await screenRecorder?.cancel().catch(() => {})
++        screenRecorder = null
++        manager.cleanup()
++        composer.cleanup()
++        updateStore({ state: 'error', error: error instanceof Error ? error.message : 'Recording could not start.' })
++        get(store).config.onStopped?.()
++      } finally {
++        if (startPending === startedGeneration) startPending = undefined
++      }
+     },
+ 
+     async stop (): Promise<void> {
+       const { state } = get(store)
+ 
+-      if (state !== 'recording' && state !== 'paused') {
+-        throw new Error(`Cannot stop from state: ${state}`)
+-      }
++      if (state !== 'recording' && state !== 'paused') return
+ 
+       if (screenRecorder === null) {
+         throw new Error('No active recording')
+@@ -154,13 +187,20 @@ function createRecorder (): Readable<RecorderStore> & Recorder {
+       updateStore({ state: 'stopping' })
+       stopElapsedTimer()
+ 
+-      const result = await screenRecorder.stop()
+-      updateStore({ state: 'stopped', result })
+-
+-      manager.cleanup()
+-      composer.cleanup()
+-
+-      screenRecorder = null
++      const active = screenRecorder
++      try {
++        const result = await active.stop()
++        if (screenRecorder === active) updateStore({ state: 'stopped', result })
++      } catch (error) {
++        if (screenRecorder === active) updateStore({ state: 'error', error: error instanceof Error ? error.message : 'Recording upload failed.' })
++      } finally {
++        if (screenRecorder === active) {
++          screenRecorder = null
++          manager.cleanup()
++          composer.cleanup()
++          get(store).config.onStopped?.()
++        }
++      }
+     },
+ 
+     async pause (): Promise<void> {
+@@ -195,35 +235,26 @@ function createRecorder (): Readable<RecorderStore> & Recorder {
+     },
+ 
+     async cancel (): Promise<void> {
+-      if (screenRecorder !== null) {
+-        await screenRecorder?.cancel()
+-        screenRecorder = null
+-      }
+-
+-      const { result } = get(store)
+-      if (result !== null) {
+-        await deleteFile(result.uuid)
++      try {
++        const result = get(store).result
++        if (result !== null) await result.discard()
++      } finally {
++        await this.cleanup()
+       }
+-
+-      await this.cleanup()
+     },
+ 
+     async cleanup (): Promise<void> {
+-      if (screenRecorder !== null) {
+-        await screenRecorder?.cancel()
+-        screenRecorder = null
++      generation++
++      const active = screenRecorder
++      screenRecorder = null
++      try {
++        await active?.cancel()
++      } finally {
++        stopElapsedTimer()
++        manager.cleanup()
++        composer.cleanup()
++        updateStore({ state: 'idle', config: {}, elapsedTime: 0, result: null, error: undefined })
+       }
+-
+-      stopElapsedTimer()
+-
+-      manager.cleanup()
+-      composer.cleanup()
+-
+-      updateStore({
+-        state: 'idle',
+-        elapsedTime: 0,
+-        result: null
+-      })
+     },
+ 
+     toggleCam (): void {
+diff --git a/plugins/recorder-resources/src/types.ts b/plugins/recorder-resources/src/types.ts
+index e295d01..b1e7dda 100644
+--- a/plugins/recorder-resources/src/types.ts
++++ b/plugins/recorder-resources/src/types.ts
+@@ -25,6 +25,9 @@ export interface RecordingOptions {
+ }
+ 
+ export interface RecordingResult {
++  file: File
++  discard: () => Promise<void>
++  assertWorkspace: () => void
+   uuid: string
+   type: string
+   size: number
+diff --git a/plugins/recorder-resources/src/recording.ts b/plugins/recorder-resources/src/recording.ts
+index 8624b47..031a12f 100644
+--- a/plugins/recorder-resources/src/recording.ts
++++ b/plugins/recorder-resources/src/recording.ts
+@@ -41,7 +41,7 @@ export {
+ export { recorder } from './stores/recorder'
+ 
+ export async function record (config: RecorderConfig): Promise<void> {
+-  await recorder.initialize(config)
++  await recorder.initialize({ ...config, onStopped: showRecordingPopup })
+   showRecordingPopup()
+ }
+ 
+diff --git a/plugins/recorder-resources/src/components/RecordingPopup.svelte b/plugins/recorder-resources/src/components/RecordingPopup.svelte
+index 5db9764..19ea43d 100644
+--- a/plugins/recorder-resources/src/components/RecordingPopup.svelte
++++ b/plugins/recorder-resources/src/components/RecordingPopup.svelte
+@@ -36,6 +36,7 @@
+   import { createEventDispatcher } from 'svelte'
+ 
+   import plugin from '../plugin'
++  import { RECORDING_LIMIT_LABEL } from '../uploader'
+   import { canvasWidth, canvasHeight, canvasStream } from '../stores/composer'
+   import {
+     cancelRecording,
+@@ -77,6 +78,8 @@
+ 
+   const dispatch = createEventDispatcher()
+ 
++  let saveError = ''
++  let saving = false
+   let name = ''
+   let space = plugin.space.Drive
+ 
+@@ -101,90 +104,109 @@
+       (await formatRecordingName(
+         screenShareEnabled ? plugin.string.ScreenRecordingName : plugin.string.CameraRecordingName,
+         new Date()
+-      )) + '.mp4'
++      )) + '.webm'
+   }
+ 
+   async function handleCompleteRecording (): Promise<void> {
+-    if (name.length === 0) return
+-
+-    const {
+-      result,
+-      config: { onFileUploaded, target }
+-    } = state
+-    if (result != null) {
+-      if (onFileUploaded !== undefined) {
+-        const file = new Blob([], { type: result.type })
+-        await onFileUploaded({
+-          name,
+-          file,
+-          uuid: result.uuid as Ref<Blob>,
+-          type: result.type,
+-          path: undefined,
+-          metadata: {
+-            width: result.width,
+-            height: result.height
+-          }
+-        })
+-      }
++    if (name.length === 0 || saving) return
++    saving = true
++    saveError = ''
++    try {
++
++      const {
++        result,
++        config: { onFileUploaded, target }
++      } = state
++      if (result != null) {
++        result.assertWorkspace()
++        if (!name.toLowerCase().endsWith('.webm')) name += '.webm'
++        if (onFileUploaded !== undefined) {
++          const file = result.file
++          await onFileUploaded({
++            name,
++            file,
++            uuid: result.uuid as Ref<Blob>,
++            type: result.type,
++            path: undefined,
++            metadata: {
++              originalWidth: result.width,
++              originalHeight: result.height
++            }
++          })
++        }
+ 
+-      if (target === undefined) {
+-        const client = getClient()
+-        const fileId = await createFile(client, space, drive.ids.Root, {
+-          title: name,
+-          file: result.uuid as Ref<Blob>,
+-          size: result.size,
+-          type: result.type,
+-          lastModified: Date.now(),
+-          metadata: {
+-            width: result.width,
+-            height: result.height
+-          }
+-        })
+-        void openDocFromRef(drive.class.File, fileId)
+-      } else {
+-        void openDocFromRef(target.objectClass, target.objectId)
++        if (target === undefined) {
++          const client = getClient()
++          const fileId = await createFile(client, space, drive.ids.Root, {
++            title: name,
++            file: result.uuid as Ref<Blob>,
++            size: result.size,
++            type: result.type,
++            lastModified: Date.now(),
++            metadata: {
++              originalWidth: result.width,
++              originalHeight: result.height
++            }
++          })
++          void openDocFromRef(drive.class.File, fileId)
++        } else {
++          void openDocFromRef(target.objectClass, target.objectId)
++        }
+       }
+-    }
+ 
+-    await cleanupRecording()
++      await cleanupRecording()
+ 
+-    dispatch('close')
++      dispatch('close')
++    } catch (error) {
++      saveError = error instanceof Error ? error.message : 'Recording could not be saved. Please try again.'
++    } finally {
++      saving = false
++    }
+   }
+ 
+   let messageBox: PopupResult | null = null
+ 
+   async function handleCancelRecording (): Promise<void> {
+-    if (canClosePopup()) {
+-      await cancelRecording()
++    if (saving) return
++    try {
++      if (canClosePopup()) {
++        await cancelRecording()
+ 
+-      dispatch('close')
+-      return
+-    }
++        dispatch('close')
++        return
++      }
+ 
+-    const shouldPause = state.state === 'recording'
+-    if (shouldPause) {
+-      await pauseRecording()
+-    }
++      const shouldPause = state.state === 'recording'
++      if (shouldPause) {
++        await pauseRecording()
++      }
+ 
+-    messageBox = showPopup(
+-      MessageBox,
+-      {
+-        label: plugin.string.CancelRecording,
+-        message: plugin.string.CancelRecordingConfirm
+-      },
+-      undefined,
+-      async (cancel: boolean) => {
+-        messageBox = null
+-        if (cancel) {
+-          await cancelRecording()
+-          dispatch('close')
+-        } else {
+-          if (shouldPause) {
+-            await resumeRecording()
++      messageBox = showPopup(
++        MessageBox,
++        {
++          label: plugin.string.CancelRecording,
++          message: plugin.string.CancelRecordingConfirm
++        },
++        undefined,
++        async (cancel: boolean) => {
++          messageBox = null
++          if (cancel) {
++            try {
++              await cancelRecording()
++              dispatch('close')
++            } catch (error) {
++              saveError = error instanceof Error ? error.message : 'Recording cleanup failed.'
++            }
++          } else {
++            if (shouldPause) {
++              await resumeRecording()
++            }
+           }
+         }
+-      }
+-    )
++      )
++    } catch (error) {
++      saveError = error instanceof Error ? error.message : 'Recording cleanup failed.'
++    }
+   }
+ 
+   export function canClose (): boolean {
+@@ -192,7 +214,7 @@
+   }
+ 
+   function canClosePopup (): boolean {
+-    return state.state === 'idle' || state.state === 'ready'
++    return state.state === 'idle' || state.state === 'ready' || state.state === 'error' || state.state === 'stopping'
+   }
+ 
+   async function handleCamSetting (e: MouseEvent): Promise<void> {
+@@ -271,7 +293,7 @@
+   }
+ 
+   function handleKeyDown (e: KeyboardEvent): void {
+-    if (state?.state === 'stopping') return
++    if (saving) return
+     if (messageBox !== null) return
+ 
+     if (e.key === 'Escape') {
+@@ -306,6 +328,10 @@
+   onCancel={handleCancelRecording}
+   hideFooter
+ >
++  <div class="px-3 py-2" role="note">{RECORDING_LIMIT_LABEL}</div>
++  {#if state.error || saveError}
++    <div class="px-3 py-2" role="alert">{state.error || saveError}</div>
++  {/if}
+   <div class="container p-3 flex-col-center justify-center">
+     {#if state.state === 'ready' && mainStream === null && !loading}
+       <div class="placeholder flex-col-center justify-center">
+@@ -340,7 +366,9 @@
+ 
+   <svelte:fragment slot="afterContent">
+     <div class="hulyModal-footer px-2">
+-      {#if state.state === 'ready'}
++      {#if state.state === 'error'}
++        <button type="button" on:click={handleCancelRecording}>Close recording</button>
++      {:else if state.state === 'ready'}
+         <!-- Recording not started -->
+         <ModernButton
+           size={'small'}
+@@ -427,7 +455,7 @@
+           label={view.string.Save}
+           noFocus
+           on:click={handleCompleteRecording}
+-          disabled={name.length === 0 || space == null}
++          disabled={saving || name.length === 0 || space == null}
+         />
+ 
+         <div class="flex-grow" />
+@@ -461,6 +489,8 @@
+             noFocus
+             on:click={stopRecording}
+           />
++          <span role="status">Uploading recording…</span>
++          <button type="button" on:click={handleCancelRecording}>Cancel upload</button>
+         {:else if state.state === 'recording'}
+           <!-- Recording in progress -->
+           <ModernButton
+diff --git a/plugins/recorder-resources/src/components/WorkbenchExtension.svelte b/plugins/recorder-resources/src/components/WorkbenchExtension.svelte
+index 995e5dd..4b694b4 100644
+--- a/plugins/recorder-resources/src/components/WorkbenchExtension.svelte
++++ b/plugins/recorder-resources/src/components/WorkbenchExtension.svelte
+@@ -1,5 +1,5 @@
+ <script lang="ts">
+-  import { getMetadata } from '@hcengineering/platform'
++  import { getFileStorage } from '@hcengineering/presentation'
+   import { pushRootBarComponent } from '@hcengineering/ui'
+   import { onMount } from 'svelte'
+ 
+@@ -9,8 +9,9 @@
+   const readonly = !hasAccountRole(getCurrentAccount(), AccountRole.Guest)
+ 
+   onMount(() => {
+-    const endpoint = getMetadata(recorder.metadata.StreamUrl) ?? ''
+-    if (endpoint !== '' && !readonly) {
++    let available = false
++    try { available = getFileStorage() !== undefined && typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('video/webm') } catch {}
++    if (available && !readonly) {
+       pushRootBarComponent('right', recorder.component.RecorderExt, 1300)
+     }
+   })
+diff --git a/plugins/recorder-resources/src/components/RecorderExt.svelte b/plugins/recorder-resources/src/components/RecorderExt.svelte
+index db05c0c..a38c2ae 100644
+--- a/plugins/recorder-resources/src/components/RecorderExt.svelte
++++ b/plugins/recorder-resources/src/components/RecorderExt.svelte
+@@ -13,7 +13,6 @@
+ // limitations under the License.
+ -->
+ <script lang="ts">
+-  import { getMetadata } from '@hcengineering/platform'
+   import { Icon, tooltip } from '@hcengineering/ui'
+   import { onDestroy } from 'svelte'
+ 
+@@ -24,7 +23,7 @@
+   import { cancelRecording, recorderState, record, stopRecording } from '../recording'
+   import { formatElapsedTime } from '../utils'
+ 
+-  const endpoint = getMetadata(plugin.metadata.StreamUrl) ?? ''
++  const available = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('video/webm')
+ 
+   $: state = $recorderState.state
+   $: elapsedTime = $recorderState.elapsedTime
+@@ -38,8 +37,8 @@
+   })
+ </script>
+ 
+-{#if endpoint !== ''}
+-  {#if state !== 'stopped' && state !== 'idle' && state !== 'ready'}
++{#if available}
++  {#if state !== 'stopped' && state !== 'idle' && state !== 'ready' && state !== 'error'}
+     <button
+       class="antiButton ghost jf-center bs-none no-focus statusButton negative"
+       style="padding-left: 0.25rem"
+diff --git a/packages/presentation/src/file.ts b/packages/presentation/src/file.ts
+index bef82bf..09cef3a 100644
+--- a/packages/presentation/src/file.ts
++++ b/packages/presentation/src/file.ts
+@@ -15,7 +15,7 @@
+ 
+ import { type Blob as PlatformBlob, type Ref, type WorkspaceUuid } from '@hcengineering/core'
+ import { getMetadata } from '@hcengineering/platform'
+-import { type FileStorage, createFileStorage as createStorageClient } from '@hcengineering/storage-client'
++import { type FileStorage, type FileStorageUploadOptions, createFileStorage as createStorageClient } from '@hcengineering/storage-client'
+ import { v4 as uuid } from 'uuid'
+ 
+ import plugin from './plugin'
+@@ -137,28 +137,50 @@ export function getContentType (name: string, type: string): string {
+ 
+ export async function uploadFile (
+   file: File,
+-  uuid?: Ref<PlatformBlob>
++  uuid?: Ref<PlatformBlob>,
++  options?: FileStorageUploadOptions & { expectedWorkspace?: WorkspaceUuid }
+ ): Promise<{ uuid: Ref<PlatformBlob>, metadata: Record<string, any> }> {
++  const token = getToken()
++  const workspace = getCurrentWorkspaceUuid()
++  const storage = getFileStorage()
++  const checkWorkspace = (): void => {
++    if (getCurrentWorkspaceUuid() !== workspace || (options?.expectedWorkspace !== undefined && options.expectedWorkspace !== workspace)) {
++      throw new Error('The upload workspace changed. Return to the original workspace.')
++    }
++    options?.signal?.throwIfAborted()
++  }
++  checkWorkspace()
+   if (uploadGuard !== undefined) {
+     await uploadGuard(file)
+   }
+ 
+   uuid ??= generateFileId() as Ref<PlatformBlob>
+ 
+-  const token = getToken()
+-  const workspace = getCurrentWorkspaceUuid()
++  checkWorkspace()
+ 
+   const contentType = getContentType(file.name, file.type)
+   if (contentType !== file.type) {
+     file = new File([file], file.name, { type: contentType, lastModified: file.lastModified })
+   }
+ 
+-  const storage = getFileStorage()
+-  await storage.uploadFile(token, workspace, uuid, file)
+-
+-  const metadata = (await getFileMetadata(file, uuid)) ?? {}
+-
+-  return { uuid, metadata }
++  await storage.uploadFile(token, workspace, uuid, file, options)
++  if (options?.signal === undefined) {
++    return { uuid, metadata: (await getFileMetadata(file, uuid)) ?? {} }
++  }
++  checkWorkspace()
++  const signal = options.signal
++  let onAbort: () => void = () => {}
++  try {
++    const aborted = new Promise<never>((resolve, reject) => {
++      onAbort = () => { reject(signal.reason ?? new Error('Upload cancelled')) }
++      signal.addEventListener('abort', onAbort, { once: true })
++      if (signal.aborted) onAbort()
++    })
++    const metadata = (await Promise.race([getFileMetadata(file, uuid), aborted])) ?? {}
++    return { uuid, metadata }
++  } finally {
++    signal.removeEventListener('abort', onAbort)
++  }
+ }
+ 
+ /** @public */
+diff --git a/plugins/recorder-resources/package.json b/plugins/recorder-resources/package.json
+index 4f883af..798121e 100644
+--- a/plugins/recorder-resources/package.json
++++ b/plugins/recorder-resources/package.json
+@@ -56,6 +56,7 @@
+     "@hcengineering/analytics": "workspace:^0.7.19",
+     "install": "^0.13.0",
+     "svelte": "^4.2.20",
+-    "tus-js-client": "^4.3.1"
++    "tus-js-client": "^4.3.1",
++    "@fix-webm-duration/fix": "1.0.1"
+   }
+ }
+diff --git a/common/config/rush/pnpm-lock.yaml b/common/config/rush/pnpm-lock.yaml
+index 17bdc9f..5055884 100644
+--- a/common/config/rush/pnpm-lock.yaml
++++ b/common/config/rush/pnpm-lock.yaml
+@@ -25741,6 +25741,9 @@ importers:
+ 
+   ../../plugins/recorder-resources:
+     dependencies:
++      '@fix-webm-duration/fix':
++        specifier: 1.0.1
++        version: 1.0.1
+       '@hcengineering/analytics':
+         specifier: workspace:^0.7.19
+         version: link:../../foundations/core/packages/analytics
+@@ -42174,6 +42177,13 @@ importers:
+ 
+ packages:
+ 
++  "@fix-webm-duration/fix@1.0.1":
++    resolution:
++      integrity: sha512-rRN4CpWQaXRbCXYqKIxnsUq8OSWSGq/SVlnxxkx0HxMZZ1u0qnB24P766o8QS5YaMMqAOFAzmsMmfZ2OWucOLQ==
++  "@fix-webm-duration/parser@1.0.1":
++    resolution:
++      integrity: sha512-Z6el7ohBBpym4iOmxDxumN715cHzLcAbtOtYfIbvoyToVtAuxvHt3ELXGff83iAXEU1Yj7g+obQBdiKJYVhbWw==
++
+   7zip-bin@5.2.0:
+     resolution: {integrity: sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==}
+ 
+@@ -52231,6 +52241,14 @@ packages:
+ 
+ snapshots:
+ 
++  "@fix-webm-duration/fix@1.0.1":
++    dependencies:
++      "@fix-webm-duration/parser": 1.0.1
++      tslib: 2.8.1
++  "@fix-webm-duration/parser@1.0.1":
++    dependencies:
++      tslib: 2.8.1
++
+   7zip-bin@5.2.0: {}
+ 
+   '@adobe/css-tools@4.4.4': {}

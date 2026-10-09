@@ -21,7 +21,7 @@ describe("service units", () => {
 
   it("renders a systemd unit that restarts, runs as the user, and grants low ports only for --domain", () => {
     const unit = systemdUnit(spec);
-    expect(unit).toContain("Description=OpenMausBot (agentada)");
+    expect(unit).toContain("Description=Chief Executive Suite (agentada)");
     expect(unit).toContain("User=maus");
     expect(unit).toContain("Environment=OMB_DATA_DIR=/home/maus/.openmausbot");
     expect(unit).toContain("ExecStart=/usr/bin/node /usr/lib/node_modules/openmausbot/cli.js serve --port 8799 --data-dir /home/maus/.openmausbot --domain maus.example.com --no-pair");
@@ -36,7 +36,7 @@ describe("service units", () => {
 
   it("renders a launchd agent that keeps the server alive and logs under the data dir", () => {
     const plist = launchdPlist({ ...spec, home: "/Users/maus", dataDir: "/Users/maus/.openmausbot" });
-    expect(plist).toContain("<string>com.openmausbot.serve</string>");
+    expect(plist).toContain("<string>com.chiefexecutivesuite.serve</string>");
     expect(plist).toContain("<string>/usr/bin/node</string>");
     expect(plist).toContain("<string>serve</string>");
     expect(plist).toContain("<string>maus.example.com</string>");
@@ -49,10 +49,10 @@ describe("service units", () => {
     expect(unstableInstallWarning("/home/maus/.npm/_npx/abc123/node_modules/openmausbot/cli.js")).toMatch(/npm install -g openmausbot/);
     expect(unstableInstallWarning("/usr/lib/node_modules/openmausbot/cli.js")).toBeNull();
     const linux = servicePlan("linux", "/home/maus/.openmausbot");
-    expect(linux?.installed).toBe("/etc/systemd/system/openmausbot.service");
-    expect(linux?.activate.join("\n")).toContain("systemctl enable --now openmausbot");
+    expect(linux?.installed).toBe("/etc/systemd/system/chief-executive-suite.service");
+    expect(linux?.activate.join("\n")).toContain("systemctl enable --now chief-executive-suite");
     const mac = servicePlan("darwin", "/Users/maus/.openmausbot", "/Users/maus");
-    expect(mac?.installed).toBe("/Users/maus/Library/LaunchAgents/com.openmausbot.serve.plist");
+    expect(mac?.installed).toBe("/Users/maus/Library/LaunchAgents/com.chiefexecutivesuite.serve.plist");
     expect(mac?.activate.join("\n")).toContain("launchctl bootstrap gui/$(id -u)");
     expect(servicePlan("win32", "C:\\x")).toBeNull();
   });

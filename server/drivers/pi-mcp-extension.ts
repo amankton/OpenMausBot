@@ -549,9 +549,9 @@ export default async function (pi: PiExtensionApi): Promise<void> {
   try {
     config = JSON.parse(readFileSync(configPath, "utf8")) as McpConfig;
   } catch {
-    throw new Error("OpenMausBot Pi MCP configuration could not be read");
+    throw new Error("Chief Executive Suite Pi MCP configuration could not be read");
   }
-  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("OpenMausBot Pi MCP configuration is invalid");
+  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("Chief Executive Suite Pi MCP configuration is invalid");
   const parsed = parseToolScope(config.toolScope);
   if (!parsed.ok) throw new Error(parsed.error);
   const scope = parsed.scope;

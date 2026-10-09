@@ -378,6 +378,37 @@ winOnly("resolveCli (Windows)", () => {
     expect(resolveCli("ombfake", [], { PATH: "", PATHEXT: ".CMD" })).toEqual({ command: "ombfake", args: [] });
   });
 
+  it("resolves the Hermes Python bootstrap without changing fixed or invocation arguments", () => {
+    const bin = join(dir, "Hermes tools & spaces");
+    mkdirSync(bin);
+    const python = join(bin, "python.exe");
+    writeFileSync(python, "MZ-fixture");
+    const code = `import base64; exec(base64.b64decode('${Buffer.from("print('fixture')").toString("base64")}'))`;
+    const shim = join(dir, "hermes.cmd");
+    writeFileSync(shim, `\uFEFF@echo off\r\r\n\r\n"${python}" -I -c "${code}" %*\r\n`);
+    const args = ["", 'he said "hi"', "C:\\space dir\\", "%PATH%", "!VALUE!", "x&y|z", "q^r", "<in>out"];
+    expect(resolveCli(`"${shim}" --fixed`, args)).toEqual({ command: python, args: ["-I", "-c", code, "--fixed", ...args] });
+    // Re-read after an installer rewrites the wrapper; never retain a stale runtime.
+    const updatedPython = join(dir, "python.exe");
+    writeFileSync(updatedPython, "MZ-new-fixture");
+    writeFileSync(shim, `@echo off\n"${updatedPython}" -I -c "${code}" %*\n`);
+    expect(resolveCli(shim).command).toBe(updatedPython);
+  });
+
+  it.each([" && echo extra", "\nset EXTRA=1", "\nexit /b", " %PATH%"])("does not reinterpret a modified Python batch launcher (%s)", (extra) => {
+    const python = join(dir, "python.exe");
+    writeFileSync(python, "MZ-fixture");
+    const shim = join(dir, "hermes.cmd");
+    writeFileSync(shim, `@echo off\n"${python}" -I -c "import base64; exec(base64.b64decode('cGFzcw=='))" %*${extra}\n`);
+    expect(resolveCli(shim, ["--version"])).toEqual({ command: shim, args: ["--version"] });
+  });
+
+  it("does not resolve a Python bootstrap with a missing interpreter", () => {
+    const shim = join(dir, "hermes.cmd");
+    writeFileSync(shim, `@echo off\n"${join(dir, "missing", "python.exe")}" -I -c "import base64; exec(base64.b64decode('cGFzcw=='))" %*\n`);
+    expect(resolveCli(shim).command).toBe(shim);
+  });
+
   it("parses an npm .cmd shim down to `node <cli.js>`, never the shim's own node.exe", async () => {
     shimWith("ombfake.cmd", JS_SHIM, "ombfake.js", "console.log('js target ' + process.argv.slice(2).join(','));\n");
     onPath();

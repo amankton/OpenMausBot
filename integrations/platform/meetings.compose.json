@@ -1,0 +1,89 @@
+{
+  "services": {
+    "nginx": {
+      "volumes": [
+        "./nginx-meetings.conf:/etc/nginx/conf.d/default.conf:ro"
+      ]
+    },
+    "front": {
+      "image": "${CHIEF_PLATFORM_FRONT_IMAGE:?Build and pin the patched frontend first}",
+      "environment": [
+        "LIVEKIT_WS=ws://localhost:18087/_livekit"
+      ]
+    },
+    "transactor": {
+      "image": "${CHIEF_PLATFORM_TRANSACTOR_IMAGE:?Build and pin the patched transactor first}"
+    },
+    "workspace": {
+      "image": "${CHIEF_PLATFORM_WORKSPACE_IMAGE:?Build and pin the patched workspace first}"
+    },
+    "love": {
+      "depends_on": {
+        "redpanda": { "condition": "service_healthy" },
+        "account": { "condition": "service_started" },
+        "livekit": { "condition": "service_started" }
+      },
+      "image": "${CHIEF_PLATFORM_LOVE_IMAGE:?Build and pin the patched Love image first}",
+      "pull_policy": "never",
+      "restart": "unless-stopped",
+      "networks": [
+        "backend"
+      ],
+      "environment": [
+        "PORT=8096",
+        "ACCOUNTS_URL=http://account:3000",
+        "SECRET=${CHIEF_PLATFORM_SECRET:?Existing Platform secret required}",
+        "QUEUE_CONFIG=redpanda:9092",
+        "LIVEKIT_PROJECT=chief-platform",
+        "LIVEKIT_HOST=http://livekit:7880",
+        "LIVEKIT_API_KEY=${CHIEF_PLATFORM_LIVEKIT_KEY:?Prepare meeting keys}",
+        "LIVEKIT_API_SECRET=${CHIEF_PLATFORM_LIVEKIT_SECRET:?Prepare meeting keys}",
+        "LIVEKIT_WEBHOOK_API_KEY=${CHIEF_PLATFORM_LIVEKIT_KEY:?Prepare meeting keys}",
+        "LIVEKIT_WEBHOOK_API_SECRET=${CHIEF_PLATFORM_LIVEKIT_SECRET:?Prepare meeting keys}",
+        "CHIEF_MEMBER_MEETINGS_ONLY=true",
+        "CHIEF_CAPTURE_DIRECTORY=/var/lib/chief-capture",
+        "CHIEF_CAPTURE_WORKER_SECRET=${CHIEF_CAPTURE_WORKER_SECRET:?Prepare the private capture worker configuration}",
+        "AGENTS=",
+        "POLLING_INTERVAL_MS=10000",
+        "STORAGE_CONFIG=${CHIEF_PLATFORM_STORAGE:?Existing Platform storage required}"
+      ],
+      "volumes": ["capture_metadata:/var/lib/chief-capture"],
+      "deploy": {
+        "resources": {
+          "limits": {
+            "memory": "384M",
+            "cpus": "0.75"
+          }
+        }
+      }
+    },
+    "livekit": {
+      "image": "livekit/livekit-server@sha256:d0c04791bf63ca8dcea123571827d56ba9504bd57c8d5de60ee03b5408cc3154",
+      "pull_policy": "never",
+      "restart": "unless-stopped",
+      "networks": [
+        "backend"
+      ],
+      "command": [
+        "--config",
+        "/etc/livekit.json"
+      ],
+      "volumes": [
+        "../../.chief-local/platform/livekit.json:/etc/livekit.json:ro"
+      ],
+      "ports": [
+        "127.0.0.1:18088:18088/tcp",
+        "127.0.0.1:18089:18089/udp"
+      ],
+      "deploy": {
+        "resources": {
+          "limits": {
+            "memory": "384M",
+            "cpus": "1"
+          }
+        }
+      }
+    }
+  },
+  "volumes": { "capture_metadata": { "name": "chief-platform_capture_metadata" } }
+}

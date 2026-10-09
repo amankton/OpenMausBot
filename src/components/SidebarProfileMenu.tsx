@@ -31,6 +31,7 @@ import {
 import { InitialsAvatar } from "./Avatar";
 import { DiscordIcon } from "./DiscordIcon";
 import { AboutDialog } from "./AboutDialog";
+import { crewframePhoneSetupEnabled } from "../lib/crewframe-phone";
 import { PhoneAppDialog } from "./PhoneAppDialog";
 import { SidebarPopoverMenu, type SidebarMenuItem } from "./SidebarPopoverMenu";
 import { ShortcutHint } from "./ShortcutHint";
@@ -41,6 +42,7 @@ import { useUpdaterState, type UpdaterState } from "@/lib/updater";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { FEEDBACK_URL, HELP_CENTER_URL, openExternalLink } from "@/lib/app-links";
+import { upstreamServicesAvailable } from "@/lib/release-profile";
 import {
   cloudPhoneDestination,
   connectPhoneEntry,
@@ -307,7 +309,7 @@ export function SidebarProfileMenu() {
       destinations,
       connected: phone.kind === "connected",
       onConnect: connectTo,
-      onGetApp: () => setPhoneAppOpen(true),
+      onGetApp: () => crewframePhoneSetupEnabled() ? dispatch(phonePairingSettingsAction()) : setPhoneAppOpen(true),
     }),
     {
       key: "settings",
@@ -338,14 +340,14 @@ export function SidebarProfileMenu() {
       key: "help",
       label: t("sidebar.menu.help"),
       icon: <HelpCircle size={18} />,
-      onSelect: () => void openExternalLink(HELP_CENTER_URL),
+      onSelect: () => void openExternalLink(upstreamServicesAvailable ? HELP_CENTER_URL : new URL("/chief-help.html", location.href).href),
     },
-    {
+    ...(upstreamServicesAvailable ? [{
       key: "feedback",
       label: t("sidebar.menu.feedback"),
       icon: <DiscordIcon size={17} />,
       onSelect: () => void openExternalLink(FEEDBACK_URL),
-    },
+    }] : []),
   ];
 
   return (

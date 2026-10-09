@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "kind": "backend-fragment-not-deployment",
+  "createdAt": "2026-10-07T23:45:00.972Z",
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "baselineReceipt": ".chief-local/capture-baseline/backend/baseline.json",
+  "files": [
+    {
+      "path": "services/love/src/main.ts",
+      "beforeSha256": "0c007a4169babc491a432c501270b0fb65ca1684ace4b500953bcbdff6097d6c",
+      "sha256": "f4d1612f4b95f88c6c7d89b2805db4bdcdf414f00e336308bc187a14b582cf76"
+    },
+    {
+      "path": "services/love/src/config.ts",
+      "beforeSha256": "afcfa2298b81ffa1cf59fba3f729a702ce40d580918b059430f120808db59b13",
+      "sha256": "12f73a8d3a77bc5dc44873fc28a4e0fe83898242e270eca5b9948062fea94bca"
+    },
+    {
+      "path": "services/love/src/capture.ts",
+      "beforeSha256": null,
+      "sha256": "e97825e793af1aa70b5943b34d4a752407396a87e949185931c00e15cb83ed25"
+    },
+    {
+      "path": "services/love/src/captureRoutes.ts",
+      "beforeSha256": null,
+      "sha256": "97399b5f7403fa6526135912a10f4244a4237791edb8f4b5366ac40de6607a2c"
+    }
+  ],
+  "patch": {
+    "path": "0005-capture-backend.fragment.patch",
+    "sha256": "cf3f2b884d03ca991a748d7a975420bd7cf28fafcf0ac39b98ab50f031ec8bb9"
+  },
+  "frozen": [
+    {
+      "path": "0001-explicit-media-consent.patch",
+      "sha256": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487"
+    },
+    {
+      "path": "0002-member-meeting-admission.patch",
+      "sha256": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c"
+    },
+    {
+      "path": "0003-room-interaction.patch",
+      "sha256": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d"
+    },
+    {
+      "path": "0004-bounded-raw-recording.patch",
+      "sha256": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d"
+    }
+  ]
+}

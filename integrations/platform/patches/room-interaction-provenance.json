@@ -1,0 +1,32 @@
+{
+  "revision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "patch": "0003-room-interaction.patch",
+  "sha256": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+  "modifiedFiles": [
+    {
+      "path": "plugins/love-resources/src/utils.ts",
+      "sha256": "f9ea401c6c39bbd52e07529113bb123e3fd14a390a8f7598e366d515e2ee1226"
+    },
+    {
+      "path": "plugins/love-resources/src/room-invitation.ts",
+      "sha256": "7ff25a355f28378e437ac0ed74c660909945da0247d1fe0b059803f6ace14742"
+    },
+    {
+      "path": "plugins/love-resources/src/components/RoomPreview.svelte",
+      "sha256": "1091fa76df68f3655e41bde2489268f4e53b98472e898435d960262aa108cbd6"
+    },
+    {
+      "path": "plugins/love-resources/src/components/RoomInvitePopup.svelte",
+      "sha256": "eda0f76d9e073caa0f05dc1754723240782665a72ae550ccef6256a863b1eaad"
+    },
+    {
+      "path": "plugins/love-resources/src/components/FloorPreview.svelte",
+      "sha256": "c0220c2f20631e30eb8de83960e8aabbb072a8fc92adb7958ee340895d6c686b"
+    }
+  ],
+  "dependsOn": [
+    "0001-explicit-media-consent.patch",
+    "0002-member-meeting-admission.patch"
+  ],
+  "status": "Source behavior tests, package build, TypeScript and Svelte checks passed; browser validation pending"
+}

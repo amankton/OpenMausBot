@@ -101,12 +101,19 @@ const { createTrustedApprovalModeCoordinator } = require("./approval-trusted-mod
 const { DESKTOP_MUTATION_HEADER, desktopServerHeaders } = require("./desktop-server-auth.cjs");
 const { MIN_BOUNDS, normalizeUnreadCount, parseWindowState, resolveWindowState } = require("./window-state.cjs");
 
+app.setName("Chief Executive Suite");
+const chiefProfileDir = process.env.CHIEF_PROFILE_DIR;
+if (chiefProfileDir && !path.isAbsolute(chiefProfileDir)) throw new Error("CHIEF_PROFILE_DIR must be an absolute path");
+app.setPath("userData", chiefProfileDir || path.join(app.getPath("appData"), "chief-executive-suite"));
+if (process.platform === "win32") app.setAppUserModelId("com.chiefexecutivesuite.app");
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 127.0.0.1 explicitly — vite binds IPv4; a bare "localhost" here can
 // resolve to ::1 and paint a black window
-const DEV_URL = process.env.ELECTRON_START_URL ?? "http://127.0.0.1:5199";
-const DEFAULT_COMPOSIO_BROKER_URL = "https://openmausbot-composio.milindsoni201.workers.dev";
-let SERVER_PORT = 8799;
+const DEV_URL = process.env.ELECTRON_START_URL ?? "http://127.0.0.1:5299";
+// Chief has no managed broker until its operator explicitly configures one.
+const DEFAULT_COMPOSIO_BROKER_URL = "";
+let SERVER_PORT = 8899;
 const APP_ICON = path.join(__dirname, "resources/app-icon.png");
 let desktopViewerWindow = null;
 let desktopViewerOwner = null;
@@ -213,14 +220,14 @@ function applyUnreadBadge(win = mainWindow) {
 // intercepting input. This app is not graphics-heavy, so reliability wins.
 if (process.platform === "linux") {
   app.disableHardwareAcceleration();
-  app.setDesktopName("com.openmausbot.app.desktop");
+  app.setDesktopName("com.chiefexecutivesuite.app.desktop");
 }
 
 // One instance per user: without this lock a second launch forks a second
 // harness server on a fallback port and splits data dirs in two. The loser
 // exits before any child or window exists; the winner surfaces itself.
 if (!app.requestSingleInstanceLock()) {
-  console.log("[desktop] OpenMausBot is already running — focusing that window");
+  console.log("[desktop] Chief Executive Suite is already running — focusing that window");
   process.exit(0);
 }
 
@@ -347,7 +354,7 @@ const serverSupervisor = createServerSupervisor({
     slog("server recovery paused after repeated failures; quit and reopen to retry");
     dialog.showErrorBox(
       "The bot server stopped",
-      "Automatic recovery could not restart the background server. Quit and reopen OpenMausBot to try again. Interrupted chat turns were not resent.\n\n" +
+      "Automatic recovery could not restart the background server. Quit and reopen Chief Executive Suite to try again. Interrupted chat turns were not resent.\n\n" +
         `Server log: ${path.join(LOG_DIR, "server.log")}`,
     );
   },
@@ -359,7 +366,7 @@ function desktopDataDir() {
   // then pass this exact resolved path to the utility child. server/config.ts
   // intentionally treats an empty OMB_DATA_DIR differently, so inheriting it
   // without normalization would lease one directory and write another.
-  return process.env.OMB_DATA_DIR || path.join(app.getPath("home"), ".openmausbot");
+  return process.env.OMB_DATA_DIR || path.join(app.getPath("home"), ".chief-executive-suite");
 }
 
 async function stopUtilityServer(proc, timeoutMs = UTILITY_SERVER_STOP_TIMEOUT_MS) {
@@ -1204,7 +1211,7 @@ async function runCompanyBackup(kind, input, scheduled = null) {
     const status = await localBackupStatus(proc);
     if (status.pendingRestore) {
       publishCompanyBackupState({ busy: false, pendingRestore: true });
-      throw new Error("Restart OpenMausBot to finish the pending restore before starting another backup operation.");
+      throw new Error("Restart Chief Executive Suite to finish the pending restore before starting another backup operation.");
     }
     if (status.busy) throw companyBackupDeferred();
     const transfers = createCompanyBackups({
@@ -1397,7 +1404,7 @@ async function startServerPackaged() {
   // server during teardown — one settle-and-retry covers it
   let everyPortForeignOwned = true;
   for (let attempt = 0; attempt < 2; attempt++) {
-    for (const port of [8799, 18799, 28799]) {
+    for (const port of [8899, 18899, 28899]) {
       if (desktopShutdownStarted) return false;
       const started = await startServerOn(port);
       if (started.proc) {
@@ -1440,8 +1447,8 @@ function buildErrorPage({ allPortsOccupied }) {
   const serverLogPath = path.join(LOG_DIR, "server.log");
   const serverLogHref = pathToFileURL(serverLogPath).href;
   const reason = allPortsOccupied
-    ? "Every OpenMausBot port answered health checks from another process — likely a second copy of the app, or another program on ports 8799–28799. Quit that program, then quit and reopen OpenMausBot."
-    : "The background server didn't come up in time — this is usually slow startup, not a port conflict. Quit and reopen OpenMausBot.";
+    ? "Every Chief Executive Suite port answered health checks from another process — likely a second copy of the app, or another program on ports 8899–28899. Quit that program, then quit and reopen Chief Executive Suite."
+    : "The background server didn't come up in time — this is usually slow startup, not a port conflict. Quit and reopen Chief Executive Suite.";
   return (
     "data:text/html;charset=utf-8," +
     encodeURIComponent(
@@ -1504,7 +1511,7 @@ function desktopViewerErrorPage(message, retryUrl) {
 }
 
 function openDesktopViewer(owner, rawUrl, rawTitle, contextId) {
-  if (!owner || owner.isDestroyed()) throw new Error("The OpenMausBot window is unavailable");
+  if (!owner || owner.isDestroyed()) throw new Error("The Chief Executive Suite window is unavailable");
   const url = desktopViewerUrl(rawUrl);
   const titleCandidate = Object.prototype.toString.call(rawTitle) === "[object String]" ? rawTitle.trim() : "";
   const title = titleCandidate ? titleCandidate.slice(0, 80) : "Live desktop";
@@ -1622,7 +1629,7 @@ function openDesktopViewer(owner, rawUrl, rawTitle, contextId) {
 }
 
 function ensureDesktopWorkspace(owner) {
-  if (!owner || owner.isDestroyed()) throw new Error("The OpenMausBot window is unavailable");
+  if (!owner || owner.isDestroyed()) throw new Error("The Chief Executive Suite window is unavailable");
   if (desktopWorkspaceManager) {
     if (desktopWorkspaceOwner !== owner) {
       throw new Error("The two-desktop view belongs to another app window");
@@ -3316,15 +3323,16 @@ app.whenReady().then(async () => {
       });
     } catch (error) {
       dialog.showErrorBox(
-        "OpenMausBot could not start safely",
-        error?.message ?? "Another process is using this OpenMausBot data folder.",
+        "Chief Executive Suite could not start safely",
+        error?.message ?? "Another process is using this Chief Executive Suite data folder.",
       );
       app.quit();
       return;
     }
   }
   if (app.isPackaged) {
-    app.setAsDefaultProtocolClient("openmausbot");
+    // Keep the existing OpenMausBot installation as owner of its URL scheme.
+    // Chief deep-link registration is deferred until its own scheme is implemented.
     // Chromium adds this capability below JavaScript, so renderer requests
     // can mutate the local harness while a Full-access shell using curl
     // cannot impersonate the person operating the desktop app.

@@ -1,0 +1,89 @@
+{
+  "repository": "https://github.com/Platform-Collective/platform",
+  "release": "s0.7.426",
+  "revision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "acquiredAt": "2026-10-07T20:12:48.065Z",
+  "checkout": ".chief-local/platform-source",
+  "acquisition": "Independent filtered Git clone, complete pinned working tree; Git may lazily fetch historical blobs.",
+  "trackedFileCount": 10660,
+  "patch": "0001-explicit-media-consent.patch",
+  "patchSha256": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+  "modifiedFiles": [
+    {
+      "path": "plugins/love-assets/lang/en.json",
+      "baseSha256": "445f721f43f5b32d1c2324727c260d0acf9e922a28840bc54d5ffed70695ba40",
+      "patchedSha256": "663de25ea53c7c5704c79498a0b1f8b8bb2d6f3843e48347961a2853b3b76684"
+    },
+    {
+      "path": "plugins/love-resources/src/components/guest/GuestJoinPopup.svelte",
+      "baseSha256": "9d9c5ee0e7efb048720540212791f64fddd9830b5146c15e0c373b120a7d3230",
+      "patchedSha256": "1943887314578d6cc7bfc9ca47944c116b780c221dc20345f8d14773d241bef5"
+    },
+    {
+      "path": "plugins/love-resources/src/components/meeting/CamSettingPopup.svelte",
+      "baseSha256": "58fc6bc29e74dd80408c19fef811184fa28fd5255bade6f3e30abc9a3c31b214",
+      "patchedSha256": "083f015f0fc1b4b458cba0bf66fb2c8621ec14f3edf65a8a2287616555867b86"
+    },
+    {
+      "path": "plugins/love-resources/src/components/meeting/MicSettingPopup.svelte",
+      "baseSha256": "7dc531dacff0018cc3d073e2384fb82d11874ca59db020d695f6c598b646f100",
+      "patchedSha256": "dbc9d7148d661bde5b0fc03664b97a228b98e5b04d5a400b19d5c1705d9e771c"
+    },
+    {
+      "path": "plugins/love-resources/src/components/meeting/SpeakingWhileMutedIndicator.svelte",
+      "baseSha256": "6ba475b793d1f918c71a17f312b91d6eed91959c1cf61491fff62139d9936877",
+      "patchedSha256": "e2165865fc94562db7dc2ceeb8a7023eca4ca44888fa1d737a066258f04f326c"
+    },
+    {
+      "path": "plugins/love-resources/src/liveKitClient.ts",
+      "baseSha256": "24cfd68c7682280934669325e766c48aa2818ba6031baa8723297c63929a569c",
+      "patchedSha256": "2c9135ecf0358272ccb72941c5b0c3bfea7e1eeb66040e047b60c25f5a7d204f"
+    },
+    {
+      "path": "plugins/love-resources/src/speakingWhileMuted.ts",
+      "baseSha256": "5b834e320c6f29e11c07de7ccd23aed4aa8671f2616d7122fb9a9438e85f678b",
+      "patchedSha256": "9beee94e4f5b0fcc750797660991e33d018b25fe611a1acd721a36f75bd6a6dc"
+    },
+    {
+      "path": "plugins/media-resources/src/components/MediaPopup.svelte",
+      "baseSha256": "fe4beab0da3d1e76015451fcffe9a40113f86f3570165ed9d758dd083860ffa2",
+      "patchedSha256": "b2e9977f429c77316ff0a7314d58bee27db58a61659c004177a67708422b463c"
+    },
+    {
+      "path": "plugins/media-resources/src/components/MediaPopupCamPreview.svelte",
+      "baseSha256": "f350a765596c8fd87d5b143ec19ebb118eede7179fd8b84a540db4de3d6a19e5",
+      "patchedSha256": "1e7293f23cad91e6fe7be5c04675fa512fce29cf6107745378f3c89fad93e6e6"
+    },
+    {
+      "path": "plugins/recorder-resources/src/components/RecordingPopup.svelte",
+      "baseSha256": "138dd31d93761ed760a9607600a900f22ba969f0ed519a8a4c502d73117e3d44",
+      "patchedSha256": "b2c58afcba0902036095b8358928700e5d6aee91ebd12a9d693655df1e673bbe"
+    },
+    {
+      "path": "plugins/recorder-resources/src/stores/manager.ts",
+      "baseSha256": "1c96a8041060e48e798ac4e2082b32cd7a528ec676f66168b5cb3678a4fd8858",
+      "patchedSha256": "17a9d49d170f827fd0f645b4202e50a1a4235db058d59dfc6dacdb50563b06e1"
+    }
+  ],
+  "verification": {
+    "dependenciesInstalled": true,
+    "platformBuildRun": true,
+    "dependencyClosureBuildPassed": true,
+    "targetedTypeValidationPassed": true,
+    "loveSvelteErrors": 0,
+    "recorderSvelteErrors": 0,
+    "productionWebpackPassed": true,
+    "imageDeployed": false,
+    "mediaConsentTestsPassed": 12,
+    "sharedMediaValidationPending": false,
+    "mediaSvelteErrors": 0,
+    "productionBrowserValidated": true,
+    "frontendMinifierRegressionTestsPassed": 2,
+    "productionReceiptSha256": "8bb3f7f1eeb7f9de99d48a143c0bb81c5b90ae1f0dcc0cbde85fbe94e79c98bd",
+    "frontendImageBuilt": true,
+    "frontendImage": "sha256:c79fa3251ded2d6e6a3ff6e949e9c2d3138dd939b47ad393401a29b3b111cec7",
+    "browserReceiptSha256": "535023ba78306b3eabb2018ee4dd76be88ea99b50150a62b1b886c7a3d487075",
+    "mediaRuntimeConnectedValidationPending": true,
+    "compactMenuBrowserValidated": true
+  }
+}

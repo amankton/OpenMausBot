@@ -11,6 +11,7 @@
 //
 // On this computer, someone with a paid Cloud that is Ready is offered both:
 // their Cloud first (always on), then this computer.
+import { crewframePhoneSetupEnabled } from "./crewframe-phone";
 import type { CloudAccountState } from "../../electron/cloud-account.mjs";
 import type { LocaleKey } from "@/locales";
 import { cloudPlanView } from "./cloud-plan";
@@ -36,7 +37,7 @@ export const phonePairingSettingsAction = (): Extract<Action, { type: "toggleApp
 export function currentPhonePairingTarget(cloudHome: boolean): PhonePairingTarget {
   // SAFETY: the preload's narrow bridge; `companion` is read for presence only.
   const ogb = typeof window === "undefined" ? undefined : (window.ogb as { companion?: unknown; remoteClient?: { active?: boolean } } | undefined);
-  return phonePairingTarget({ companion: Boolean(ogb?.companion), remoteClient: ogb?.remoteClient?.active === true, cloudHome });
+  return phonePairingTarget({ companion: Boolean(ogb?.companion) || crewframePhoneSetupEnabled(), remoteClient: ogb?.remoteClient?.active === true, cloudHome });
 }
 
 /** Where a phone pairs from this window. `companion`: this window has the

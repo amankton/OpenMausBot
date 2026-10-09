@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { sharedWorkspaceAvailable } from "./lib/release-profile";
 import {
   BROWSER_SIGN_IN_FAILED, previewBrowserSignIn, readSessionState, SERVICE_TRUST_REASON, takeBrowserSignInFromLocation, takePairingCodeFromLocation, takeInvitedEmailFromLocation,
 } from "./lib/session";
@@ -28,6 +29,10 @@ applyFont(readFont());
  * device"; on the owner's own machine the server trusts loopback and this
  * check is a single fast request. */
 async function chooseRoot(): Promise<React.ReactNode> {
+  // Retire the separate office surface without forwarding its old session links.
+  if (location.pathname === "/office" || location.pathname === "/office/") {
+    history.replaceState(null, "", "/workspace");
+  }
   if (location.pathname === "/pair") {
     // The OMB Cloud page's "Use in your browser": whose Cloud it is, then one Continue.
     const signIn = takeBrowserSignInFromLocation();
@@ -42,6 +47,10 @@ async function chooseRoot(): Promise<React.ReactNode> {
   // A service-trust server answers this machine's requests without a session
   // but refuses to let it manage anything: sign in first, as a remote browser would.
   if (session.kind === "loopback" && session.trust === "service") return <PairPage initialCode={null} reason={SERVICE_TRUST_REASON} />;
+  if (sharedWorkspaceAvailable && (location.pathname === "/workspace" || location.pathname === "/workspace/")) {
+    const { SharedWorkspacePage } = await import("./components/SharedWorkspacePage");
+    return <SharedWorkspacePage />;
+  }
   if (location.pathname === "/desktop-viewer") {
     const { DesktopViewer } = await import("./components/DesktopViewer");
     return <DesktopViewer />;

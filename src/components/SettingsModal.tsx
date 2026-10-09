@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, CircleUser, Coins, FlaskConical, KeyRound, Monitor, Palette, ScrollText, Search, Sparkles, TabletSmartphone, Terminal, User, Users, X, Building2, Zap, BookOpen } from "lucide-react";
 import { api, useStore, type AppSettingsSection, type ConfigStatus } from "@/state/store";
-import { analyticsEnabled, setAnalyticsEnabled } from "@/lib/analytics";
+import { analyticsConfigured, analyticsEnabled, setAnalyticsEnabled } from "@/lib/analytics";
 import { browserAvailable, browserUnavailableReason, builtInBrowserEnabled, routinesInConversationEnabled, showToolCallsEnabled, skillAuthoringEnabled, skillsLibraryEnabled } from "@/lib/feature-flags";
 import { localeChoices, type LocaleKey } from "@/locales";
 import { t } from "@/lib/i18n";
@@ -16,6 +16,8 @@ import { DecisionModelSettings } from "./DecisionModelSettings";
 import { useUpdaterState } from "@/lib/updater";
 import { EnginesSettings } from "./EnginesSettings";
 import { LocalComputerSection } from "./LocalComputerSection";
+import { CrewframePhoneSetup } from "./CrewframePhoneSetup";
+import { crewframePhoneSetupEnabled } from "../lib/crewframe-phone";
 import { CompanionSection } from "./CompanionSection";
 import { ServerPairingCard } from "./ServerPairingCard";
 import { PeopleSection } from "./PeopleSection";
@@ -29,6 +31,7 @@ import { ConnectedWorkspacesSettings } from "./ConnectedWorkspacesSettings";
 import { OrganizationSettings } from "./OrganizationSettings";
 import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ProSettingsCard } from "./ProIntroduction";
+import { upstreamServicesAvailable } from "@/lib/release-profile";
 import { Card, SettingRow, Switch } from "./SettingsPrimitives";
 import { effortLabel } from "./ModelPicker";
 import { EFFORT_LEVELS, isEffortLevel } from "../../shared/wire";
@@ -321,14 +324,14 @@ function NewBotEffortRow() {
 function AnalyticsRow() {
   const [on, setOn] = useState(analyticsEnabled);
   return (
-    <SettingRow title={t("settings.analytics.title")} subtitle={t("settings.analytics.subtitle")}>
+    <SettingRow title={t("settings.analytics.title")} subtitle={analyticsConfigured() ? t("settings.analytics.subtitle") : "Analytics are unavailable in this build. No Chief analytics project is configured."}>
       <Switch
         checked={on}
         aria-label={t("settings.analytics.aria")}
         onClick={() => {
           const next = !on;
           setAnalyticsEnabled(next);
-          setOn(next);
+          setOn(analyticsEnabled());
         }}
       />
     </SettingRow>
@@ -792,6 +795,7 @@ export function SettingsModal() {
   const q = query.trim().toLowerCase();
   const ownerOrAdmin = useOwnerOrAdmin();
   const baseSections = SECTIONS.filter((entry) => !remoteActive || entry.id === "companion" || entry.id === "appearance" || entry.id === "desktopWorkspaces")
+    .filter((entry) => upstreamServicesAvailable || !["cloudAccount", "organization"].includes(entry.id))
     .filter((entry) => entry.id !== "desktopWorkspaces" || Boolean(window.ogb?.environments))
     .filter((entry) => entry.id !== "organization" || Boolean(window.ogb?.organization))
     // On the person's own Cloud in this app's window, the plan shows read only (cloudPlan);
@@ -888,6 +892,7 @@ export function SettingsModal() {
   /** One section's content, as its own Advanced page or one block of a
    * stacked Simple page. */
   const renderSection = (id: AppSettingsSection) => {
+    if (!upstreamServicesAvailable && ["cloudAccount", "organization"].includes(id)) return null;
     switch (id) {
       case "desktopWorkspaces":
         return <ConnectedWorkspacesSettings />;
@@ -904,7 +909,7 @@ export function SettingsModal() {
             <div className="rounded-2xl border border-accent-border/40 bg-raised-hover/40 px-1">
               <AdvancedModeRow />
             </div>
-            <ProSettingsCard />
+            {upstreamServicesAvailable && <ProSettingsCard />}
             <Card title={t("settings.profile.title")} subtitle={t("settings.profile.sharedSubtitle")}>
               <ProfileFields />
             </Card>
@@ -1008,6 +1013,7 @@ export function SettingsModal() {
       case "backups":
         return <><WorkspaceBackupSettings /><CompanyBackupSettings /></>;
       case "companion": {
+        if (crewframePhoneSetupEnabled()) return <CrewframePhoneSetup focusRequest={state.appSettingsPhonePairing} />;
         // "Connect your phone" lands on the one pairing that fits this window:
         // this computer's phone flow, or this server's (or Cloud's) pairing code.
         const phoneFocus = state.appSettingsPhonePairing;

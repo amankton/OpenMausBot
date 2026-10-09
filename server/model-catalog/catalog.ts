@@ -296,7 +296,7 @@ export class ModelCatalogStore {
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? CATALOG_FETCH_TIMEOUT_MS);
     try {
       const response = await (this.options.fetch ?? fetch)(MODELS_DEV_URL, {
-        headers: { accept: "application/json", "user-agent": "OpenMausBot", ...(etag ? { "if-none-match": etag } : {}) },
+        headers: { accept: "application/json", "user-agent": "Chief Executive Suite", ...(etag ? { "if-none-match": etag } : {}) },
         // Nothing secret is sent, but the catalog comes from models.dev only.
         redirect: "error",
         signal: controller.signal,

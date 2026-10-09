@@ -6,6 +6,7 @@ import {
   verifyCloudflaredExecutable,
 } from "./prepare-cloudflared.mjs";
 import { verifyBrowserBundle } from "./prepare-browser.mjs";
+import { verifyChiefPackage } from "./chief-package-policy.mjs";
 
 async function requireRealDirectory(directory, mode = 0o755) {
   const details = await lstat(directory);
@@ -75,6 +76,7 @@ export default async function afterPack(context) {
       ? path.join(context.appOutDir, "OpenMausBot.app", "Contents", "Resources")
       : path.join(context.appOutDir, "resources")
   );
+  if (context.packager && process.env.VITE_CHIEF_AGENT_ONLY === "1") verifyChiefPackage(resources);
   await validateCloudflared(resources, context.electronPlatformName, Boolean(context.packager));
   const browserRoot = path.join(resources, "browser-engine");
   const hasBrowser = await lstat(browserRoot).then(() => true, (error) => {

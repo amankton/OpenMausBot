@@ -1,3 +1,4 @@
+import { ChiefBrand } from "./ChiefBrand";
 import { track } from "@/lib/analytics";
 import { OrganizationIdentity } from "./OrganizationIdentity";
 import { approvalCardOutcome } from "./ApprovalCard";
@@ -2488,6 +2489,9 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
           onToggle={layoutInteractive ? () => toggleSection(PINNED_THREADS_SECTION_ID) : undefined}
         />
       )}
+      <div className="flex shrink-0 items-center justify-center px-4 py-3" aria-label="Chief Executive Suite">
+        <ChiefBrand compact={density === "icons"} className={density === "icons" ? "size-8" : "h-7 w-40"} />
+      </div>
       </GlassBar>
 
       {density !== "icons" && <div

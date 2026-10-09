@@ -1,4 +1,4 @@
-// "About OpenMausBot" — the version you are running and where to go next.
+// Product identity, version, and separately disclosed third-party notices.
 // Small on purpose: the interesting settings live in the settings panel, and
 // this exists so a bug report can quote a version number.
 import { useEffect, useRef } from "react";
@@ -6,9 +6,7 @@ import { useEffect, useRef } from "react";
 import {
   APP_NAME,
   APP_REPOSITORY,
-  DOCS_URL,
   LICENSE_URL,
-  RELEASES_URL,
   appVersion,
   openExternalLink,
   platformLabel,
@@ -54,14 +52,19 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
           {platform ? ` · ${platform}` : ""}
         </p>
         <p className="mt-3 text-[13px] leading-relaxed text-ink-secondary">
-          An open-source desktop home for your agents. Apache 2.0 licensed.
+          Your personal team of AI agents.
         </p>
+        <details className="mt-4 text-[12px] leading-relaxed text-ink-secondary">
+          <summary className="cursor-pointer text-accent">Third-party notices</summary>
+          <p className="mt-2">
+          Built on OpenMausBot by Milind Soni. Core code is Apache 2.0 licensed;
+          required copyright and dependency notices accompany this application.
+          </p>
         <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[13px]">
-          <AboutLink href={APP_REPOSITORY} label="GitHub" />
-          <AboutLink href={DOCS_URL} label="Docs" />
-          <AboutLink href={RELEASES_URL} label="Releases" />
-          <AboutLink href={LICENSE_URL} label="License" />
+          <AboutLink href={APP_REPOSITORY} label="Upstream source" />
+          <AboutLink href={LICENSE_URL} label="Core license" />
         </div>
+        </details>
         <button
           ref={closeRef}
           type="button"

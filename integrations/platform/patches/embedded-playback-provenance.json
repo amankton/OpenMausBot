@@ -1,0 +1,22 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-08T06:58:10.334Z",
+  "patch": "0008-embedded-media-playback.patch",
+  "patchSha256": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+    "0007-visible-media-devices.patch": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a"
+  },
+  "inputs": [
+    {
+      "file": "packages/presentation/src/utils.ts",
+      "beforeSha256": "fbb49c3b14d677ddc248900ea569b004a60ca6ea84515ffbd989dee32c293f33",
+      "sha256": "3ee01ab5576d69dcdae7f66d81674de1313dd8a81eb2305e887dfe265e458ed9"
+    }
+  ]
+}

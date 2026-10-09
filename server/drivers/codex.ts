@@ -91,7 +91,7 @@ function missingNativeCodexThread(error: unknown, cursor: string): boolean {
 
 /** Ask the configured executable to update itself. This matters when the user
  * selected a non-PATH Codex: installing a second global copy would leave
- * OpenMausBot pointing at the old binary. */
+ * Chief Executive Suite pointing at the old binary. */
 export function codexUpdateCommand(cli: string, platform: NodeJS.Platform = process.platform): string {
   if (cli === "codex") return "codex update";
   const trimmed = cli.trim();
@@ -183,7 +183,7 @@ export function managedCodexArgs(config: NonNullable<CodexConfig["managed"]>): s
 }
 
 const DENY_TIMEOUT_NOTE =
-  "OpenMausBot: nobody answered this permission request in time. Skip this action and finish what you can without it.";
+  "Chief Executive Suite: nobody answered this permission request in time. Skip this action and finish what you can without it.";
 
 const skippedSseServers = new Set<string>();
 const renamedMcpServers = new Set<string>();
@@ -967,7 +967,7 @@ export const CodexDriver: ProviderDriver<CodexConfig> = {
       const settle = async (ok: boolean, stopReason: string | null) => {
         if (state.settled) return;
         state.settled = true;
-        for (const finish of Array.from(asks.values())) finish("deny", "OpenMausBot: the turn ended", "system");
+        for (const finish of Array.from(asks.values())) finish("deny", "Chief Executive Suite: the turn ended", "system");
         for (const p of rpcPending.values()) p.reject(new Error("turn settled"));
         rpcPending.clear();
         const complete = () => {
@@ -1548,7 +1548,7 @@ export const CodexDriver: ProviderDriver<CodexConfig> = {
       // nothing streamed yet, and never for auth/shape errors or interrupts
       try {
         await request("initialize", {
-          clientInfo: { name: "openmausbot", title: "OpenMausBot", version: serverVersion() },
+          clientInfo: { name: "openmausbot", title: "Chief Executive Suite", version: serverVersion() },
           // Named permission profiles are an experimental app-server field in
           // Codex 0.151. Negotiate them explicitly; older servers ignore this
           // capability and remain on the legacy Custom fallback below.
@@ -1641,7 +1641,7 @@ export const CodexDriver: ProviderDriver<CodexConfig> = {
           approvalParams = namedApprovalParams(approvalMode);
         }
         // Codex's `never` means "do not ask to escalate", not "grant every
-        // requested permission". Only the user's explicit OpenMausBot Full
+        // requested permission". Only the user's explicit Chief Executive Suite Full
         // mode may synthesize approvals; Custom must preserve the sandbox
         // boundary from config.toml (for example never + read-only).
         autoAcceptPermissions = approvalMode === "full";

@@ -36,14 +36,38 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("sidebar footer places", () => {
+  it.each(["comfortable", "compact", "icons"] as const)("keeps personal agents open when entering Shared workspace (%s)", density => {
+    const { html, nodes: tree } = render(density);
+    const link = tree.find(node => node.props["data-sidebar-nav"] === "shared-workspace")!;
+    expect(link.type).toBe("a");
+    expect(link.props.href).toBe("/workspace");
+    expect(link.props.target).toBe("chief-shared-workspace");
+    expect(link.props.rel).toBe("noopener noreferrer");
+    expect(link.props.onClick).toBeUndefined();
+    expect(fixture.dispatch).not.toHaveBeenCalled();
+    expect(html).toContain("Shared workspace");
+    expect(html).not.toContain('data-sidebar-nav="shared-office"');
+    expect(html).toContain('data-sidebar-nav="team-map"');
+    if (density === "icons") expect(link.props["aria-label"]).toBe("Shared workspace");
+  });
+  it.each([false, true])("uses only Shared workspace in either interface mode (advanced=%s)", (advanced) => {
+    fixture.advanced = advanced;
+    for (const density of ["comfortable", "compact", "icons"] as const) {
+      const { html } = render(density);
+      expect(html).toContain('href="/workspace"');
+      expect(html).not.toContain('href="/office"');
+      expect(html).not.toContain("Shared office");
+      expect(html).toContain("Shared workspace");
+    }
+  });
+
   it.each(["comfortable", "compact"] as const)("shows Routines, Triggers and Apps as direct rows (%s)", (density) => {
     const { html } = render(density);
     const order = ["routines", "triggers", "apps"].map((id) => html.indexOf(`data-sidebar-nav="${id}"`));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     for (const label of ["Routines", "Triggers", "Apps"]) expect(html).toContain(`>${label}</span>`);
-    // the hover Tools menu is gone in Simple mode
-    expect(html).not.toContain("Team map");
+    expect(html).toContain(">Team map</span>");
   });
 
   it("opens each place through the store", () => {
@@ -71,8 +95,8 @@ describe("sidebar footer places", () => {
     expect(html.indexOf('data-testid="routines-attention"')).toBeLessThan(html.indexOf('data-sidebar-nav="triggers"'));
   });
 
-  it("shows Team map as its own row in Advanced mode, with no Tools menu", () => {
-    fixture.advanced = true;
+  it.each([false, true])("opens the original Team map in both interface modes (advanced=%s)", (advanced) => {
+    fixture.advanced = advanced;
     const { nodes: tree, html } = render("comfortable");
     expect(html).toContain(">Team map</span>");
     expect(html).not.toContain(">Tools<");

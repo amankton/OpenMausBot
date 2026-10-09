@@ -82,7 +82,7 @@ export const PROVIDER_NOT_CONFIGURED_MESSAGE =
   "The Computer engine has no AI sign-in on its cloud computer. Choose another engine in this bot's settings.";
 /** An OMB Cloud's included Boat account has no agent sign-ins and never
  * will: the operator's account must not run (or pay for) customers' models. */
-export const COMPUTER_ENGINE_CLOUD_UNAVAILABLE = "The Computer engine isn't available on OpenMaus Cloud — choose another engine.";
+export const COMPUTER_ENGINE_CLOUD_UNAVAILABLE = "The Computer engine isn't available on Chief Cloud — choose another engine.";
 
 /** The words of a Boat error envelope ({code, message, error:{code,
  * message}}), never a bare code when Boat sent a sentence. */

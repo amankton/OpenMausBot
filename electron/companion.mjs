@@ -25,8 +25,8 @@ import {
 // sidecar opened. They must stay clear of the harness, which takes 8799 for
 // itself and 8800 for its webhook receiver — the sidecar refuses to start on
 // either and says which, rather than racing it for the socket.
-const CONTROL_PORT = 8811;
-const COMPANION_PORT = 8810;
+const CONTROL_PORT = 8911;
+const COMPANION_PORT = 8910;
 
 let proc = null;
 let lastError = null;

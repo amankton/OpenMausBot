@@ -9,6 +9,7 @@ import { useOwnerOrAdmin } from "@/lib/use-owner-or-admin";
 import { useAdvancedMode } from "@/lib/interface-mode";
 import {
   draftRevision,
+  appendComposerDraft,
   appendDraftAttachments,
   changeDraftAttachmentPending,
   forgetFailedComposerSend,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/drafts";
 import { BotAvatar } from "./Avatar";
 import { MentionTextarea } from "./MentionTextarea";
+import { MeetingReviewImport } from "./MeetingReviewImport";
 import { ComposerAttachments, pathForFile } from "./ComposerAttachments";
 import { splitTranscriptCitations, type CitationAttachment } from "@/lib/citations";
 import { LocalComputerAutoWarning } from "./LocalComputerAutoWarning";
@@ -997,6 +999,11 @@ export function Composer({
               >
                 <Paperclip size={17} />
               </button>
+              {bot && !group && <MeetingReviewImport key={draftId} targetName={bot.name} disabled={locked}
+                onAppendDraft={(material) => {
+                  if (locked || draftIdRef.current !== draftId) return;
+                  appendComposerDraft(draftId, material);
+                }} />}
               {group && !group.dm && (
                 <button
                   type="button"

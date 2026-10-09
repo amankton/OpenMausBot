@@ -63,7 +63,7 @@ export function spawnCli(
   args: string[],
   opts: SpawnOptions,
 ): ChildProcessByStdio<Writable, Readable, Readable> {
-  const resolved = resolveCli(cli, args);
+  const resolved = resolveCli(cli, args, opts.env);
   assertSafeCliArgv(resolved);
   const child = spawn(resolved.command, resolved.args, {
     ...opts,
@@ -94,16 +94,15 @@ export function execCli(
   opts: ExecFileOptions,
   cb: (err: Error | null, stdout: string, stderr?: string) => void,
 ): void {
-  const resolved = resolveCli(cli, args);
   try {
+    const resolved = resolveCli(cli, args, opts.env);
     assertSafeCliArgv(resolved);
+    execFile(resolved.command, resolved.args, { ...opts, windowsHide: true, encoding: "utf8" }, (err, stdout, stderr) =>
+      cb(err, stdout, stderr),
+    );
   } catch (error) {
     queueMicrotask(() => cb(error instanceof Error ? error : new Error(String(error)), "", ""));
-    return;
   }
-  execFile(resolved.command, resolved.args, { ...opts, windowsHide: true, encoding: "utf8" }, (err, stdout, stderr) =>
-    cb(err, stdout, stderr),
-  );
 }
 
 /** Human wording for a failed CLI spawn.
@@ -120,6 +119,8 @@ export function describeSpawnFailure(err: NodeJS.ErrnoException, cli: string): S
     return { message: `\`${cli}\` isn't installed, or isn't on this app's PATH`, setup: true };
   if (err.code === "EACCES" || err.code === "EPERM")
     return { message: `\`${cli}\` isn't executable — check its file permissions`, setup: true };
+  if (err.code === "EINVAL")
+    return { message: `\`${cli}\` could not be launched directly; select a native executable or a supported CLI launcher`, setup: true };
   if (err.code === "ENAMETOOLONG")
     return {
       message: `\`${cli}\` received too much launch data for Windows; update this provider or pass its prompt through stdin/a file`,

@@ -1,5 +1,6 @@
 "use strict";
 
+// Wire protocol shared with server/request-auth.ts, not a display label.
 const DESKTOP_MUTATION_HEADER = "X-OpenMausBot-Desktop-Owner";
 
 /** Add the per-launch owner capability to main-process requests. Chromium's

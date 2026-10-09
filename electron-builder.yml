@@ -1,22 +1,11 @@
-appId: com.openmausbot.app
-productName: OpenMausBot
-artifactName: OpenMausBot-${version}-${arch}.${ext}
-
-protocols:
-  - name: OpenMausBot package install
-    schemes: [openmausbot]
-
-# In-app auto-update reads latest-mac.yml + the .zip (macOS) or latest.yml +
-# the NSIS .exe (Windows) from the PUBLIC releases in this source repo.
-# Public → no token on users' machines. Baked into
-# app-update.yml; both metadata files are emitted here even with
-# --publish never, and must be uploaded to the GitHub release alongside the
-# artifacts — a release missing latest.yml leaves every Windows install
-# stranded on its installed version.
-publish:
-  - provider: github
-    owner: milind-soni
-    repo: OpenMausBot
+appId: com.chiefexecutivesuite.app
+productName: Chief Executive Suite
+publish: null
+extraMetadata:
+  description: Your personal team of AI agents.
+  author:
+    name: Chief Executive Suite contributors
+artifactName: Chief-Executive-Suite-${version}-${arch}.${ext}
 
 directories:
   buildResources: build
@@ -34,10 +23,11 @@ afterPack: ./scripts/after-pack.mjs
 files:
   - electron/**
   - "!electron/**/*.test.*"
+  - "!electron/**/*.node-test.*"
   - "!electron/resources/speech-helper"
   - "!electron/resources/speech-helper.swift"
   - "!electron/resources/speech-helper-Info.plist"
-  - "!electron/resources/OpenMausBot Speech.app/**"
+  - "!electron/resources/Chief Executive Suite Speech.app/**"
   # The Teach a skill recorder is gone, but a machine that once ran
   # `pnpm build:recorder` may still hold its helper build; never ship it.
   - "!electron/resources/recorder-helper"
@@ -91,9 +81,9 @@ mac:
   # unmarked ones on Intel), so latest-mac.yml must list all four files.
   target:
     - target: dmg
-      arch: [arm64, x64]
+      arch: [ arm64, x64 ]
     - target: zip
-      arch: [arm64, x64]
+      arch: [ arm64, x64 ]
   icon: build/icon.icns
   category: public.app-category.productivity
   hardenedRuntime: true
@@ -102,8 +92,8 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   # the dictation helper is a signed background app — Windows and Linux never see it
   extraResources:
-    - from: electron/resources/OpenMausBot Speech.app
-      to: OpenMausBot Speech.app
+    - from: electron/resources/Chief Executive Suite Speech.app
+      to: Chief Executive Suite Speech.app
     # CUA must live outside ASAR. prepare-cua stages the signed executable and
     # a self-contained JS/native SDK bundle selected for macOS arm64.
     # ${arch} resolves per built arch — each bundle carries its own natives
@@ -116,10 +106,14 @@ mac:
     - from: dist-native/browser/darwin-${arch}
       to: browser-engine
   extendInfo:
-    NSMicrophoneUsageDescription: OpenMausBot uses the microphone for voice dictation into the composer.
-    NSSpeechRecognitionUsageDescription: OpenMausBot transcribes your voice on-device to type messages for you.
-    NSAccessibilityUsageDescription: OpenMausBot uses Accessibility when you let a bot control this Mac.
-    NSScreenCaptureUsageDescription: OpenMausBot uses Screen Recording so bots can see this Mac before acting.
+    NSMicrophoneUsageDescription: Chief Executive Suite uses the microphone for
+      voice dictation into the composer.
+    NSSpeechRecognitionUsageDescription: Chief Executive Suite transcribes your
+      voice on-device to type messages for you.
+    NSAccessibilityUsageDescription: Chief Executive Suite uses Accessibility when
+      you let a bot control this Mac.
+    NSScreenCaptureUsageDescription: Chief Executive Suite uses Screen Recording so
+      bots can see this Mac before acting.
   # Notarization runs manually after the build (notarytool + staple),
   # mirroring the BlueyLite ship_release.sh flow.
   notarize: false
@@ -129,7 +123,7 @@ dmg:
   # ${arch} is load-bearing: without it the x64 dmg silently overwrites
   # the arm64 one when both arches build (this section overrides both the
   # top-level and mac-level artifactName, so it must carry the arch itself)
-  artifactName: OpenMausBot-${version}-${arch}.dmg
+  artifactName: Chief-Executive-Suite-${version}-${arch}.dmg
 
 win:
   target:
@@ -150,7 +144,7 @@ win:
       to: cua-driver-background.exe
     - from: dist-native/cua-win32-x64/cua-sdk
       to: cua-sdk
-  # No signing config yet (would go under win.signtoolOptions or
+  # Configure publisher signing for public distribution (under win.signtoolOptions or
   # win.azureSignOptions — eb 26 nests it, there is no top-level
   # win.certificateFile). The installer is unsigned, so SmartScreen shows
   # "unknown publisher" on first run (README says so). verifyUpdateCodeSignature
@@ -163,11 +157,11 @@ win:
 nsis:
   oneClick: true
   perMachine: false
-  shortcutName: OpenMausBot
+  shortcutName: Chief Executive Suite
   # Versioned, like the .dmg. The README's /latest/download/ button needs a
   # STABLE filename, so ship a second copy named OpenMausBot-setup.exe on the
   # release — the same trick as OpenMausBot.dmg beside OpenMausBot-${version}.dmg.
-  artifactName: OpenMausBot-${version}-setup.${ext}
+  artifactName: Chief-Executive-Suite-${version}-setup.${ext}
 
 linux:
   target:
@@ -179,11 +173,11 @@ linux:
   # lone 1024px PNG is not indexed by GNOME's hicolor theme on Ubuntu 24.04.
   icon: build/icon.svg
   category: Utility
-  executableName: openmausbot
-  synopsis: Your own team of AI bots, in a chat app
-  description: A local-first chat app for running a team of AI agents.
+  executableName: chief-executive-suite
+  synopsis: A shared office for people and their personal agents
+  description: A shared office for people and their personal agents.
   maintainer: Milind Soni <46266943+milind-soni@users.noreply.github.com>
-  vendor: OpenMausBot
+  vendor: Chief Executive Suite
   syncDesktopName: true
   # The reviewed x64 CLI runtime is staged before packaging and remains
   # outside ASAR so executable modes and adjacent sidecars are preserved.
@@ -195,11 +189,11 @@ linux:
     - from: dist-native/browser/linux-x64
       to: browser-engine
     - from: build/linux-openmausbot-browser.apparmor
-      to: openmausbot-browser.apparmor
+      to: chief-executive-suite-browser.apparmor
   desktop:
     entry:
-      Name: OpenMausBot
-      Comment: Your own team of AI bots, in a chat app
+      Name: Chief Executive Suite
+      Comment: A shared office for people and their personal agents.
       Keywords: AI;Agents;Chat;Productivity;
 
 deb:
@@ -207,7 +201,7 @@ deb:
   priority: optional
   # Add the narrow browser policy's parser without replacing Electron's
   # default shared-library dependencies.
-  fpm: ["--depends", "apparmor"]
+  fpm: [ "--depends", "apparmor" ]
   # dpkg can preserve legacy directory modes during an upgrade. This
   # idempotent hook repairs only the exact package-owned CUA path.
   afterInstall: build/linux-after-install.sh

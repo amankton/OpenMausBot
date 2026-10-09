@@ -1,4 +1,4 @@
-// Config + data dirs. One file, ~/.openmausbot/config.json, env fallbacks:
+// Config + data dirs. One file, ~/.chief-executive-suite/config.json, env fallbacks:
 //   { "xai": {"key":"xai-…"}, "composio": {"apiKey":"ak_…"}, "box": {"token":"…"},
 //     "instances": { "<instanceId>": {"driver":"grok", …} } }
 import { readFileSync, mkdirSync, existsSync, renameSync, statSync } from "node:fs";
@@ -872,7 +872,7 @@ export function builtInBrowserEnabled(cfg: AppConfig, _env: NodeJS.ProcessEnv = 
  *
  * Deliberately NOT a Settings toggle: this is a maintainer-only escape hatch
  * for an unfinished feature, not a user preference. Someone who needs it
- * enables it by hand in `~/.openmausbot/config.json`
+ * enables it by hand in `~/.chief-executive-suite/config.json`
  * (`{"features": {"sharedComputers": true}}`) and restarts the server. */
 export function sharedComputersEnabled(cfg: AppConfig): boolean {
   return cfg.features?.sharedComputers === true;
@@ -889,7 +889,7 @@ export function claudeUserMcpEnabled(cfg: AppConfig): boolean {
 
 /** Opt-in generated titles for new bot threads: a cheap provider one-shot
  * names the row instead of the first-message snippet. Off until enabled by
- * hand in ~/.openmausbot/config.json
+ * hand in ~/.chief-executive-suite/config.json
  * (`{"features": {"llmThreadTitles": true}}`); a one-shot that fails or
  * answers anything unusable leaves the snippet untouched. */
 export function llmThreadTitlesEnabled(cfg: AppConfig): boolean {
@@ -898,7 +898,7 @@ export function llmThreadTitlesEnabled(cfg: AppConfig): boolean {
 
 /** Opt-in shared skills library (skills lane S1): one store at the data dir
  * that bots reference by assignment instead of per-workspace copies. Off
- * unless enabled by hand in ~/.openmausbot/config.json
+ * unless enabled by hand in ~/.chief-executive-suite/config.json
  * (`{"features": {"skillsLibrary": true}}`); while off, every skills
  * surface keeps today's byte-identical per-bot behavior. */
 export function skillsLibraryEnabled(cfg: AppConfig): boolean {
@@ -936,7 +936,7 @@ export function providerReloadKeys(patch: object): string[] {
 }
 
 // OMB_DATA_DIR isolates test/soak rigs from the user's real fleet.
-export const DATA_DIR = process.env.OMB_DATA_DIR ?? join(homedir(), ".openmausbot");
+export const DATA_DIR = process.env.OMB_DATA_DIR ?? join(homedir(), ".chief-executive-suite");
 const LEGACY_DATA_DIR = join(homedir(), ".opengrokbot");
 export const EVENTS_DIR = join(DATA_DIR, "events");
 export const NATIVE_DIR = join(DATA_DIR, "native");
@@ -1266,7 +1266,7 @@ function openCodeProviderKeyNameRefusal(name: string): string | undefined {
   const reserved = name.startsWith("OPENCODE_") || name.startsWith("OMB_")
     || (WORKSPACE_CREDENTIAL_ENV as readonly string[]).includes(name)
     || ((PROVIDER_CREDENTIAL_ENV as readonly string[]).includes(name) && !(OPENCODE_PROVIDER_ENV as readonly string[]).includes(name));
-  return reserved ? `OpenMaus keeps ${name} for itself, so OpenCode can't be given it here. Put this key in opencode.json instead.` : undefined;
+  return reserved ? `Chief keeps ${name} for itself, so OpenCode can't be given it here. Put this key in opencode.json instead.` : undefined;
 }
 
 /** The saved OpenCode provider keys that can be used, by name. A hand-edited
@@ -1315,7 +1315,7 @@ export function onConfigSaved(listener: (before: JsonObject, after: JsonObject) 
   return () => { configSaveListeners.delete(listener); };
 }
 
-/** Merge a partial config into ~/.openmausbot/config.json (secrets never
+/** Merge a partial config into ~/.chief-executive-suite/config.json (secrets never
  * echoed back — callers report configured-or-not booleans only). */
 export function saveConfig(
   patch: Partial<Omit<AppConfig, "threads" | "newBots">> & {

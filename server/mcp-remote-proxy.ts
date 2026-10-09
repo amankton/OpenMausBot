@@ -52,7 +52,7 @@ async function handle(message: Json): Promise<void> {
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(message.method === "tools/call" ? 120_000 : 30_000)]);
   try {
     const result = message.method === "initialize"
-      ? await client.initialize("OpenMausBot tool proxy", signal)
+      ? await client.initialize("Chief Executive Suite tool proxy", signal)
       : await client.request(message.method, message.params, signal);
     if (message.method === "initialize") initialized = true;
     send({ jsonrpc: "2.0", id: message.id, result });

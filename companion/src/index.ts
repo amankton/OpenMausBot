@@ -62,10 +62,10 @@ const num = (value: string | undefined, fallback: number): number => {
   return Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : fallback;
 };
 
-const HARNESS_PORT = num(process.env.OMB_PORT, 8799);
+const HARNESS_PORT = num(process.env.OMB_PORT, 8899);
 const WEBHOOK_PORT = num(process.env.OMB_WEBHOOK_PORT, HARNESS_PORT + 1);
-const COMPANION_PORT = num(process.env.OMB_COMPANION_PORT, 8810);
-const CONTROL_PORT = num(process.env.OMB_CONTROL_PORT, 8811);
+const COMPANION_PORT = num(process.env.OMB_COMPANION_PORT, 8910);
+const CONTROL_PORT = num(process.env.OMB_CONTROL_PORT, 8911);
 const SERVICE_TYPE = "_openmausbot._tcp";
 let hostedUrl = hostedCompanionUrl(process.env.OMB_COMPANION_HOSTED_URL);
 const PRIVATE_ORIGIN = companionOriginSocket(process.env.OMB_COMPANION_INTERNAL_ORIGIN);

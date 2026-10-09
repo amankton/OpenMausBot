@@ -183,7 +183,19 @@ export async function stageBrowserTarget(root, target, { cacheDirectory = proces
     verifyBrowserBundle(stage, target);
     // Keep the previous complete tree until the new one passes every check.
     const previous = join(scratch, "previous");
-    if (existsSync(destination)) renameSync(destination, previous);
+    if (existsSync(destination)) {
+      try { renameSync(destination, previous); }
+      catch (error) {
+        // Windows may retain executable handles (including a user's active
+        // browser). Reuse only a byte-identical freshly verified vendor tree;
+        // never stop that browser or trust a partially staged directory.
+        if (process.platform !== "win32" || !["EPERM", "EBUSY"].includes(error?.code)) throw error;
+        verifyBrowserBundle(destination, target);
+        if (JSON.stringify(bundleInventory(destination)) !== JSON.stringify(bundleInventory(stage))) throw error;
+        console.log(`Verified existing browser bundle is identical; retaining in-use ${target} files`);
+        return destination;
+      }
+    }
     try { renameSync(stage, destination); }
     catch (error) {
       if (existsSync(previous)) renameSync(previous, destination);

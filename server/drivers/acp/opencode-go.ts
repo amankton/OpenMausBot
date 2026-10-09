@@ -254,7 +254,7 @@ function runGit(directory: string, args: string[]): Promise<void> {
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
   return new Promise((resolveRun, rejectRun) => {
     execFile("git", [
-      "-c", "user.name=OpenMaus", "-c", "user.email=model-discovery@openmaus.invalid",
+      "-c", "user.name=Chief", "-c", "user.email=model-discovery@openmaus.invalid",
       "-c", "commit.gpgsign=false", "-c", `core.hooksPath=${join(directory, ".git", "no-hooks")}`,
       ...args,
     ], { cwd: directory, env: { ...env, GIT_TERMINAL_PROMPT: "0" }, timeout: 10_000, windowsHide: true }, (error) => {
@@ -280,7 +280,7 @@ function discoveryDirectory(): Promise<string> {
     if (!existsSync(marker)) {
       try {
         await runGit(directory, ["init", "-q"]);
-        await runGit(directory, ["commit", "-q", "--allow-empty", "--no-verify", "-m", "OpenMaus model discovery"]);
+        await runGit(directory, ["commit", "-q", "--allow-empty", "--no-verify", "-m", "Chief model discovery"]);
         writeFileSync(marker, "OpenCode files this folder's sessions under its own project.\n");
       } catch {
         // No git: probes run here all the same.

@@ -363,7 +363,7 @@ export class McpOAuthManager {
       const response = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "OpenMausBot", version: "1" } } }),
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "Chief Executive Suite", version: "1" } } }),
         redirect: "error",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
@@ -385,7 +385,7 @@ export class McpOAuthManager {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
-        client_name: "OpenMausBot",
+        client_name: "Chief Executive Suite",
         redirect_uris: [redirectUri],
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
@@ -396,7 +396,7 @@ export class McpOAuthManager {
     });
     const body = await response.json().catch(() => ({})) as { client_id?: unknown };
     if (!response.ok || typeof body.client_id !== "string" || !body.client_id) {
-      throw new Error("This server would not register OpenMausBot for sign-in. Try again later.");
+      throw new Error("This server would not register Chief Executive Suite for sign-in. Try again later.");
     }
     return body.client_id;
   }
@@ -472,7 +472,7 @@ export class McpOAuthManager {
       if (request.headers.host !== expected.host || !request.url?.startsWith("/")) throw new Error("host");
       callback = new URL(request.url, flow.redirectUri);
     } catch {
-      response.writeHead(400).end("Invalid sign-in callback. Return to OpenMausBot and try again.");
+      response.writeHead(400).end("Invalid sign-in callback. Return to Chief Executive Suite and try again.");
       return;
     }
     try {
@@ -481,11 +481,11 @@ export class McpOAuthManager {
       if (flow.status.phase === "failed") {
         response.writeHead(400).end(`${flow.status.message} You can close this tab.`);
       } else {
-        response.end("Signed in. You can close this tab and return to OpenMausBot.");
+        response.end("Signed in. You can close this tab and return to Chief Executive Suite.");
       }
     } catch (error) {
       response.writeHead(error instanceof McpSignInError ? error.status : 400)
-        .end("Invalid or expired sign-in. Return to OpenMausBot and try again.");
+        .end("Invalid or expired sign-in. Return to Chief Executive Suite and try again.");
     }
   }
 

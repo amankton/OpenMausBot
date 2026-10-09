@@ -1,0 +1,144 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "license": "EPL-2.0",
+  "baselineFrontendImage": "sha256:c79fa3251ded2d6e6a3ff6e949e9c2d3138dd939b47ad393401a29b3b111cec7",
+  "description": "Incremental patch over the edited source used for the frozen frontend image; apply after patches0001–0003.",
+  "patchSha256": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d"
+  },
+  "inputs": [
+    {
+      "file": "plugins/recorder-resources/src/uploader.ts",
+      "baselineSha256": "ae76cfa9502442a77819a2d275b3fdec788ecc767d25ce24717cbb8c42f30448",
+      "currentSha256": "9acd60c41951f5355b0364bc832650dc250042f0577a4ec7c629a14ff9b02ecb"
+    },
+    {
+      "file": "plugins/recorder-resources/src/screen-recorder.ts",
+      "baselineSha256": "50a98ba6249f5ed5d771c4b5d796dee837b05da81287e0b4e10c73e11cfde72e",
+      "currentSha256": "b9cbfe8dc4843c4528f12ee5ffe6a3f31bfc7831838ceb1ec20fbcf64d13a8d3"
+    },
+    {
+      "file": "plugins/recorder-resources/src/stream.ts",
+      "baselineSha256": "451e4c6f848e79235673763b5b7e538f9d20f98dff78df7b6fc9707cf3b9d7d1",
+      "currentSha256": "187e41a46f79b0bcaac752610303b252dfdf01051325f986fc9826ca4859aa7c"
+    },
+    {
+      "file": "plugins/recorder-resources/src/recorder.ts",
+      "baselineSha256": "a1ddffbfa879e932d0d54a8e6edfd5ea4576b378235b6bd6f8209daa8b961331",
+      "currentSha256": "00d3948d361b02ce4e869f843c776b24aac208508a9bf5904f666c4edc4383ad"
+    },
+    {
+      "file": "plugins/recorder-resources/src/stores/recorder.ts",
+      "baselineSha256": "0fe718b4cc76960a99ae1bbcd40034ef7605f8dfe39fe2865ee960906884d103",
+      "currentSha256": "07ee4f4ff4e913cea131abab0171a90733b292596060f65bfed4a31bd915983e"
+    },
+    {
+      "file": "plugins/recorder-resources/src/types.ts",
+      "baselineSha256": "3548166a1d0c319cd8711a66414d484079a89fa7f4f8dde8f80ed08df331d5e4",
+      "currentSha256": "7a929fc4f7e865748df78bb80f602370e9712399b98027c2034b5d301aa0753d"
+    },
+    {
+      "file": "plugins/recorder-resources/src/recording.ts",
+      "baselineSha256": "4647351399b4bfa65b60ff3e813e07949aa6ef5a4cd771662e3bb51816823084",
+      "currentSha256": "775c3731cf8460aee65f126ce9ba88010261632a517a3dfa805387ec23baa374"
+    },
+    {
+      "file": "plugins/recorder-resources/src/components/RecordingPopup.svelte",
+      "baselineSha256": "b2c58afcba0902036095b8358928700e5d6aee91ebd12a9d693655df1e673bbe",
+      "currentSha256": "4d6cee237cb558e2e69136af4a30001c922431d7e2baadfc61a929ce72238681"
+    },
+    {
+      "file": "plugins/recorder-resources/src/components/WorkbenchExtension.svelte",
+      "baselineSha256": "6386c23834819b7cfe27e78d9dcf6f71db4464437e43d42161a4e35afd5624e4",
+      "currentSha256": "4508a0545e25dd2f60964388642d123117f943f71bbb9a0477677b4f75a70a64"
+    },
+    {
+      "file": "plugins/recorder-resources/src/components/RecorderExt.svelte",
+      "baselineSha256": "727379196c4981f42b48115114d657850f2507cbb094b69252224db4960a8cbd",
+      "currentSha256": "410fffce7de2f21e6bdacd3d7f6441c9325f70cdf990ea9342fcfde10b693145"
+    },
+    {
+      "file": "packages/presentation/src/file.ts",
+      "baselineSha256": "bb815bc7ec66890e6a37e539f5076470bb7d217ddcaccc8f43c3f2aba0d53443",
+      "currentSha256": "602fbf3af1df18cc4591d3e1521bbe2f0eb1fdd43919badb9e2865afb548d78b"
+    },
+    {
+      "file": "plugins/recorder-resources/package.json",
+      "baselineSha256": "dd3aeb96bb5522f7ea50c190911f6f05dee75ec53cd599214f37bd63f8c6533d",
+      "currentSha256": "0433a01776c1dade3ce7c47dbaa461ddfda78f9844744fa83668b806c6a03b68"
+    },
+    {
+      "file": "common/config/rush/pnpm-lock.yaml",
+      "baselineSha256": "a87fdfde93399480f8560d2e5ff4b874eaf4f655784553379260b41667f94852",
+      "currentSha256": "d7800c23457a2c1b8aaf75ea6160bcac31f2c2919ec3a62da0d938abbcf10535"
+    }
+  ],
+  "durationRepair": {
+    "dependency": "@fix-webm-duration/fix@1.0.1",
+    "license": "MIT",
+    "dependencyProvenanceSha256": "3f5e63a61527ef80a7dd621a8a38b6ea767c41cce04e21b9f1b1d0f889de1b45",
+    "isolatedBrowserEvidenceSha256": "8763c06cdf05a5f46d7640a81ad9224cd7ac41db13f15e57c185aa26c92a69f5",
+    "durationExcludesPauses": true,
+    "repairWaitLimitMs": 10000,
+    "synchronousParserPreemption": false
+  },
+  "validation": {
+    "focusedTests": 30,
+    "reverseApplyCheck": true,
+    "packageTypes": "presentation previously passed; recorder-resources revalidated after duration repair at 768 MiB",
+    "svelte": {
+      "errors": 0,
+      "warnings": 33,
+      "files": 1961,
+      "logSha256": "ee9bb52bce81877d01b81c3b21133385f189ee76f164fcb5ec6bb54604d5388e",
+      "note": "Prior raw increment check; duration repair makes no Svelte edits"
+    },
+    "productionBuild": {
+      "passed": true,
+      "receiptSha256": "47ba6af278d04e6730842b93618b7fb049a2c936908c3744e1fcd89d9bf733c3",
+      "configurations": 2,
+      "heapCapMiB": 2048,
+      "minimumWindowsAvailableMiB": 2309,
+      "maximumChildRssMiB": 2660
+    },
+    "browserPlaybackAndAuthorization": {
+      "passed": true,
+      "mode": "compiled",
+      "checkedAt": "2026-10-07T23:00:32.334Z",
+      "receiptSha256": "f1d7f218037d8844c5105fd73aeea1262f3131429d3d7a5c601d7d86549c8b70",
+      "checks": 6,
+      "surface": "Card Activity comment attachment (legacy chunter), explicit comment Send after recorder Save",
+      "mainCardBodyRecordingCovered": false,
+      "authCases": [
+        {
+          "case": "anonymous",
+          "get": 401,
+          "delete": 403,
+          "post": 403
+        },
+        {
+          "case": "invalid bearer",
+          "get": 401,
+          "delete": 401,
+          "post": 401
+        },
+        {
+          "case": "valid outsider",
+          "get": 403,
+          "delete": 403,
+          "post": 403
+        },
+        {
+          "case": "member wrong workspace URL",
+          "get": 403,
+          "delete": 403,
+          "post": 403
+        }
+      ]
+    },
+    "deployed": false
+  }
+}

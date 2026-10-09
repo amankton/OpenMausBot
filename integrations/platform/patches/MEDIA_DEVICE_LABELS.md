@@ -1,0 +1,13 @@
+# Visible microphone and camera names
+
+Patch `0007-visible-media-devices.patch` applies after the accepted six-patch stack at source revision `03b7aad7dc562f4f9769c51a4df08191a0393997`.
+
+The retained selector passed an empty browser device label directly to the UI. It now uses visible default microphone/camera/speaker labels until names are available. Opening settings still only enumerates devices. Explicit Show audio device names / Show camera name controls briefly request the corresponding input, refresh its name, and release every returned track, including permission results arriving after the popup closes. Device and permission changes refresh the list. Hidden device IDs no longer overwrite saved input choices. Camera preview follows the selected device ID so a label refresh alone does not restart capture.
+
+Verification on October 7, 2026 (America/Los_Angeles): all 17 media consent/device tests and both minifier tests passed. Ordered reconstruction of all seven patches from the pinned upstream revision passed for 55 files. Both media packages validated; Svelte reported zero errors and 15 existing warnings. The compiled browser verifier passed all nine checks using 140 built assets, including hidden labels for all three device kinds, individual disclosure of synthetic hardware names, and track cleanup. Raw-recording acceptance also passed for this build.
+
+Both production configurations passed with the established Windows build recipe, a 2048 MiB Node heap and native minification. Build receipt SHA-256: `2bb22ddbdd0cef9de51553fff4fa7f3dfdf4498ce0a240a77c916eee5abc9982`. Earlier low-memory attempts did not produce deployable receipts. The successful build temporarily paused the exact Chief service containers, waited for memory reclamation, and restored all 17 services with their IDs and mounts preserved. Startup and runtime memory guards remain unchanged.
+
+Deployment status and the matching deployed browser receipt are recorded separately in `docs/verification/evidence/chief-device-label-rollout.json` when rollout completes. Browser acceptance uses synthetic devices and an isolated acceptance workspace; it does not activate the owner's physical microphone or camera.
+
+Deployed on October 7 at 23:46 America/Los_Angeles. All nine checks passed against the deployed frontend. The rollout receipt confirms only the frontend container changed, all 17 services are running, and all persistent mounts and other images were preserved. The owner's in-app browser was refreshed; it returned to the shared-workspace sign-in screen. Actual physical hardware names therefore remain unverified in that profile until the owner signs in and permits name disclosure.

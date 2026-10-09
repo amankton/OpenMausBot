@@ -162,7 +162,7 @@ describe("computerPrompt", () => {
   it("distinguishes background window control from foreground desktop input", () => {
     const prompt = computerPrompt("local");
     expect(prompt).toContain("background delivery");
-    expect(prompt).toContain("do not bring OpenMausBot");
+    expect(prompt).toContain("do not bring Chief Executive Suite");
     expect(prompt).toContain("dedicated browser tools");
     expect(prompt).toContain("keeping the user's intended browser profile/account");
     expect(prompt).toContain("Do not silently retry a background refusal");
@@ -277,7 +277,7 @@ describe("cloudHomePrompt", () => {
   it("says the bot runs in the cloud, offers what works there, and never asks for a place that cannot exist", () => {
     for (const tools of [true, false]) {
       const text = cloudHomePrompt(tools);
-      expect(text).toMatch(/^ You run on the user's My Cloud, their always-on OpenMausBot in the cloud, not on their own computer\./);
+      expect(text).toMatch(/^ You run on the user's My Cloud, their always-on Chief Executive Suite in the cloud, not on their own computer\./);
       expect(text).toContain("Offer what works here: the built-in browser and their cloud computer, a desktop in the cloud. Call it their cloud computer, as the app does.");
       expect(text).not.toMatch(/\bOMB\b|\bBoat\b|\bbox\b/);
       expect(text).toContain("Never ask them to set up this computer or a Local VM; neither exists here.");

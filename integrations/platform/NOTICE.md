@@ -1,0 +1,9 @@
+# Retained Platform deployment provenance
+
+The files in `upstream/` are exact tracked source blobs from [amankton/platform-selfhost, revision 42fdd73311843cea76fb7f9dade9d7397b358368](https://github.com/amankton/platform-selfhost/tree/42fdd73311843cea76fb7f9dade9d7397b358368). `upstream/source.json` records SHA-256 hashes. Their Eclipse Public License 2.0 is retained in `upstream/LICENSE`; existing notices remain intact. No runtime configuration, credentials, database, volume, or workspace content was copied.
+
+`compose.json` and `nginx.conf` are Chief adaptations of these retained files. Changes: a fixed independent project/network/volume namespace; only one host port bound to IPv4 loopback; installed image digests; new private credentials; localhost service URLs; Chief page title and disabled desktop update channel. The unused upstream Mongo volume was removed. The original 15-service set and full model registration remain. These adaptations retain the upstream EPL-2.0 licensing context. Each container and its dependencies retain their own licenses; this notice does not relicense their binaries.
+
+Platform source reference: [Platform-Collective/platform, 03b7aad7dc562f4f9769c51a4df08191a0393997](https://github.com/Platform-Collective/platform/tree/03b7aad7dc562f4f9769c51a4df08191a0393997), the peeled `s0.7.426` release tag. `image-lock.json` records locally installed RepoDigests for that release and its supporting services. A matching release tag and image name do **not** establish a reproducible build or prove the installed binaries were built from that exact commit. No such attestation is claimed.
+
+The release package/module closure and remaining integration work are described in `docs/CHIEF_PLATFORM_MODULE_MAP.md`. This preparation retains the actual image UI and services; it does not claim a complete source build, a minimal Contacts-only build, or completed Chief integration of every selected module.

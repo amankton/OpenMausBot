@@ -403,6 +403,14 @@ export function verificationServerEnvironment(parentEnv: NodeJS.ProcessEnv, data
 }
 
 /** Start one foreground-owned, fake-engine server with no access to user data. */
+export function verificationPlatformUrl(raw: string): string {
+  if (!/^http:\/\/(?:localhost|127\.0\.0\.1):[1-9]\d{0,4}(?:\/workbench\/[\w/-]+)?\/?$/.test(raw)) {
+    throw new ControlOmbError("Platform verification requires an explicit owned loopback HTTP fixture");
+  }
+  try { return new URL(raw).href; }
+  catch { throw new ControlOmbError("Platform verification requires a valid loopback port"); }
+}
+
 export async function launchVerificationServer(
   parentEnv: NodeJS.ProcessEnv = process.env,
   signal?: AbortSignal,
@@ -416,7 +424,12 @@ export async function launchVerificationServer(
   extraProviders: Array<"codex"> = [],
   /** Programmatic tests only: an owned loopback Boat provider, never a live account. */
   boatFixtureApi?: string,
+  /** Chief office fixtures keep fake agents and a disposable home. Media, if
+   * supplied, must be an explicitly owned loopback development server. */
+  chiefOffice?: { media?: { url: string; key: string; secret: string }; platformUrl?: string },
 ): Promise<VerificationServer> {
+  // Explicit programmatic grant only; never inherit a real Platform setting.
+  const platformUrl = chiefOffice?.platformUrl === undefined ? undefined : verificationPlatformUrl(chiefOffice.platformUrl);
   if (boatFixtureApi) {
     if (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(boatFixtureApi)) {
       throw new ControlOmbError("Boat verification requires an explicit loopback HTTP provider");
@@ -462,6 +475,14 @@ export async function launchVerificationServer(
 
   const log = openSync(logPath, "a", 0o600);
   const childEnv = verificationServerEnvironment(parentEnv, dataDir, port);
+  if (chiefOffice) {
+    childEnv.CHIEF_OFFICE_ENABLED = "1";
+    if (platformUrl) childEnv.CHIEF_PLATFORM_URL = platformUrl;
+    if (chiefOffice.media) {
+      if (!/^ws:\/\/127\.0\.0\.1:\d{1,5}$/.test(chiefOffice.media.url)) throw new ControlOmbError("Chief verification media must be loopback only");
+      Object.assign(childEnv, { CHIEF_LIVEKIT_URL: chiefOffice.media.url, CHIEF_LIVEKIT_API_KEY: chiefOffice.media.key, CHIEF_LIVEKIT_API_SECRET: chiefOffice.media.secret });
+    }
+  }
   // Opt-in live Local VM fixture: keep the temporary home and fake engine,
   // granting only the explicitly selected machine connection and static UI.
   if (localVm) Object.assign(childEnv, {

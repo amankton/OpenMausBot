@@ -1,0 +1,172 @@
+diff --git a/plugins/media-resources/src/components/MediaPopup.svelte b/plugins/media-resources/src/components/MediaPopup.svelte
+index e2647fa..ef86f67 100644
+--- a/plugins/media-resources/src/components/MediaPopup.svelte
++++ b/plugins/media-resources/src/components/MediaPopup.svelte
+@@ -20,12 +20,59 @@
+   import MediaPopupCamSelector from './MediaPopupCamSelector.svelte'
+   import MediaPopupMicSelector from './MediaPopupMicSelector.svelte'
+   import MediaPopupSpkSelector from './MediaPopupSpkSelector.svelte'
+-  import { getMediaDevices } from '@hcengineering/media'
++  import { getMediaDevices, releaseStream, type MediaInfo } from '@hcengineering/media'
+   import { Loading } from '@hcengineering/ui'
++  import { onMount, onDestroy } from 'svelte'
++  import { camAccess, micAccess, state } from '../stores'
+ 
+   let micOpened = false
+   let camOpened = false
+   let spkOpened = false
++  let mediaInfo: MediaInfo | undefined
++  let error = ''
++  let requesting = false
++  let hiddenMicrophone = false
++  let hiddenCamera = false
++  let closed = false
++  let version = 0
++
++  async function refreshDevices (): Promise<void> {
++    const current = ++version
++    try {
++      const next = await getMediaDevices(false, false)
++      if (!closed && current === version) mediaInfo = next
++    } catch {
++      if (!closed && current === version) error = 'Could not list devices. Check browser permissions and try again.'
++    }
++  }
++
++  async function revealDevice (kind: 'audio' | 'video'): Promise<void> {
++    if (requesting || closed) return
++    requesting = true
++    error = ''
++    let stream: MediaStream | null = null
++    try {
++      // This explicit action briefly activates only the requested input to unlock its name.
++      stream = await navigator.mediaDevices.getUserMedia({ audio: kind === 'audio', video: kind === 'video' })
++      if (!closed) await refreshDevices()
++    } catch {
++      if (!closed) error = 'Device access was not granted. Allow access in your browser settings, then try again.'
++    } finally {
++      releaseStream(stream)
++      requesting = false
++    }
++  }
++
++  $: hiddenMicrophone = mediaInfo?.devices.some(device => (device.kind === 'audioinput' || device.kind === 'audiooutput') && !device.label.trim()) ?? false
++  $: hiddenCamera = mediaInfo?.devices.some(device => device.kind === 'videoinput' && !device.label.trim()) ?? false
++  $: if ($camAccess.state || $micAccess.state || $state) void refreshDevices()
++
++  onMount(() => {
++    const changed = (): void => { void refreshDevices() }
++    navigator.mediaDevices?.addEventListener('devicechange', changed)
++    return () => navigator.mediaDevices?.removeEventListener('devicechange', changed)
++  })
++  onDestroy(() => { closed = true; version++ })
+ 
+   function handleMicExpanded (ev: CustomEvent<boolean>): void {
+     micOpened = ev.detail
+@@ -54,11 +101,11 @@
+ 
+ <div class="antiPopup mediaPopup">
+   <ComponentExtensions extension={media.extension.StateContext} on:close />
+-  {#await getMediaDevices(false, false)}
++  {#if mediaInfo === undefined && !error}
+     <div class="p-4">
+       <Loading />
+     </div>
+-  {:then mediaInfo}
++  {:else if mediaInfo !== undefined}
+     <div class="ap-scroll">
+       <div class="ap-box">
+         <MediaPopupMicSelector {mediaInfo} bind:expanded={micOpened} on:expand={handleMicExpanded} />
+@@ -68,7 +115,15 @@
+         <MediaPopupCamSelector {mediaInfo} bind:expanded={camOpened} on:expand={handleCamExpanded} />
+       </div>
+     </div>
+-  {/await}
++  {/if}
++  {#if hiddenMicrophone || hiddenCamera}
++    <div class="p-4">
++      <p>Your browser hides device names until you allow access. Audio identification briefly uses the microphone; camera identification briefly uses the camera. Both stop immediately afterward.</p>
++      {#if hiddenMicrophone}<button disabled={requesting} on:click={() => revealDevice('audio')}>Show audio device names</button>{/if}
++      {#if hiddenCamera}<button disabled={requesting} on:click={() => revealDevice('video')}>Show camera name</button>{/if}
++    </div>
++  {/if}
++  {#if error}<p class="p-4" role="alert">{error}</p><button disabled={requesting} on:click={() => refreshDevices()}>Refresh devices</button>{/if}
+ </div>
+ 
+ <style lang="scss">
+diff --git a/plugins/media-resources/src/components/MediaPopupCamPreview.svelte b/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
+index eb97313..1ab9d4f 100644
+--- a/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
++++ b/plugins/media-resources/src/components/MediaPopupCamPreview.svelte
+@@ -21,18 +21,19 @@
+   export let selected: MediaDeviceInfo
+ 
+   let previewEnabled = false
++  let selectedDeviceId = ''
+   let requestVersion = 0
+   let stream: MediaStream | null = null
+   let video: HTMLVideoElement | null = null
+ 
+-  async function updateStream (device: MediaDeviceInfo, enabled: boolean): Promise<void> {
++  async function updateStream (deviceId: string, enabled: boolean): Promise<void> {
+     const request = ++requestVersion
+     releaseStream(stream)
+     stream = null
+     if (!enabled) return
+     const constraints =
+-      device !== null
+-        ? { video: { deviceId: { exact: device.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
++      deviceId !== ''
++        ? { video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+         : { video: { width: { ideal: 1280 }, height: { ideal: 720 } } }
+ 
+     try {
+@@ -58,7 +59,8 @@
+     stream = null
+   })
+ 
+-  $: void updateStream(selected, previewEnabled)
++  $: selectedDeviceId = selected?.deviceId ?? ''
++  $: void updateStream(selectedDeviceId, previewEnabled)
+ 
+   $: if (video !== null && stream !== null) {
+     video.srcObject = stream
+diff --git a/plugins/media-resources/src/utils.ts b/plugins/media-resources/src/utils.ts
+index 140b6e8..dca88fa 100644
+--- a/plugins/media-resources/src/utils.ts
++++ b/plugins/media-resources/src/utils.ts
+@@ -28,10 +28,15 @@ import { onDestroy } from 'svelte'
+ import type TypedEventEmitter from 'typed-emitter'
+ import { registerSession, sessions, state, unregisterSession } from './stores'
+ import { get } from 'svelte/store'
++import media from './plugin'
+ 
+ /** @public */
+ export function getDeviceLabel (device: MediaDeviceInfo): IntlString {
+-  return getEmbeddedLabel(cleanupDeviceLabel(device.label))
++  const label = cleanupDeviceLabel(device.label).trim()
++  if (label !== '') return getEmbeddedLabel(label)
++  return device.kind === 'audioinput'
++    ? media.string.DefaultMic
++    : device.kind === 'videoinput' ? media.string.DefaultCam : media.string.DefaultSpeaker
+ }
+ 
+ /** @public */
+diff --git a/plugins/media/src/utils.ts b/plugins/media/src/utils.ts
+index 3926613..5c5eeb3 100644
+--- a/plugins/media/src/utils.ts
++++ b/plugins/media/src/utils.ts
+@@ -152,10 +152,11 @@ export async function getMediaDevices (microphone: boolean, camera: boolean): Pr
+ 
+   const activeMicrophone =
+     microphonePermission === 'denied' ? undefined : getActiveDevice('audioinput', devices, selectedMicrophoneId)
+-  updateSelectedMicId(activeMicrophone?.deviceId)
++  // Before permission, browsers may hide IDs. Do not erase a saved selection.
++  if (activeMicrophone?.deviceId) updateSelectedMicId(activeMicrophone.deviceId)
+   const activeCamera =
+     cameraPermission === 'denied' ? undefined : getActiveDevice('videoinput', devices, selectedCameraId)
+-  updateSelectedCamId(activeCamera?.deviceId)
++  if (activeCamera?.deviceId) updateSelectedCamId(activeCamera.deviceId)
+   const activeSpeaker = getActiveDevice('audiooutput', devices, selectedSpeakerId)
+ 
+   return { activeMicrophone, activeCamera, activeSpeaker, devices }

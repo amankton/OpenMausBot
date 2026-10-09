@@ -142,7 +142,7 @@ await build({
 // dist-server/ alone. The npm package also copies it to
 // <package>/enterprise/server/index.js, beside the server. Its own license
 // travels with it either way.
-if (existsSync(join(root, "enterprise", "server", "index.ts"))) {
+if (process.env.OMB_INCLUDE_ENTERPRISE !== '0' && existsSync(join(root, "enterprise", "server", "index.ts"))) {
   await build({
     entryPoints: [join(root, "enterprise", "server", "index.ts")],
     bundle: true,

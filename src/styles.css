@@ -1660,3 +1660,8 @@ button:disabled.bg-danger {
 ::highlight(omb-citation-source) {
   background-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
+
+/* Supplied Chief wordmarks follow light and dark application skins. */
+.chief-on-light { display: none; }
+:is([data-skin="atelier"], [data-skin="lagoon"], [data-skin="linen"], [data-skin="daylight"], [data-skin="meadow"]) .chief-on-dark { display: none; }
+:is([data-skin="atelier"], [data-skin="lagoon"], [data-skin="linen"], [data-skin="daylight"], [data-skin="meadow"]) .chief-on-light { display: block; }

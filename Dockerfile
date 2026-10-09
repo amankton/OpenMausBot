@@ -64,7 +64,7 @@ RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
 # which may be an existing mounted volume. Session state still lives in HOME.
 ENV HOME=/data \
     AGENT_BROWSER_EXECUTABLE_PATH=/opt/openmausbot-browser/chrome \
-    OMB_DATA_DIR=/data/.openmausbot \
+    OMB_DATA_DIR=/data/.chief-executive-suite \
     OMB_STATIC_DIR=/app/dist \
     OMB_PORT=8799 \
     OMB_WEBHOOK_PORT=8800 \

@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/amankton/platform-selfhost",
+  "revision": "42fdd73311843cea76fb7f9dade9d7397b358368",
+  "files": [
+    {
+      "path": "compose.yml",
+      "revision": "42fdd73311843cea76fb7f9dade9d7397b358368",
+      "sha256": "3a8433656f9e2ff794a3e9586d1e9dfa57e0a515a00e87cced1dac1cbae09abe"
+    },
+    {
+      "path": ".huly.nginx",
+      "revision": "42fdd73311843cea76fb7f9dade9d7397b358368",
+      "sha256": "f9ed19196f09c7846c00ebbe68a76462b3e4898bbd8f0ea77e4b415d02a8b080"
+    },
+    {
+      "path": "LICENSE",
+      "revision": "42fdd73311843cea76fb7f9dade9d7397b358368",
+      "sha256": "8c349f80764d0648e645f41ef23772a70c995a0924b5235f735f4a3d09df127c"
+    }
+  ]
+}

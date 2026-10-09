@@ -1,0 +1,562 @@
+//
+// Copyright © 2024 Hardcore Engineering Inc.
+//
+// Licensed under the Eclipse Public License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License. You may
+// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+import {
+  getClient as getAccountClientRaw,
+  isWorkspaceLoginInfo,
+  type AccountClient
+} from '@hcengineering/account-client'
+import { createOpenTelemetryMetricsContext, SplitLogger } from '@hcengineering/analytics-service'
+import { MeasureContext, newMetrics, systemAccountUuid } from '@hcengineering/core'
+import {
+  parseRoomName,
+  ParticipantMetadata,
+  queueEvents,
+  QueueMeetingEvent,
+  QueueMeetingMessage,
+  QueueMeetingUpdateMetadataMessage,
+  QueueWebhookMeetingMessage,
+  RoomMetadata
+} from '@hcengineering/love'
+import { setMetadata } from '@hcengineering/platform'
+import serverClient from '@hcengineering/server-client'
+
+import { getPlatformQueue } from '@hcengineering/kafka'
+import { initStatisticsContext, QueueTopic, StorageConfig, StorageConfiguration } from '@hcengineering/server-core'
+import { storageConfigFromEnv } from '@hcengineering/server-storage'
+import serverToken, { generateToken } from '@hcengineering/server-token'
+import cors from 'cors'
+import express, { type Request } from 'express'
+import {
+  EgressClient,
+  RoomAgentDispatch,
+  RoomServiceClient,
+  WebhookReceiver,
+  type WebhookEvent
+} from 'livekit-server-sdk'
+import { join } from 'path'
+import { updateLiveKitSessions } from './billing'
+import config from './config'
+import { LiveKitPollingService } from './polling'
+import { RecordingProcessor } from './recordings'
+import { WebhookProcessor } from './webhook'
+import { WorkspaceClient } from './workspaceClient'
+import { AdmissionError, MeetingAdmission } from './admission'
+import { installCapture } from './captureRoutes'
+import { getClient as getWorkspaceRestClient } from './client'
+import { GuestManager } from './guests'
+import { createToken, decodeMeetingToken, extractToken, getRoomName, parseMetadata } from './utils'
+/**
+ * Recursively converts all BigInt values in an object to strings.
+ * This is needed because JSON.stringify cannot handle BigInt values.
+ */
+function convertBigIntToString (obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+  if (typeof obj === 'bigint') {
+    return obj.toString()
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToString)
+  }
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = convertBigIntToString(value)
+    }
+    return result
+  }
+  return obj
+}
+
+function getAccountClient (token?: string): AccountClient {
+  return getAccountClientRaw(config.AccountsURL, token)
+}
+
+export function getWebhookRoomName (event: WebhookEvent): string | undefined {
+  if (event.egressInfo != null && typeof event.egressInfo.roomName === 'string') return event.egressInfo.roomName
+  if (typeof (event as any).roomName === 'string') return (event as any).roomName
+  if (event.room != null && typeof event.room.name === 'string') return event.room.name
+  return undefined
+}
+
+export const main = async (): Promise<void> => {
+  setMetadata(serverClient.metadata.Endpoint, config.AccountsURL)
+  setMetadata(serverClient.metadata.UserAgent, config.ServiceID)
+  setMetadata(serverToken.metadata.Secret, config.Secret)
+  setMetadata(serverToken.metadata.Service, 'love')
+
+  const storageConfigs: StorageConfiguration = storageConfigFromEnv()
+  const s3StorageConfigs: StorageConfiguration | undefined =
+    config.S3StorageConfig !== undefined ? storageConfigFromEnv(config.S3StorageConfig) : undefined
+
+  const queue = getPlatformQueue('love-client')
+
+  const ctx = initStatisticsContext('love', {
+    factory: () =>
+      createOpenTelemetryMetricsContext(
+        'love',
+        {},
+        {},
+        newMetrics(),
+        new SplitLogger('love', {
+          root: join(process.cwd(), 'logs'),
+          enableConsole: (process.env.ENABLE_CONSOLE ?? 'true') === 'true'
+        })
+      )
+  })
+
+  const storageConfig = storageConfigs.storages.find((it) => ['datalake', 's3'].includes(it.kind))
+  const s3storageConfig = s3StorageConfigs?.storages.findLast((p) => p.kind === 's3')
+
+  const app = express()
+  const port = config.Port
+  app.use(cors())
+  app.use(express.raw({ type: 'application/webhook+json' }))
+  app.use((req, res, next) => { if (req.path.startsWith('/capture')) next(); else express.json()(req, res, next) })
+
+  // Day-one member meetings: external guests and capture require their own consent/admission increment.
+  app.use((req, res, next) => {
+    if (config.MemberMeetingsOnly && ['/guestToken', '/guestInfo', '/guestJoin', '/startRecord', '/stopRecord', '/transcription'].includes(req.path)) {
+      res.status(403).send({ error: 'This operation is not enabled for member meetings' })
+      return
+    }
+    next()
+  })
+
+  const admissionFor = async (req: Request): Promise<MeetingAdmission> => {
+    const token = extractToken(req.headers)
+    if (token == null) throw new AdmissionError(401, 'A workspace sign-in is required')
+    const login = await getAccountClient(token).getLoginInfoByToken()
+    if (!isWorkspaceLoginInfo(login)) throw new AdmissionError(401, 'A workspace sign-in is required')
+    const caller = await getWorkspaceRestClient(token, login.workspace)
+    const workspace = await WorkspaceClient.create(login.workspace, ctx)
+    return new MeetingAdmission(login, caller, workspace.getAdmissionClient(), config.Secret)
+  }
+  const admissionError = (res: express.Response, error: unknown): void => {
+    res.status(error instanceof AdmissionError ? error.status : 503).send({ error: error instanceof AdmissionError ? error.message : 'Meeting admission is temporarily unavailable' })
+  }
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/inviteMeeting', async (req, res) => {
+    try {
+      const admission = await admissionFor(req)
+      await admission.invite(req.body.to, req.body.meetingId)
+      res.status(204).send()
+    } catch (error) { admissionError(res, error) }
+  })
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/respondToMeetingInvite', async (req, res) => {
+    try {
+      if (typeof req.body.accept !== 'boolean' || typeof req.body.inviteId !== 'string') throw new AdmissionError(400, 'Invalid invitation response')
+      const admission = await admissionFor(req)
+      await admission.respond(req.body.inviteId, req.body.accept, req.body.meetingId)
+      res.status(204).send()
+    } catch (error) { admissionError(res, error) }
+  })
+
+  const roomClient = new RoomServiceClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
+  const capture = await installCapture(app, roomClient, ctx)
+  const egressClient = new EgressClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
+
+  const eventProducer = queue.getProducer<QueueMeetingMessage>(ctx, QueueTopic.LoveQueue)
+
+  const webhookProcessor = new WebhookProcessor(
+    ctx,
+    roomClient,
+    eventProducer,
+    egressClient,
+    storageConfig,
+    s3storageConfig
+  )
+
+  const recordingProcessor = new RecordingProcessor(
+    ctx.newChild('recordings', {}),
+    roomClient,
+    eventProducer,
+    egressClient,
+    storageConfig,
+    s3storageConfig
+  )
+
+  const guestManager = new GuestManager(ctx, roomClient)
+
+  const receivers = [new WebhookReceiver(config.ApiKey, config.ApiSecret)]
+
+  if (config.LiveKitWebhookKey !== '' && config.LiveKitWebhookSecret !== '') {
+    receivers.push(new WebhookReceiver(config.LiveKitWebhookKey, config.LiveKitWebhookSecret))
+  }
+
+  async function decodeEvent (req: Request): Promise<WebhookEvent> {
+    for (const r of receivers) {
+      try {
+        return await r.receive(req.body, req.get('Authorization'))
+      } catch (e) {
+        // Ignore
+      }
+    }
+    throw new Error('Failed to decode webhook event with all receivers')
+  }
+
+  const eventConsumer = queue.createConsumer(ctx, QueueTopic.LoveQueue, 'love-webhook-producer', async (ctx, msg) => {
+    const queueMsg = msg.value as QueueMeetingMessage
+    switch (queueMsg.type) {
+      case QueueMeetingEvent.webhook: {
+        const event = (queueMsg as QueueWebhookMeetingMessage).webhook
+        await ctx.with('handle-webhook', {}, () =>
+          webhookProcessor.processEvent(event, {
+            meetingId: queueMsg.meetingId,
+            workspace: msg.workspace
+          })
+        )
+        break
+      }
+      case QueueMeetingEvent.updateMetadata: {
+        const metadataMsg = queueMsg as QueueMeetingUpdateMetadataMessage
+        await updateMetadata(ctx, roomClient, metadataMsg.roomName, metadataMsg.metadata)
+        break
+      }
+      case QueueMeetingEvent.started: {
+        const wsClient = await WorkspaceClient.create(msg.workspace, ctx)
+        const mm = await wsClient.findMeetingById(queueMsg.meetingId)
+        if (!config.MemberMeetingsOnly && mm !== undefined && mm.startWithRecording === true) {
+          const sysToken = generateToken(systemAccountUuid, msg.workspace, { service: 'love' })
+          const wsLoginInfo = await getAccountClient(sysToken).getLoginInfoByToken()
+          if (!isWorkspaceLoginInfo(wsLoginInfo)) {
+            break
+          }
+          await recordingProcessor.startRecording(
+            getRoomName(msg.workspace, queueMsg.meetingId),
+            msg.workspace,
+            queueMsg.meetingId,
+            wsLoginInfo,
+            mm.title
+          )
+        }
+        break
+      }
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/webhook', async (req, res) => {
+    try {
+      const rawEvent: WebhookEvent = await decodeEvent(req)
+      // Convert all BigInt values to strings to prevent serialization errors throughout the handler
+      const event = convertBigIntToString(rawEvent) as typeof rawEvent
+
+      if (event.room?.metadata != null && event.room?.metadata !== '') {
+        try {
+          const metadata = JSON.parse(event.room.metadata) as RoomMetadata
+          if (metadata.projectKey != null && metadata.projectKey !== config.LiveKitProject) {
+            ctx.info('Ignoring event from different project', { eventProjectKey: metadata.projectKey })
+            return
+          }
+        } catch (err: any) {
+          ctx.error('Failed to parse room metadata', { error: err, room: JSON.stringify(event?.room, null, 2) })
+        }
+      }
+
+      const roomStr = getWebhookRoomName(event)
+      if (roomStr === undefined) {
+        console.warn('No roomName available in event', { event: event.event })
+        return
+      }
+
+      const roomName = parseRoomName(roomStr)
+      if (roomName === undefined) {
+        ctx.info('Skipping event: invalid room name format', { roomName: roomStr, event: event.event })
+
+        return
+      }
+
+      await capture.attendance(roomStr, event.event, event.participant?.identity, event.participant?.sid)
+      await eventProducer.send(ctx, roomName.workspace, [queueEvents.webhook(roomName.meetingId, event)])
+    } catch (e) {
+      ctx.error('Failed to process webhook event', { error: e })
+    } finally {
+      res.status(200).send() // We should always say event is received
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/getToken', async (req, res) => {
+    const { meetingId, workspaceId } = decodeMeetingToken(req, res)
+    if (meetingId == null || workspaceId == null) {
+      return
+    }
+
+    try {
+      const admission = await admissionFor(req)
+      if (admission.auth.workspace !== workspaceId) throw new AdmissionError(403, 'Workspace mismatch')
+      const person = await admission.requireJoin(meetingId)
+      const _id = person._id
+      const participantName = person.name
+      const x = req.body.x ?? -1
+      const y = req.body.y ?? -1
+      const roomName = getRoomName(workspaceId, meetingId)
+
+      const room = await roomClient.listRooms([roomName])
+      // TODO: Retry creation
+      if (room === undefined || room.length === 0) {
+        ctx.info('Creating room', { roomName })
+        try {
+          await roomClient.createRoom({
+            metadata: JSON.stringify({
+              projectKey: config.LiveKitProject,
+              workspaceId,
+              meetingId
+            } satisfies RoomMetadata),
+            departureTimeout: 3,
+            name: roomName,
+            agents: config.MemberMeetingsOnly ? [] : config.Agents.filter(Boolean).map((it) => new RoomAgentDispatch({ agentName: it }))
+          })
+        } catch (err: any) {
+          console.error('Error creating room:', err)
+        }
+      }
+
+      res.send(
+        await createToken(
+          roomName,
+          _id,
+          participantName,
+          JSON.stringify({
+            x,
+            y
+          } satisfies ParticipantMetadata)
+        )
+      )
+    } catch (error) { admissionError(res, error) }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/guestToken', async (req, res) => {
+    await guestManager.handleGuestToken(req, res)
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/guestInfo', async (req, res) => {
+    await guestManager.handleGuestInfo(req, res)
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/guestJoin', async (req, res) => {
+    await guestManager.handleGuestJoin(req, res)
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.get('/checkRecordAvailable', async (_req, res) => {
+    res.send(!config.MemberMeetingsOnly && await checkRecordAvailable(ctx, storageConfig, s3storageConfig))
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/startRecord', async (req, res) => {
+    const { meetingId, workspaceId } = decodeMeetingToken(req, res)
+    if (meetingId == null || workspaceId == null) {
+      return
+    }
+
+    const roomName = getRoomName(workspaceId, meetingId)
+
+    try {
+      const token = extractToken(req.headers)
+      const wsLoginInfo = await getAccountClient(token).getLoginInfoByToken()
+      if (!isWorkspaceLoginInfo(wsLoginInfo)) {
+        console.error('No workspace found for the token')
+        res.status(401).send()
+        return
+      }
+
+      await recordingProcessor.startRecording(
+        roomName,
+        workspaceId,
+        meetingId,
+        wsLoginInfo,
+        req.body.title ?? 'recording'
+      )
+      res.send()
+    } catch (e) {
+      console.error(e)
+      res.status(500).send()
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/stopRecord', async (req, res) => {
+    const { meetingId, workspaceId } = decodeMeetingToken(req, res)
+    if (meetingId == null || workspaceId == null) {
+      return
+    }
+
+    const roomName = getRoomName(workspaceId, meetingId)
+
+    try {
+      void recordingProcessor.stopRecording(roomName, workspaceId, meetingId)
+      res.send()
+    } catch (e) {
+      console.error(e)
+      res.status(500).send()
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/transcription', async (req, res) => {
+    const { meetingId, workspaceId } = decodeMeetingToken(req, res)
+    if (meetingId == null || workspaceId == null) {
+      return
+    }
+
+    const roomName = getRoomName(workspaceId, meetingId)
+
+    const language = req.body.language
+    const transcription = req.body.transcription ?? false
+
+    if (typeof roomName !== 'string') {
+      res.status(400).send()
+      return
+    }
+
+    try {
+      // Check if LiveKit room exists before updating transcription
+      const existingRooms = await roomClient.listRooms([roomName])
+      if (existingRooms === undefined || existingRooms.length === 0) {
+        ctx.error('Cannot update transcription: LiveKit room does not exist', { roomName })
+        res.status(404).send({ error: 'Room does not exist. Please ensure participants have joined the meeting.' })
+        return
+      }
+
+      const metadata = language != null ? { transcription, language } : { transcription }
+      await eventProducer.send(ctx, workspaceId, [queueEvents.updateMetadata(meetingId, roomName, metadata)])
+      res.status(200).send()
+    } catch (e) {
+      console.error(e)
+      res.status(500).send()
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  app.post('/language', async (req, res) => {
+    const { meetingId, workspaceId } = decodeMeetingToken(req, res)
+    if (meetingId == null || workspaceId == null) {
+      return
+    }
+
+    const roomName = getRoomName(workspaceId, meetingId)
+
+    const language = req.body.language
+
+    try {
+      const admission = await admissionFor(req)
+      await admission.requireJoin(meetingId)
+      await eventProducer.send(ctx, workspaceId, [
+        queueEvents.updateMetadata(meetingId, roomName, {
+          language
+        })
+      ])
+      res.send()
+    } catch (e) {
+      console.error(e)
+      res.status(500).send()
+    }
+  })
+
+  // Initialize polling service if enabled
+  const pollingService = new LiveKitPollingService(ctx, roomClient, {
+    intervalMs: config.PollingIntervalMs,
+    projectKey: config.LiveKitProject
+  })
+  pollingService.start()
+
+  const workspaceConsumer = queue.createConsumer(ctx, QueueTopic.Workspace, 'love-client', async (ctx, msg, queue) => {
+    pollingService.addWorkspaceToCheck(msg.workspace)
+  })
+
+  const workspaceTxConsumer = queue.createConsumer(ctx, QueueTopic.Tx, 'love-client', async (ctx, msg) => {
+    pollingService.addWorkspaceToCheck(msg.workspace)
+  })
+
+  ctx.info('LiveKit polling service started', {
+    intervalMs: config.PollingIntervalMs,
+    projectKey: config.LiveKitProject
+  })
+
+  const server = app.listen(port, () => {
+    console.log(`Server listening on port ${port}`)
+  })
+
+  const shutdown = (): void => {
+    void workspaceConsumer.close()
+    void workspaceTxConsumer.close()
+    void eventConsumer.close()
+    void eventProducer.close()
+    void queue.shutdown()
+    pollingService.stop()
+    void WorkspaceClient.closeAll()
+    server.close(() => { void capture.close().finally(() => process.exit()) })
+  }
+
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
+  process.on('uncaughtException', (e) => {
+    console.error(e)
+  })
+  process.on('unhandledRejection', (e) => {
+    console.error(e)
+  })
+
+  if (config.BillingUrl !== '' && config.UseGlobalLiveKit) {
+    setInterval(
+      () => {
+        void updateLiveKitSessions(ctx).catch((error) => {
+          ctx.error('failed to update livekit sessions', { error })
+        })
+      },
+      config.BillingPollInterval * 60 * 1000
+    )
+    try {
+      void updateLiveKitSessions(ctx)
+    } catch {}
+  }
+}
+
+const checkRecordAvailable = async (
+  ctx: MeasureContext,
+  storageConfig: StorageConfig | undefined,
+  s3storageConfig: StorageConfig | undefined
+): Promise<boolean> => {
+  if (storageConfig !== undefined && storageConfig.kind === 's3') return true
+  if (storageConfig !== undefined && storageConfig.kind === 'datalake' && s3storageConfig !== undefined) return true
+  ctx.error('NO S3 storage config storage:', {
+    storageConfig: storageConfig?.kind,
+    s3storageConfig: s3storageConfig?.kind
+  })
+  return false
+}
+
+async function updateMetadata (
+  ctx: MeasureContext,
+  roomClient: RoomServiceClient,
+  roomName: string,
+  metadata: Partial<RoomMetadata>
+): Promise<void> {
+  const room = (await roomClient.listRooms([roomName]))[0]
+  if (room === undefined) {
+    ctx.warn(`Cannot update metadata: room "${roomName}" does not exist`)
+    return
+  }
+  const currentMetadata = parseMetadata(room.metadata)
+
+  await roomClient.updateRoomMetadata(roomName, JSON.stringify({ ...currentMetadata, ...metadata }))
+}

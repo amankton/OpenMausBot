@@ -6,6 +6,11 @@ import authModule from "./desktop-server-auth.cjs";
 const { DESKTOP_MUTATION_HEADER, desktopServerHeaders } = authModule;
 const TOKEN = "a".repeat(43);
 
+test("packaged auth is a valid HTTP header using the server wire protocol", () => {
+  const headers = new Headers(desktopServerHeaders({}, { packaged: true, token: TOKEN }));
+  assert.equal(headers.get("x-openmausbot-desktop-owner"), TOKEN);
+});
+
 test("adds the owner capability to packaged main-process mutations", () => {
   assert.deepEqual(desktopServerHeaders(
     { "content-type": "application/json" },

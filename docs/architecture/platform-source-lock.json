@@ -1,0 +1,12 @@
+{
+  "status": "retained-subsystem-approved-implementation-in-progress",
+  "repository": "https://github.com/Platform-Collective/platform",
+  "tag": "s0.7.426",
+  "tagObject": "f7d60427b1f5fec844b77a3c1141c6a76fd25eaf",
+  "commit": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "referenceImage": "platformcollective/front:s0.7.426",
+  "referenceImageDigest": "sha256:03c16b1ab7ab590f988d781cea345bb2ba06b7f792b819cdb0dd0b39bf14bebe",
+  "binarySourceAttestation": false,
+  "license": "EPL-2.0",
+  "contactsDataMigration": false
+}

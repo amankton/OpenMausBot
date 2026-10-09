@@ -1,0 +1,346 @@
+diff --git a/plugins/love-resources/src/components/FloorPreview.svelte b/plugins/love-resources/src/components/FloorPreview.svelte
+index 34d9da17f..14c59a480 100644
+--- a/plugins/love-resources/src/components/FloorPreview.svelte
++++ b/plugins/love-resources/src/components/FloorPreview.svelte
+@@ -135,6 +135,7 @@
+         {room}
+         info={getInfo(room._id, $infos)}
+         preview
++        interactive={!configure && !disabled}
+         on:hover={(e) => {
+           hover(e, i)
+         }}
+diff --git a/plugins/love-resources/src/components/RoomInvitePopup.svelte b/plugins/love-resources/src/components/RoomInvitePopup.svelte
+new file mode 100644
+index 000000000..a3e133575
+--- /dev/null
++++ b/plugins/love-resources/src/components/RoomInvitePopup.svelte
+@@ -0,0 +1,53 @@
++<!-- Chief retained Platform interaction increment. EPL-2.0; see upstream LICENSE. -->
++<script lang="ts">
++  import contact, { getCurrentEmployee, formatName, type Employee } from '@hcengineering/contact'
++  import { type Room } from '@hcengineering/love'
++  import { createQuery } from '@hcengineering/presentation'
++  import { closePopup } from '@hcengineering/ui'
++  import { placePersonInRoom } from '../room-invitation'
++
++  export let room: Room
++  let members: Employee[] = []
++  let selected = ''
++  let busy = false
++  let message = ''
++  const me = getCurrentEmployee()
++  createQuery().query(contact.mixin.Employee, { active: true }, (result) => {
++    members = result.filter((person) => person._id !== me && person.personUuid != null)
++  })
++  async function invite (): Promise<void> {
++    const person = members.find((member) => member._id === selected)
++    if (person == null || busy) return
++    busy = true
++    try {
++      await placePersonInRoom(person._id, room)
++      message = 'Invitation sent. They choose whether to accept; their camera and microphone stay off.'
++    } catch (error) {
++      message = error instanceof Error ? error.message : 'The invitation could not be sent. Try again.'
++    } finally { busy = false }
++  }
++</script>
++
++<section class="antiPopup chief-room-invite" aria-label="Invite a person to this room">
++  <h2>Invite a person</h2>
++  <label for="chief-room-person">Workspace member</label>
++  <select id="chief-room-person" bind:value={selected} disabled={busy}>
++    <option value="">Choose a person</option>
++    {#each members as person}<option value={person._id}>{formatName(person.name)}</option>{/each}
++  </select>
++  <p>The person receives an invitation. Accepting does not turn on their devices.</p>
++  <p role="status" aria-live="polite">{message}</p>
++  <div class="actions">
++    <button type="button" disabled={busy || selected === ''} on:click={() => { void invite() }}>{busy ? 'Sending…' : 'Send invitation'}</button>
++    <button type="button" on:click={() => closePopup()}>Close</button>
++  </div>
++</section>
++
++<style>
++  .chief-room-invite { width: 22rem; max-width: 90vw; padding: 1.25rem; gap: .75rem; display: flex; flex-direction: column; border-radius: .75rem; background: var(--popup-bg-color); color: var(--theme-content-color); box-shadow: var(--popup-shadow); }
++  h2 { font-size: 1rem; font-weight: 600; }
++  p { font-size: .8rem; line-height: 1.5; }
++  select, button { border: 1px solid var(--theme-divider-color); border-radius: .375rem; padding: .5rem; background: var(--popup-bg-color); color: inherit; }
++  .actions { display: flex; gap: .5rem; }
++  button:disabled { opacity: .5; }
++</style>
+diff --git a/plugins/love-resources/src/components/RoomPreview.svelte b/plugins/love-resources/src/components/RoomPreview.svelte
+index cf00095ba..d1ea75c60 100644
+--- a/plugins/love-resources/src/components/RoomPreview.svelte
++++ b/plugins/love-resources/src/components/RoomPreview.svelte
+@@ -16,7 +16,7 @@
+   import { getCurrentEmployee, Person } from '@hcengineering/contact'
+   import { Avatar, myEmployeeStore, getPersonByPersonRef, statusByUserStore } from '@hcengineering/contact-resources'
+   import { ParticipantInfo, Room, RoomAccess, RoomType, MeetingStatus, isOffice, Office } from '@hcengineering/love'
+-  import { Icon, Label, eventToHTMLElement, showPopup } from '@hcengineering/ui'
++  import { Icon, Label, SelectPopup, eventToHTMLElement, getCurrentLocation, showPopup } from '@hcengineering/ui'
+   import { createEventDispatcher } from 'svelte'
+   import { getClient } from '@hcengineering/presentation'
+   import { openDoc } from '@hcengineering/view-resources'
+@@ -24,18 +24,51 @@
+   import love from '../plugin'
+   import { myInfo, myOffice, selectedRoomPlace, currentRoom, currentMeetingMinutes, infos } from '../stores'
+   import { getRoomLabel } from '../utils'
+-  import { IntlString } from '@hcengineering/platform'
++  import { IntlString, getEmbeddedLabel } from '@hcengineering/platform'
+   import { lkSessionConnected } from '../liveKitClient'
+   import { AccountUuid, clone, Ref } from '@hcengineering/core'
+   // import RoomLanguage from './RoomLanguage.svelte'
+   import PersonActionPopup from './PersonActionPopup.svelte'
++  import RoomInvitePopup from './RoomInvitePopup.svelte'
++  import { personDragType, readDraggedPerson, writeDraggedPerson, placePersonInRoom } from '../room-invitation'
++  import { createMeeting } from '../meetings'
+ 
+   export let room: Room
+   export let info: ParticipantInfo[]
+   export let preview: boolean = false
++  export let interactive: boolean = !preview
+   export let hovered: boolean = false
+ 
+   const dispatch = createEventDispatcher()
++  let invitationMessage = ''
++  let placingPerson = false
++
++  function openCompactActions (event: MouseEvent): void {
++    const anchor = eventToHTMLElement(event)
++    const value = [
++      { id: 'open', label: getEmbeddedLabel('Open room') },
++      ...(room.access === RoomAccess.DND ? [] : [{ id: 'invite', label: getEmbeddedLabel('Invite a person to this room') }])
++    ]
++    showPopup(SelectPopup, { value }, anchor, (result) => {
++      if (result === 'open') void openRoom(0, 0)
++      if (result === 'invite' && room.access !== RoomAccess.DND) showPopup(RoomInvitePopup, { room }, anchor)
++    })
++  }
++
++  async function dropPerson (event: DragEvent): Promise<void> {
++    event.preventDefault()
++    event.stopPropagation()
++    if (!interactive || placingPerson) return
++    const person = readDraggedPerson(event.dataTransfer?.getData(personDragType) ?? '', getCurrentLocation().path[1])
++    if (person === undefined) return
++    placingPerson = true
++    try {
++      const result = await placePersonInRoom(person, room)
++      invitationMessage = result === 'invited' ? 'Invitation sent.' : 'Joined the room.'
++    } catch (error) {
++      invitationMessage = error instanceof Error ? error.message : 'Could not complete this request. Try again.'
++    } finally { placingPerson = false }
++  }
+ 
+   function prepareInfo (info: ParticipantInfo[]): ParticipantInfo[] {
+     const result: ParticipantInfo[] = []
+@@ -73,6 +106,7 @@
+   $: _info = prepareInfo(info ?? [])
+ 
+   const me = getCurrentEmployee()
++  $: if (!placingPerson && invitationMessage === 'Joined the room.' && $myInfo?.room !== room._id) invitationMessage = ''
+   $: myName = $myEmployeeStore?.name
+ 
+   let hoveredRoomX: number | undefined = undefined
+@@ -111,6 +145,13 @@
+   }
+ 
+   async function openRoom (x: number, y: number): Promise<void> {
++    if (interactive && getCurrentLocation().path[2] !== 'love') {
++      selectedRoomPlace.set({ _id: room._id, x, y })
++      try { await createMeeting(room) } catch (error) {
++        invitationMessage = error instanceof Error ? error.message : 'Could not join this room. Try again.'
++      }
++      return
++    }
+     const client = getClient()
+     const hierarchy = client.getHierarchy()
+     if ($lkSessionConnected && $currentRoom?._id === room._id) {
+@@ -239,8 +280,16 @@
+ <!-- svelte-ignore a11y-no-static-element-interactions -->
+ <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+ <!-- svelte-ignore a11y-click-events-have-key-events -->
++<!-- Pointer entry on the room background has the native Open room button as its keyboard equivalent. -->
++<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+ <div
+   class="floorGrid-room"
++  role="group"
++  aria-label={room.name || roomPerson?.name || 'Office'}
++  on:dragover={(event) => {
++    if (interactive && event.dataTransfer?.types.includes(personDragType)) event.preventDefault()
++  }}
++  on:drop={(event) => { void dropPerson(event) }}
+   class:hovered
+   class:disabled
+   class:myOffice={$myOffice?._id === room._id}
+@@ -260,9 +309,12 @@
+     {#each new Array(room.width + extraRow) as _, x}
+       {@const personInfo = getPersonInfo(y, x, _info)}
+       {@const isHovered = hoveredRoomX === x && hoveredRoomY === y}
++      {@const draggablePerson = personInfo?.person ?? (shouldShowAvatar && x === 0 && y === 0 ? roomPerson?._id : undefined)}
+       <!-- svelte-ignore a11y-click-events-have-key-events -->
+       <div
+         class="floorGrid-room__field"
++        draggable={interactive && draggablePerson != null}
++        on:dragstart={(event) => { if (draggablePerson != null) writeDraggedPerson(event, draggablePerson) }}
+         class:hovered={isHovered}
+         class:person={$myInfo?.room === room._id}
+         on:mouseenter={() => {
+@@ -298,15 +350,40 @@
+     {/each}
+   {/each}
+ 
+-  {#if !preview}
+-    <div class="floorGrid-room__header">
+-      <span class="overflow-label text-md flex-grow">
++  {#if !preview || interactive}
++    <div class="floorGrid-room__header" class:chief-compact-controls={preview}>
++      <span class="overflow-label text-md flex-grow" class:chief-compact-label={preview}>
+         <Label label={roomLabel} />
+       </span>
++      {#if preview}
++        <button
++          class="chief-room-invite-button"
++          type="button"
++          aria-label="Room actions"
++          title="Room actions"
++          on:click|stopPropagation={openCompactActions}
++        >⋯</button>
++      {:else}
++      <button
++        class="chief-room-invite-button"
++        type="button"
++        aria-label="Open room"
++        title="Open room"
++        on:click|stopPropagation={() => { void openRoom(0, 0) }}
++      >↗</button>
++      <button
++        class="chief-room-invite-button"
++        type="button"
++        aria-label="Invite a person to this room"
++        title="Invite a person to this room"
++        disabled={room.access === RoomAccess.DND}
++        on:click|stopPropagation={(event) => showPopup(RoomInvitePopup, { room }, eventToHTMLElement(event))}
++      >+</button>
++      {/if}
+       <!-- {#if !isOffice(room)}
+         <RoomLanguage {room} />
+       {/if} -->
+-      {#if room.access === RoomAccess.DND || room.type === RoomType.Video}
++      {#if !preview && (room.access === RoomAccess.DND || room.type === RoomType.Video)}
+         <div class="flex-row-center flex-no-shrink h-full flex-gap-2">
+           {#if room.access === RoomAccess.DND}
+             <Icon icon={love.icon.DND} fill={'var(--bg-negative-default)'} size={'small'} />
+@@ -318,4 +395,20 @@
+       {/if}
+     </div>
+   {/if}
++  {#if invitationMessage}<span class="chief-room-feedback" role="status" aria-live="polite">{invitationMessage}</span>{/if}
+ </div>
++
++<style>
++  .chief-room-invite-button { flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: .25rem; border: 1px solid var(--theme-divider-color); background: var(--popup-bg-color); color: inherit; cursor: pointer; pointer-events: auto; }
++  .chief-room-invite-button:focus-visible { outline: 2px solid var(--theme-button-default); outline-offset: 2px; }
++  .chief-room-feedback { position: absolute; bottom: .25rem; left: .25rem; right: .25rem; padding: .25rem; font-size: .65rem; background: var(--popup-bg-color); z-index: 2; border-radius: .25rem; }
++  .chief-compact-label { display: none; }
++  .floorGrid-room > .floorGrid-room__header.chief-compact-controls { top: auto; bottom: 0; left: auto; right: 0; padding: 0; gap: 0; opacity: 0; pointer-events: none; z-index: 1; }
++  .chief-compact-controls > .chief-room-invite-button { width: 1.25rem; height: 1.25rem; padding: 0; pointer-events: none; }
++  .floorGrid-room:hover > .floorGrid-room__header.chief-compact-controls, .floorGrid-room:focus-within > .floorGrid-room__header.chief-compact-controls { opacity: 1; }
++  .floorGrid-room:hover > .chief-compact-controls > .chief-room-invite-button, .floorGrid-room:focus-within > .chief-compact-controls > .chief-room-invite-button { pointer-events: auto; }
++  @media (hover: none) {
++    .floorGrid-room > .floorGrid-room__header.chief-compact-controls { opacity: 1; }
++    .chief-compact-controls > .chief-room-invite-button { pointer-events: auto; }
++  }
++</style>
+diff --git a/plugins/love-resources/src/room-invitation.ts b/plugins/love-resources/src/room-invitation.ts
+new file mode 100644
+index 000000000..a4eff7a09
+--- /dev/null
++++ b/plugins/love-resources/src/room-invitation.ts
+@@ -0,0 +1,49 @@
++// Chief retained Platform interaction increment. EPL-2.0; see upstream LICENSE.
++import contact, { getCurrentEmployee, type Employee, type Person } from '@hcengineering/contact'
++import { type Ref } from '@hcengineering/core'
++import love, { isOffice, MeetingStatus, RoomAccess, type Room } from '@hcengineering/love'
++import { getClient } from '@hcengineering/presentation'
++import { getCurrentLocation } from '@hcengineering/ui'
++import { sendInvites } from './invites'
++import { createMeeting, createMeetingDocument } from './meetings'
++
++export const personDragType = 'application/x-chief-office-person'
++
++export function readDraggedPerson (value: string, workspace: string): Ref<Person> | undefined {
++  if (value.length > 1024) return
++  try {
++    const data = JSON.parse(value)
++    if (data.workspace !== workspace || typeof data.person !== 'string' || !/^[a-zA-Z0-9:_-]{1,200}$/.test(data.person)) return
++    return data.person as Ref<Person>
++  } catch { return undefined }
++}
++
++/** UI intent only; Love independently validates identity, room access and acceptance. */
++export async function placePersonInRoom (person: Ref<Person>, room: Room): Promise<'joined' | 'invited'> {
++  const client = getClient()
++  const me = getCurrentEmployee()
++  if (room.access === RoomAccess.DND) throw new Error('This room is not accepting visitors.')
++  if (person === me) {
++    const meeting = await createMeeting(room)
++    if (meeting === undefined) throw new Error('An invitation was requested from the office owner. Wait for their acceptance.')
++    return 'joined'
++  }
++  const member = await client.findOne(contact.mixin.Employee, { _id: person as Ref<Employee>, active: true })
++  if (member == null || member.personUuid == null) throw new Error('Choose a signed-in workspace member.')
++  let meeting = await client.findOne(love.class.MeetingMinutes, {
++    attachedTo: room._id, status: { $in: [MeetingStatus.Active, MeetingStatus.Pending] }
++  })
++  if (meeting === undefined) {
++    if (isOffice(room) && room.person !== me) throw new Error('The office owner needs to start this meeting first.')
++    meeting = await createMeetingDocument(room)
++  }
++  await sendInvites([person], meeting._id)
++  return 'invited'
++}
++
++export function writeDraggedPerson (event: DragEvent, person: Ref<Person>): void {
++  event.stopPropagation()
++  if (event.dataTransfer == null) return
++  event.dataTransfer.effectAllowed = 'move'
++  event.dataTransfer.setData(personDragType, JSON.stringify({ person, workspace: getCurrentLocation().path[1] }))
++}
+diff --git a/plugins/love-resources/src/utils.ts b/plugins/love-resources/src/utils.ts
+index 1617207c9..d08e69417 100644
+--- a/plugins/love-resources/src/utils.ts
++++ b/plugins/love-resources/src/utils.ts
+@@ -336,6 +336,8 @@ export async function getRoomLabel (room: Room): Promise<IntlString> {
+ }
+ 
+ export async function navigateToOfficeDoc (object: Doc): Promise<void> {
++  // Companion meetings must not replace an open Card, document or contact.
++  if (getCurrentLocation().path[2] !== loveId) return
+   const hierarchy = getClient().getHierarchy()
+   const panelComponent = hierarchy.classHierarchyMixin(object._class, view.mixin.ObjectPanel)
+   const comp = panelComponent?.component ?? view.component.EditDoc
+@@ -565,6 +567,8 @@ export const videoVisible = derived(sidebarStore, (store) => {
+ })
+ 
+ export function createMeetingWidget (widget: Widget, room: Ref<Room>, video: boolean): void {
++  const previousSidebar = get(sidebarStore)
++  const preserveCompanion = getCurrentLocation().path[2] !== loveId
+   const tabs: WidgetTab[] = [
+     ...(video
+       ? [
+@@ -594,9 +598,12 @@ export function createMeetingWidget (widget: Widget, room: Ref<Room>, video: boo
+     {
+       room
+     },
+-    { active: true, openedByUser: false },
++    { active: !preserveCompanion, openedByUser: false },
+     tabs
+   )
++  if (preserveCompanion) {
++    sidebarStore.update((state) => ({ ...state, variant: previousSidebar.variant, widget: previousSidebar.widget }))
++  }
+ }
+ 
+ export function createMeetingVideoWidgetTab (widget: Widget): void {

@@ -1,0 +1,36 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-08T06:30:41.005Z",
+  "patch": "0007-visible-media-devices.patch",
+  "patchSha256": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd"
+  },
+  "inputs": [
+    {
+      "file": "plugins/media-resources/src/utils.ts",
+      "beforeSha256": "0b17cbc1a87c969e8bfd6a73a613f21eb56959cddb810c73217d52c5edc36d18",
+      "sha256": "c092442ba7bc8f240f0556956c4af4a3252093dfcfa5fdf473d0aefa8adabf44"
+    },
+    {
+      "file": "plugins/media-resources/src/components/MediaPopup.svelte",
+      "beforeSha256": "b2e9977f429c77316ff0a7314d58bee27db58a61659c004177a67708422b463c",
+      "sha256": "6fac18b62dd0e4ec203c0e5adc44a5d70adb36a38cacf1e15746a4a96ca5c01f"
+    },
+    {
+      "file": "plugins/media-resources/src/components/MediaPopupCamPreview.svelte",
+      "beforeSha256": "1e7293f23cad91e6fe7be5c04675fa512fce29cf6107745378f3c89fad93e6e6",
+      "sha256": "71677e0146efd5f65eeab980b484d88cc5478124ca37f47c94ea795ff55ed846"
+    },
+    {
+      "file": "plugins/media/src/utils.ts",
+      "beforeSha256": "4219ff9fa64108e4867b68fcc715ca085a3199cb2d40620e886483640e74cfd4",
+      "sha256": "c83bb512e50fef1e0d86f5b5264a5f8f819f76a578d8b9c35e23ec9820eb115f"
+    }
+  ]
+}

@@ -44,7 +44,7 @@ function harness(caps?: Record<string, { driverKind: string; agentsMcp: boolean 
   const targetBusy = vi.fn((id: string, _sourceThreadId?: string) => Boolean(store.bot(id)?.busy));
   const validateChange = vi.fn();
   const canPersist = vi.fn((): { ok: true } | { ok: false; status: number; error: string } => ({ ok: true }));
-  const service = new TeamSetupRequestService({ store, teams: () => teams, maxBots: 100, canAccessTeam,
+  const service = new TeamSetupRequestService({ store, teams: () => teams, maxBots: 1_000, canAccessTeam,
     canPersist, ownsThread: () => sourceExists, targetBusy, deleteBot, autoApply, validateChange,
     validateModel: (selection, current) => {
       if (!({ claude: ["sonnet", "opus"], codex: ["gpt-fixture"] }[selection.instanceId]?.includes(selection.model))) return "Model is not in the current catalog";
@@ -61,6 +61,37 @@ const specialist = (key: string, section: string, modelSelection = { instanceId:
   fields: { name: key, title: "Specialist", soul: "Finish the assigned work.", section, modelSelection } });
 
 describe("reviewed Chief team setup", () => {
+  it("accepts native setup above the former 100-bot limit", async () => {
+    const h = harness();
+    while (h.store.bots.length < 182) h.bot(`existing-${h.store.bots.length}`);
+    const request = h.propose([specialist("Capacity specialist", "Work")]);
+    expect((await h.resolve(request.requestId))?.result.state).toBe("applied");
+    expect(h.store.bots).toHaveLength(183);
+  });
+  it("counts all existing records plus proposed creations at the 1,000-bot boundary", async () => {
+    const h = harness();
+    while (h.store.bots.length < 999) h.bot(`existing-${h.store.bots.length}`, { hidden: true });
+    expect(() => h.propose([specialist("One", "Work"), specialist("Two", "Work")]))
+      .toThrow("This setup exceeds the workspace bot limit");
+    const request = h.propose([specialist("Last slot", "Work")]);
+    expect((await h.resolve(request.requestId))?.result.state).toBe("applied");
+    expect(h.store.bots).toHaveLength(1_000);
+    expect(() => h.propose([specialist("Overflow", "Work")]))
+      .toThrow("This setup exceeds the workspace bot limit");
+    const update = h.propose([{ action: "update", botId: h.peer.id, fields: { title: "Updated at capacity" } }]);
+    expect((await h.resolve(update.requestId))?.result.state).toBe("applied");
+    expect(h.store.bots).toHaveLength(1_000);
+  });
+  it("rechecks capacity when approving an open native setup proposal", async () => {
+    const h = harness();
+    while (h.store.bots.length < 999) h.bot(`existing-${h.store.bots.length}`);
+    const request = h.propose([specialist("Pending specialist", "Work")]);
+    h.bot("Created while review was open");
+    expect((await h.resolve(request.requestId))?.result)
+      .toMatchObject({ state: "cancelled", error: "This setup exceeds the workspace bot limit" });
+    expect(h.apply).not.toHaveBeenCalled();
+    expect(h.store.bots).toHaveLength(1_000);
+  });
   it("reviews promotion in an authorized team without changing anything on denial", async () => {
     const h = harness(); h.peer.section = "Engineering";
     const before = structuredClone(h.store.bots);

@@ -78,6 +78,7 @@ function windowsKnownDirs(): string[] {
     join(appData, "npm"), // npm -g shims: claude, codex
     join(home, ".grok", "bin"), // x.ai installer
     join(localAppData, "agy", "bin"), // Antigravity installer
+    join(localAppData, "hermes", "bin"), // Hermes Windows installer
     // Cursor installer: cursor-agent.* and its `agent` copies (MOCA-272)
     join(localAppData, "cursor-agent"),
     join(home, ".local", "bin"), // claude native installer
@@ -307,6 +308,16 @@ function parseCmdShim(shim: string, env?: NodeJS.ProcessEnv): ResolvedSpawn | nu
     return null;
   }
   const dir = dirname(shim);
+  // Hermes' published Windows fallback is exactly two nonblank lines:
+  // @echo off, then "<python.exe>" -I -c "<base64 bootstrap>" %*.
+  // Preserve the bootstrap verbatim: it selects the current dependency
+  // generation and respects HERMES_HOME. Never interpret arbitrary batch
+  // syntax or cache an interpreter that an installer may replace later.
+  const lines = text.replace(/^\uFEFF/, "").split(/[\r\n]+/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 2 && /^@echo off$/i.test(lines[0])) {
+    const python = /^"([A-Za-z]:[\\/][^"%\r\n]+[\\/]python(?:\d+(?:\.\d+)?)?\.exe)" -I -c "(import base64; exec\(base64\.b64decode\('[A-Za-z0-9+/]+={0,2}'\)\))" %\*$/.exec(lines[1]);
+    if (python && isFile(python[1])) return { command: python[1], args: ["-I", "-c", python[2]] };
+  }
   // npm's own npm.cmd / npx.cmd, installed beside node.exe, name their entry
   // in a variable next to a helper script that is not the CLI:
   // SET "NPX_CLI_JS=%~dp0\node_modules\npm\bin\npx-cli.js". The launcher's

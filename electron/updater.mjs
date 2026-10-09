@@ -22,6 +22,7 @@ import { openBlankTerminal } from "./terminal-launch.mjs";
 import { createUpdaterCoordinator } from "./updater-coordinator.mjs";
 
 const require = createRequire(import.meta.url);
+const CHIEF_UPDATES_ENABLED = false;
 
 let autoUpdater = null;
 let win = null;
@@ -100,7 +101,8 @@ export function attachUpdaterWindow(mainWindow) {
 
 export function startUpdater() {
   // dev / unsigned builds can't auto-update — leave the banner dormant
-  if (!app.isPackaged) {
+  // Chief has no signed release feed yet. Never fetch or install upstream app releases.
+  if (!app.isPackaged || !CHIEF_UPDATES_ENABLED) {
     updaterCoordinator = null;
     setState({ status: "idle" });
     return;

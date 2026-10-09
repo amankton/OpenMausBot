@@ -26,8 +26,8 @@ export interface ServiceSpec {
   label?: string;
 }
 
-export const SYSTEMD_UNIT_NAME = "openmausbot.service";
-export const LAUNCHD_LABEL = "com.openmausbot.serve";
+export const SYSTEMD_UNIT_NAME = "chief-executive-suite.service";
+export const LAUNCHD_LABEL = "com.chiefexecutivesuite.serve";
 
 function quoteSystemd(value: string): string {
   // systemd's ExecStart splits on whitespace and understands double quotes.
@@ -46,7 +46,7 @@ export function systemdUnit(spec: ServiceSpec): string {
   const lines = [
     "# Written by `openmausbot service install`. Re-run it to change the options.",
     "[Unit]",
-    `Description=OpenMausBot${spec.label ? ` (${spec.label})` : ""}`,
+    `Description=Chief Executive Suite${spec.label ? ` (${spec.label})` : ""}`,
     "After=network-online.target",
     "Wants=network-online.target",
     "",

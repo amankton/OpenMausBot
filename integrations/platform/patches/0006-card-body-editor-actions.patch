@@ -1,0 +1,90 @@
+diff --git a/plugins/card-resources/src/components/ContentEditor.svelte b/plugins/card-resources/src/components/ContentEditor.svelte
+index 73c6f70..fd4a7ef 100644
+--- a/plugins/card-resources/src/components/ContentEditor.svelte
++++ b/plugins/card-resources/src/components/ContentEditor.svelte
+@@ -19,11 +19,12 @@
+   import contact from '@hcengineering/contact'
+   import { getResource } from '@hcengineering/platform'
+   import { getClient } from '@hcengineering/presentation'
+-  import { CollaboratorEditor, ImageUploadOptions } from '@hcengineering/text-editor-resources'
++  import { type RefAction, type TextEditorHandler } from '@hcengineering/text-editor'
++  import { CollaboratorEditor, ImageUploadOptions, defaultRefActions, getModelRefActions } from '@hcengineering/text-editor-resources'
+   import { AnySvelteComponent } from '@hcengineering/ui'
+   import { getCollaborationUser } from '@hcengineering/view-resources'
+-  import { FocusPosition } from '@tiptap/core'
+-  import { createEventDispatcher } from 'svelte'
++  import { type Editor, FocusPosition } from '@tiptap/core'
++  import { createEventDispatcher, onDestroy, tick } from 'svelte'
+ 
+   export let object: Card
+   export let readonly = false
+@@ -44,6 +45,54 @@
+   })
+ 
+   let collabEditor: CollaboratorEditor
++  let bodyEditor: Editor | undefined
++  let modelRefActions: RefAction[] = []
++  const actionCache = new WeakMap<RefAction, RefAction>()
++  let disposed = false
++  onDestroy(() => { disposed = true })
++
++  void getModelRefActions().then((actions) => {
++    if (!disposed) modelRefActions = actions
++  }).catch(() => { /* Keep the default editor actions if model actions cannot load. */ })
++
++  function guardedAction (action: RefAction, editor: Editor | undefined): RefAction {
++    const disabled = action.disabled === true || editor?.isEditable !== true
++    const cached = actionCache.get(action)
++    if (cached !== undefined) {
++      cached.disabled = disabled
++      return cached
++    }
++    // The editor keys toolbar buttons by action identity; transactions must not replace popup anchors.
++    const guarded: RefAction = {
++      ...action,
++      disabled,
++      action: (element, handler, event) => {
++        const target = bodyEditor
++        const cardId = object._id
++        const canEdit = (): boolean => action.disabled !== true && !disposed && !readonly && object._id === cardId && bodyEditor === target && target?.isEditable === true
++        if (!canEdit()) return
++        // Template/emoji popups may finish after this card becomes read-only or changes.
++        const guarded: TextEditorHandler = {
++          insertText: (...args) => { if (canEdit()) handler.insertText(...args) },
++          insertEmoji: (...args) => { if (canEdit()) handler.insertEmoji(...args) },
++          insertMarkup: (...args) => { if (canEdit()) handler.insertMarkup(...args) },
++          insertTemplate: (...args) => { if (canEdit()) handler.insertTemplate(...args) },
++          insertTable: (...args) => { if (canEdit()) handler.insertTable(...args) },
++          insertCodeBlock: (...args) => { if (canEdit()) handler.insertCodeBlock(...args) },
++          insertSeparatorLine: (...args) => { if (canEdit()) handler.insertSeparatorLine(...args) },
++          insertContent: (...args) => { if (canEdit()) handler.insertContent(...args) },
++          focus: (...args) => { if (canEdit()) handler.focus(...args) }
++        }
++        action.action(element, guarded, event)
++      }
++    }
++    actionCache.set(action, guarded)
++    return guarded
++  }
++
++  $: refActions = readonly ? [] : defaultRefActions.concat(modelRefActions)
++    .sort((a, b) => a.order - b.order)
++    .map((action) => guardedAction(action, bodyEditor))
+ 
+   export function focus (position?: FocusPosition): void {
+     collabEditor.focus(position)
+@@ -67,8 +116,13 @@
+   {overflow}
+   {editorAttributes}
+   {requestSideSpace}
++  {refActions}
++  on:editor={(event) => { bodyEditor = event.detail }}
+   on:update
+-  on:loaded
++  on:loaded={(event) => {
++    dispatch('loaded', event.detail)
++    void tick().then(() => { if (!disposed) bodyEditor = bodyEditor })
++  }}
+   kitOptions={{
+     toc: {
+       onChange: (h) => {

@@ -1,0 +1,20 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-08T00:34:22.586Z",
+  "patch": "0006-card-body-editor-actions.patch",
+  "patchSha256": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7"
+  },
+  "inputs": [
+    {
+      "file": "plugins/card-resources/src/components/ContentEditor.svelte",
+      "beforeSha256": "ba7fa68c9293ba61bdcf90e45f33088da559c250b97ce600c28024cf7661f374",
+      "sha256": "35f0c419c4885f75e7afd76bf7be433a0283b2ae4367ce41151316f26bb35bd1"
+    }
+  ]
+}
