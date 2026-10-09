@@ -41,8 +41,9 @@ describe("shared workspace origin boundary", () => {
       expect(html).toContain(`${capability} &#x27;none&#x27;`);
     }
     expect(html).toContain('referrerPolicy="no-referrer"');
-    expect(html).toContain('target="chief-retained-workspace" rel="noopener noreferrer"');
-    expect(html).toContain('href="/" target="chief-personal-workspace" rel="noopener noreferrer"');
+    expect(html).not.toContain("target=");
+    expect(html).toContain(`href="${ready.url}" rel="noreferrer"`);
+    expect(html).toContain('href="/"');
   });
 
   it("scopes delegated features to the validated origin, never paths or wildcards", () => {

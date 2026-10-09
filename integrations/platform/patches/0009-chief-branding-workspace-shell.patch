@@ -1,0 +1,3184 @@
+diff --git a/dev/prod/public/chief/avatar.svg b/dev/prod/public/chief/avatar.svg
+new file mode 100644
+index 0000000..8e150c9
+--- /dev/null
++++ b/dev/prod/public/chief/avatar.svg
+@@ -0,0 +1,20 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1649.39 1649.39" width="1649.39" height="1649.39"><title>c.h.i.e.f.</title>
++<circle cx="824.69" cy="824.69" r="824.69" fill="#0B0C10"/>
++<g stroke="#FFFFFF" stroke-width="62.5" stroke-linecap="round">
++<line x1="824.69" y1="661.29" x2="824.69" y2="459.39"/>
++<line x1="966.2" y1="742.99" x2="1141.05" y2="642.04"/>
++<line x1="966.2" y1="906.39" x2="1141.05" y2="1007.34"/>
++<line x1="824.69" y1="988.09" x2="824.69" y2="1189.99"/>
++<line x1="683.19" y1="906.39" x2="508.34" y2="1007.35"/>
++<line x1="683.19" y1="742.99" x2="508.34" y2="642.04"/>
++</g>
++<g fill="#2F5BFF">
++<circle cx="824.69" cy="459.39" r="68.75"/>
++<circle cx="1141.05" cy="642.04" r="68.75"/>
++<circle cx="1141.05" cy="1007.34" r="68.75"/>
++<circle cx="824.69" cy="1189.99" r="68.75"/>
++<circle cx="508.34" cy="1007.35" r="68.75"/>
++<circle cx="508.34" cy="642.04" r="68.75"/>
++</g>
++<circle cx="824.69" cy="824.69" r="100" fill="#FF8A1F"/>
++</svg>
+diff --git a/dev/prod/src/index.ejs b/dev/prod/src/index.ejs
+index 8c817cf..ccedb7e 100644
+--- a/dev/prod/src/index.ejs
++++ b/dev/prod/src/index.ejs
+@@ -1,38 +1,38 @@
+-<!doctype html>
+-<html>
+-
+-<head>
+-  <meta charset="utf8">
+-  <title>Huly</title>
+-  <link rel="shortcut icon" data-default-href="/huly/favicon.ico" sizes="any" id="default-favicon">
+-  <script id="workspace-favicon-bootstrap">
+-    // Run before the application (and before assigning a fallback URL) during tab restoration.
+-    // Keep the cache key and PNG validation in sync with presentation/workspaceIdentity.ts.
+-    ;(function () {
+-      var fallback = document.getElementById('default-favicon')
+-      try {
+-        var workspace = location.pathname.match(/^\/workbench\/[^/]+/)
+-        var icon = workspace && localStorage.getItem('huly.workspace-favicon:' + workspace[0])
+-        if (icon && icon.length <= 16384 && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(icon)) {
+-          var link = document.createElement('link')
+-          link.id = 'workspace-favicon'
+-          link.rel = 'icon'
+-          link.type = 'image/png'
+-          link.sizes = '32x32'
+-          link.href = icon
+-          document.head.appendChild(link)
+-          return
+-        }
+-      } catch (_) {
+-        // Storage can be unavailable in restricted browsing contexts.
+-      }
+-      fallback.href = fallback.dataset.defaultHref
+-    })()
+-  </script>
+-  <noscript><link rel="icon" href="/huly/favicon.ico"></noscript>
+-</head>
+-
+-<body style="margin: 0; overflow: hidden;">
+-</body>
+-
+-</html>
++<!doctype html>
++<html>
++
++<head>
++  <meta charset="utf8">
++  <title>Chief Executive Suite</title>
++  <link rel="shortcut icon" data-default-href="/chief/avatar.svg" sizes="any" id="default-favicon">
++  <script id="workspace-favicon-bootstrap">
++    // Run before the application (and before assigning a fallback URL) during tab restoration.
++    // Keep the cache key and PNG validation in sync with presentation/workspaceIdentity.ts.
++    ;(function () {
++      var fallback = document.getElementById('default-favicon')
++      try {
++        var workspace = location.pathname.match(/^\/workbench\/[^/]+/)
++        var icon = workspace && localStorage.getItem('huly.workspace-favicon:' + workspace[0])
++        if (icon && icon.length <= 16384 && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(icon)) {
++          var link = document.createElement('link')
++          link.id = 'workspace-favicon'
++          link.rel = 'icon'
++          link.type = 'image/png'
++          link.sizes = '32x32'
++          link.href = icon
++          document.head.appendChild(link)
++          return
++        }
++      } catch (_) {
++        // Storage can be unavailable in restricted browsing contexts.
++      }
++      fallback.href = fallback.dataset.defaultHref
++    })()
++  </script>
++  <noscript><link rel="icon" href="/chief/avatar.svg"></noscript>
++</head>
++
++<body style="margin: 0; overflow: hidden;">
++</body>
++
++</html>
+diff --git a/dev/prod/src/platform.ts b/dev/prod/src/platform.ts
+index 6e999dc..b39dd37 100644
+--- a/dev/prod/src/platform.ts
++++ b/dev/prod/src/platform.ts
+@@ -1,761 +1,761 @@
+-//
+-// Copyright © 2022, 2023, 2025 Hardcore Engineering Inc.
+-//
+-// Licensed under the Eclipse Public License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License. You may
+-// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-//
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-//
+-
+-import platform, { type Plugin, addLocation, addStringsLoader, platformId } from '@hcengineering/platform'
+-
+-import { activityId } from '@hcengineering/activity'
+-import aiBot, { aiBotId } from '@hcengineering/ai-bot'
+-import analyticsCollector, { analyticsCollectorId } from '@hcengineering/analytics-collector'
+-import { attachmentId } from '@hcengineering/attachment'
+-import { boardId } from '@hcengineering/board'
+-import calendar, { calendarId } from '@hcengineering/calendar'
+-import { cardId } from '@hcengineering/card'
+-import { chunterId } from '@hcengineering/chunter'
+-import client, { clientId } from '@hcengineering/client'
+-import contactPlugin, { contactId } from '@hcengineering/contact'
+-import { converterId } from '@hcengineering/converter'
+-import { documentsId } from '@hcengineering/controlled-documents'
+-import { desktopPreferencesId } from '@hcengineering/desktop-preferences'
+-import { diffviewId } from '@hcengineering/diffview'
+-import { documentId } from '@hcengineering/document'
+-import { driveId } from '@hcengineering/drive'
+-import exportPlugin, { exportId } from '@hcengineering/export'
+-import gmail, { gmailId } from '@hcengineering/gmail'
+-import globalProfile, { globalProfileId, globalProfileRoute } from '@hcengineering/global-profile'
+-import guest, { guestId } from '@hcengineering/guest'
+-import { hrId } from '@hcengineering/hr'
+-import { imageCropperId } from '@hcengineering/image-cropper'
+-import { inventoryId } from '@hcengineering/inventory'
+-import { leadId } from '@hcengineering/lead'
+-import login, { loginId } from '@hcengineering/login'
+-import love, { loveId } from '@hcengineering/love'
+-import notification, { notificationId } from '@hcengineering/notification'
+-import onboard, { onboardId } from '@hcengineering/onboard'
+-import presence, { presenceId } from '@hcengineering/presence'
+-import { pulseId } from '@hcengineering/pulse'
+-import print, { printId } from '@hcengineering/print'
+-import { processId } from '@hcengineering/process'
+-import { productsId } from '@hcengineering/products'
+-import { questionsId } from '@hcengineering/questions'
+-import { recruitId } from '@hcengineering/recruit'
+-import rekoni from '@hcengineering/rekoni'
+-import { requestId } from '@hcengineering/request'
+-import setting, { settingId } from '@hcengineering/setting'
+-import sign from '@hcengineering/sign'
+-import support, { supportId, supportLink, reportBugLink, docsLink, privacyPolicyLink } from '@hcengineering/support'
+-import { surveyId } from '@hcengineering/survey'
+-import { tagsId } from '@hcengineering/tags'
+-import { taskId } from '@hcengineering/task'
+-import telegram, { telegramId } from '@hcengineering/telegram'
+-import { templatesId } from '@hcengineering/templates'
+-import { testManagementId } from '@hcengineering/test-management'
+-import textEditor, { textEditorId } from '@hcengineering/text-editor'
+-import { timeId } from '@hcengineering/time'
+-import tracker, { trackerId } from '@hcengineering/tracker'
+-import { trainingId } from '@hcengineering/training'
+-import uiPlugin from '@hcengineering/ui'
+-import { uploaderId } from '@hcengineering/uploader'
+-import { mediaId } from '@hcengineering/media'
+-import recorder, { recorderId } from '@hcengineering/recorder'
+-import { viewId } from '@hcengineering/view'
+-import workbench, { workbenchId } from '@hcengineering/workbench'
+-import { mailId } from '@hcengineering/mail'
+-import { chatId } from '@hcengineering/chat'
+-import github, { githubId } from '@hcengineering/github'
+-import { bitrixId } from '@hcengineering/bitrix'
+-import { inboxId } from '@hcengineering/inbox'
+-import { achievementId } from '@hcengineering/achievement'
+-import communication, { communicationId } from '@hcengineering/communication'
+-import { emojiId } from '@hcengineering/emoji'
+-import billingPlugin, { billingId } from '@hcengineering/billing'
+-import { hulyMailId } from '@hcengineering/huly-mail'
+-import { aiAssistantId } from '@hcengineering/ai-assistant'
+-import { ratingId } from '@hcengineering/rating'
+-
+-import '@hcengineering/activity-assets'
+-import '@hcengineering/analytics-collector-assets'
+-import '@hcengineering/attachment-assets'
+-import '@hcengineering/bitrix-assets'
+-import '@hcengineering/board-assets'
+-import '@hcengineering/calendar-assets'
+-import '@hcengineering/card-assets'
+-import '@hcengineering/chunter-assets'
+-import '@hcengineering/contact-assets'
+-import '@hcengineering/controlled-documents-assets'
+-import '@hcengineering/desktop-preferences-assets'
+-import '@hcengineering/diffview-assets'
+-import '@hcengineering/document-assets'
+-import '@hcengineering/drive-assets'
+-import '@hcengineering/export-assets'
+-import '@hcengineering/gmail-assets'
+-import '@hcengineering/guest-assets'
+-import '@hcengineering/global-profile-assets'
+-import '@hcengineering/hr-assets'
+-import '@hcengineering/inventory-assets'
+-import '@hcengineering/lead-assets'
+-import '@hcengineering/login-assets'
+-import '@hcengineering/love-assets'
+-import '@hcengineering/notification-assets'
+-import '@hcengineering/preference-assets'
+-import '@hcengineering/print-assets'
+-import '@hcengineering/process-assets'
+-import '@hcengineering/products-assets'
+-import '@hcengineering/questions-assets'
+-import '@hcengineering/recruit-assets'
+-import '@hcengineering/request-assets'
+-import '@hcengineering/setting-assets'
+-import '@hcengineering/support-assets'
+-import '@hcengineering/survey-assets'
+-import '@hcengineering/tags-assets'
+-import '@hcengineering/task-assets'
+-import '@hcengineering/telegram-assets'
+-import '@hcengineering/templates-assets'
+-import '@hcengineering/test-management-assets'
+-import '@hcengineering/text-editor-assets'
+-import '@hcengineering/time-assets'
+-import '@hcengineering/tracker-assets'
+-import '@hcengineering/training-assets'
+-import '@hcengineering/uploader-assets'
+-import '@hcengineering/recorder-assets'
+-import '@hcengineering/media-assets'
+-import '@hcengineering/view-assets'
+-import '@hcengineering/workbench-assets'
+-import '@hcengineering/chat-assets'
+-import '@hcengineering/inbox-assets'
+-import '@hcengineering/mail-assets'
+-import '@hcengineering/github-assets'
+-import '@hcengineering/achievement-assets'
+-import '@hcengineering/communication-assets'
+-import '@hcengineering/emoji-assets'
+-import '@hcengineering/billing-assets'
+-import '@hcengineering/huly-mail-assets'
+-import '@hcengineering/ai-assistant-assets'
+-import '@hcengineering/rating-assets'
+-
+-import { coreId } from '@hcengineering/core'
+-import presentation, { loadServerConfig, createFileStorage, presentationId } from '@hcengineering/presentation'
+-
+-import { setMetadata } from '@hcengineering/platform'
+-import { initThemeStore, setDefaultLanguage } from '@hcengineering/theme'
+-
+-import { preferenceId } from '@hcengineering/preference'
+-import { uiId } from '@hcengineering/ui/src/plugin'
+-import { configureAnalytics } from './analytics'
+-import { Analytics } from '@hcengineering/analytics'
+-
+-export interface Config {
+-  ACCOUNTS_URL: string
+-  UPLOAD_URL: string
+-  FILES_URL: string
+-  DATALAKE_URL?: string
+-  MODEL_VERSION: string
+-  VERSION: string
+-  COLLABORATOR_URL: string
+-  COLLABORATOR?: string
+-  REKONI_URL: string
+-  TELEGRAM_URL: string
+-  GMAIL_URL: string
+-  CALENDAR_URL: string
+-  PUSH_PUBLIC_KEY: string
+-  APP_PROTOCOL?: string
+-  GITHUB_APP?: string
+-  GITHUB_CLIENTID?: string
+-  GITHUB_URL: string
+-  LOVE_ENDPOINT?: string
+-  LIVEKIT_WS?: string
+-  SIGN_URL?: string
+-  PRINT_URL?: string
+-  ANALYTICS_COLLECTOR_URL?: string
+-  BRANDING_URL?: string
+-  TELEGRAM_BOT_URL?: string
+-  AI_URL?: string
+-  DISABLE_SIGNUP?: string
+-  HIDE_LOCAL_LOGIN?: string
+-  LINK_PREVIEW_URL?: string
+-  PASSWORD_STRICTNESS?: 'very_strict' | 'strict' | 'normal' | 'none'
+-  // Could be defined for dev environment
+-  FRONT_URL?: string
+-  PREVIEW_URL?: string
+-  STATS_URL?: string
+-  PRESENCE_URL?: string
+-  USE_BINARY_PROTOCOL?: boolean
+-  TRANSACTOR_OVERRIDE?: string
+-  BACKUP_URL?: string
+-  STREAM_URL?: string
+-  PUBLIC_SCHEDULE_URL?: string
+-  CALDAV_SERVER_URL?: string
+-  EXPORT_URL?: string
+-  MAIL_URL?: string
+-  COMMUNICATION_API_ENABLED?: string
+-  BILLING_URL?: string
+-  PAYMENT_URL?: string
+-  EXCLUDED_APPLICATIONS_FOR_ANONYMOUS?: string
+-  HULYLAKE_URL?: string
+-  DISABLED_FEATURES?: string
+-  SIGNUP_URL?: string
+-}
+-
+-export interface Branding {
+-  title?: string
+-  links?: Array<{
+-    rel: string
+-    href: string
+-    type?: string
+-    sizes?: string
+-  }>
+-  support?: {
+-    supportLink?: string
+-    reportBugLink?: string
+-    docsLink?: string
+-    privacyPolicyLink?: string
+-  }
+-  languages?: string
+-  lastNameFirst?: string
+-  defaultLanguage?: string
+-  defaultApplication?: string
+-  defaultSpace?: string
+-  defaultSpecial?: string
+-  initWorkspace?: string
+-  defaultInviteRole?: string
+-  inviteLinkGeneratorRoles?: string[]
+-}
+-
+-export type BrandingMap = Record<string, Branding>
+-
+-const clientType = process.env.CLIENT_TYPE
+-const configs: Record<string, string> = {
+-  'dev-production': '/config-dev.json',
+-  'dev-huly': '/config-huly.json',
+-  'dev-bold': '/config.json',
+-  'dev-server': '/config.json',
+-  'dev-server-test': '/config-test.json',
+-  'dev-worker': '/config-worker.json',
+-  'dev-worker-local': '/config-worker-local.json'
+-}
+-
+-const PASSWORD_REQUIREMENTS: Record<NonNullable<Config['PASSWORD_STRICTNESS']>, Record<string, number>> = {
+-  very_strict: {
+-    MinDigits: 4,
+-    MinLength: 32,
+-    MinLowerChars: 4,
+-    MinSpecialChars: 4,
+-    MinUpperChars: 4
+-  },
+-  strict: {
+-    MinDigits: 2,
+-    MinLength: 16,
+-    MinLowerChars: 2,
+-    MinSpecialChars: 2,
+-    MinUpperChars: 2
+-  },
+-  normal: {
+-    MinDigits: 1,
+-    MinLength: 8,
+-    MinLowerChars: 1,
+-    MinSpecialChars: 1,
+-    MinUpperChars: 1
+-  },
+-  none: {
+-    MinDigits: 0,
+-    MinLength: 0,
+-    MinLowerChars: 0,
+-    MinSpecialChars: 0,
+-    MinUpperChars: 0
+-  }
+-}
+-
+-function configureI18n(): void {
+-  // Add localization
+-  addStringsLoader(
+-    platformId,
+-    async (lang: string) =>
+-      await import(
+-        /* webpackInclude: /\.json$/ */
+-        /* webpackMode: "lazy" */
+-        /* webpackChunkName: "lang-[request]" */
+-        `@hcengineering/platform/lang/${lang}.json`
+-      )
+-  )
+-  addStringsLoader(
+-    coreId,
+-    async (lang: string) =>
+-      await import(
+-        /* webpackInclude: /\.json$/ */
+-        /* webpackMode: "lazy" */
+-        /* webpackChunkName: "lang-[request]" */
+-        `@hcengineering/core/lang/${lang}.json`
+-      )
+-  )
+-  addStringsLoader(
+-    presentationId,
+-    async (lang: string) => await import(`@hcengineering/presentation/lang/${lang}.json`)
+-  )
+-  addStringsLoader(
+-    textEditorId,
+-    async (lang: string) => await import(`@hcengineering/text-editor-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(uiId, async (lang: string) => await import(`@hcengineering/ui/lang/${lang}.json`))
+-  addStringsLoader(uploaderId, async (lang: string) => await import(`@hcengineering/uploader-assets/lang/${lang}.json`))
+-  addStringsLoader(recorderId, async (lang: string) => await import(`@hcengineering/recorder-assets/lang/${lang}.json`))
+-  addStringsLoader(mediaId, async (lang: string) => await import(`@hcengineering/media-assets/lang/${lang}.json`))
+-  addStringsLoader(activityId, async (lang: string) => await import(`@hcengineering/activity-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    attachmentId,
+-    async (lang: string) => await import(`@hcengineering/attachment-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(bitrixId, async (lang: string) => await import(`@hcengineering/bitrix-assets/lang/${lang}.json`))
+-  addStringsLoader(boardId, async (lang: string) => await import(`@hcengineering/board-assets/lang/${lang}.json`))
+-  addStringsLoader(calendarId, async (lang: string) => await import(`@hcengineering/calendar-assets/lang/${lang}.json`))
+-  addStringsLoader(chunterId, async (lang: string) => await import(`@hcengineering/chunter-assets/lang/${lang}.json`))
+-  addStringsLoader(contactId, async (lang: string) => await import(`@hcengineering/contact-assets/lang/${lang}.json`))
+-  addStringsLoader(driveId, async (lang: string) => await import(`@hcengineering/drive-assets/lang/${lang}.json`))
+-  addStringsLoader(gmailId, async (lang: string) => await import(`@hcengineering/gmail-assets/lang/${lang}.json`))
+-  addStringsLoader(hrId, async (lang: string) => await import(`@hcengineering/hr-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    inventoryId,
+-    async (lang: string) => await import(`@hcengineering/inventory-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(leadId, async (lang: string) => await import(`@hcengineering/lead-assets/lang/${lang}.json`))
+-  addStringsLoader(loginId, async (lang: string) => await import(`@hcengineering/login-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    notificationId,
+-    async (lang: string) => await import(`@hcengineering/notification-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(onboardId, async (lang: string) => await import(`@hcengineering/onboard-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    preferenceId,
+-    async (lang: string) => await import(`@hcengineering/preference-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(recruitId, async (lang: string) => await import(`@hcengineering/recruit-assets/lang/${lang}.json`))
+-  addStringsLoader(requestId, async (lang: string) => await import(`@hcengineering/request-assets/lang/${lang}.json`))
+-  addStringsLoader(settingId, async (lang: string) => await import(`@hcengineering/setting-assets/lang/${lang}.json`))
+-  addStringsLoader(supportId, async (lang: string) => await import(`@hcengineering/support-assets/lang/${lang}.json`))
+-  addStringsLoader(tagsId, async (lang: string) => await import(`@hcengineering/tags-assets/lang/${lang}.json`))
+-  addStringsLoader(taskId, async (lang: string) => await import(`@hcengineering/task-assets/lang/${lang}.json`))
+-  addStringsLoader(telegramId, async (lang: string) => await import(`@hcengineering/telegram-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    templatesId,
+-    async (lang: string) => await import(`@hcengineering/templates-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(trackerId, async (lang: string) => await import(`@hcengineering/tracker-assets/lang/${lang}.json`))
+-  addStringsLoader(viewId, async (lang: string) => await import(`@hcengineering/view-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    workbenchId,
+-    async (lang: string) => await import(`@hcengineering/workbench-assets/lang/${lang}.json`)
+-  )
+-
+-  addStringsLoader(
+-    desktopPreferencesId,
+-    async (lang: string) => await import(`@hcengineering/desktop-preferences-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(diffviewId, async (lang: string) => await import(`@hcengineering/diffview-assets/lang/${lang}.json`))
+-  addStringsLoader(documentId, async (lang: string) => await import(`@hcengineering/document-assets/lang/${lang}.json`))
+-  addStringsLoader(timeId, async (lang: string) => await import(`@hcengineering/time-assets/lang/${lang}.json`))
+-  addStringsLoader(githubId, async (lang: string) => await import(`@hcengineering/github-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    documentsId,
+-    async (lang: string) => await import(`@hcengineering/controlled-documents-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(productsId, async (lang: string) => await import(`@hcengineering/products-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    questionsId,
+-    async (lang: string) => await import(`@hcengineering/questions-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(trainingId, async (lang: string) => await import(`@hcengineering/training-assets/lang/${lang}.json`))
+-  addStringsLoader(guestId, async (lang: string) => await import(`@hcengineering/guest-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    globalProfileId,
+-    async (lang: string) => await import(`@hcengineering/global-profile-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(loveId, async (lang: string) => await import(`@hcengineering/love-assets/lang/${lang}.json`))
+-  addStringsLoader(printId, async (lang: string) => await import(`@hcengineering/print-assets/lang/${lang}.json`))
+-  addStringsLoader(exportId, async (lang: string) => await import(`@hcengineering/export-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    analyticsCollectorId,
+-    async (lang: string) => await import(`@hcengineering/analytics-collector-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(
+-    testManagementId,
+-    async (lang: string) => await import(`@hcengineering/test-management-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(surveyId, async (lang: string) => await import(`@hcengineering/survey-assets/lang/${lang}.json`))
+-  addStringsLoader(cardId, async (lang: string) => await import(`@hcengineering/card-assets/lang/${lang}.json`))
+-  addStringsLoader(mailId, async (lang: string) => await import(`@hcengineering/mail-assets/lang/${lang}.json`))
+-  addStringsLoader(chatId, async (lang: string) => await import(`@hcengineering/chat-assets/lang/${lang}.json`))
+-  addStringsLoader(processId, async (lang: string) => await import(`@hcengineering/process-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    achievementId,
+-    async (lang: string) => await import(`@hcengineering/achievement-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(
+-    communicationId,
+-    async (lang: string) => await import(`@hcengineering/communication-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(inboxId, async (lang: string) => await import(`@hcengineering/inbox-assets/lang/${lang}.json`))
+-  addStringsLoader(emojiId, async (lang: string) => await import(`@hcengineering/emoji-assets/lang/${lang}.json`))
+-  addStringsLoader(billingId, async (lang: string) => await import(`@hcengineering/billing-assets/lang/${lang}.json`))
+-  addStringsLoader(
+-    hulyMailId,
+-    async (lang: string) => await import(`@hcengineering/huly-mail-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(
+-    aiAssistantId,
+-    async (lang: string) => await import(`@hcengineering/ai-assistant-assets/lang/${lang}.json`)
+-  )
+-  addStringsLoader(ratingId, async (lang: string) => await import(`@hcengineering/rating-assets/lang/${lang}.json`))
+-}
+-
+-export async function configurePlatform() {
+-  setMetadata(platform.metadata.LoadHelper, async (loader) => {
+-    for (let i = 0; i < 5; i++) {
+-      try {
+-        return await loader()
+-      } catch (err: any) {
+-        if (err.message.includes('Loading chunk') && i != 4) {
+-          continue
+-        }
+-        Analytics.handleError(err)
+-        console.error(err)
+-        location.reload()
+-      }
+-    }
+-  })
+-  configureI18n()
+-
+-  const config: Config = await loadServerConfig(configs[clientType ?? ''] ?? '/config.json')
+-  const branding: BrandingMap =
+-    config.BRANDING_URL !== undefined ? await (await fetch(config.BRANDING_URL, { keepalive: true })).json() : {}
+-  const myBranding = branding[window.location.host] ?? {}
+-
+-  console.log('loading configuration', config)
+-  console.log('loaded branding', myBranding)
+-
+-  const title = myBranding.title ?? 'Platform'
+-
+-  // apply branding
+-  window.document.title = title
+-
+-  const links = myBranding.links ?? []
+-  if (links.length > 0) {
+-    // remove the default favicon
+-    // it's only needed for Safari which cannot use dynamically added links for favicons
+-    document.getElementById('default-favicon')?.remove()
+-
+-    for (const link of links) {
+-      const htmlLink = document.createElement('link')
+-      htmlLink.rel = link.rel
+-      if (link.rel.split(/\s+/).includes('icon') && document.getElementById('workspace-favicon') !== null) {
+-        // Preserve the startup icon until workspace settings are available.
+-        htmlLink.dataset.defaultHref = link.href
+-      } else {
+-        htmlLink.href = link.href
+-      }
+-
+-      if (link.type !== undefined) {
+-        htmlLink.type = link.type
+-      }
+-
+-      if (link.sizes !== undefined) {
+-        htmlLink.setAttribute('sizes', link.sizes)
+-      }
+-
+-      document.head.appendChild(htmlLink)
+-    }
+-  }
+-
+-  configureAnalytics(config)
+-  // tryOpenInDesktopApp(config.APP_PROTOCOL ?? 'huly://')
+-
+-  setMetadata(login.metadata.AccountsUrl, config.ACCOUNTS_URL)
+-  setMetadata(login.metadata.DisableSignUp, config.DISABLE_SIGNUP === 'true')
+-  setMetadata(login.metadata.HideLocalLogin, config.HIDE_LOCAL_LOGIN === 'true')
+-
+-  setMetadata(login.metadata.PasswordValidations, PASSWORD_REQUIREMENTS[config.PASSWORD_STRICTNESS ?? 'none'])
+-
+-  setMetadata(presentation.metadata.UploadURL, config.UPLOAD_URL)
+-  setMetadata(presentation.metadata.DatalakeUrl, config.DATALAKE_URL)
+-  setMetadata(
+-    presentation.metadata.FileStorage,
+-    createFileStorage(config.UPLOAD_URL, config.DATALAKE_URL, config.HULYLAKE_URL)
+-  )
+-  setMetadata(presentation.metadata.CollaboratorUrl, config.COLLABORATOR_URL)
+-
+-  setMetadata(presentation.metadata.FrontUrl, config.FRONT_URL)
+-  setMetadata(presentation.metadata.PreviewUrl, config.PREVIEW_URL)
+-  setMetadata(presentation.metadata.StatsUrl, config.STATS_URL)
+-  setMetadata(presentation.metadata.LinkPreviewUrl, config.LINK_PREVIEW_URL)
+-  setMetadata(presentation.metadata.MailUrl, config.MAIL_URL)
+-  setMetadata(presentation.metadata.SignupUrl, config.SIGNUP_URL ?? 'https://huly.io/signup')
+-
+-  const disabledFeatures = (config.DISABLED_FEATURES ??'').split(',').map(it => it.trim()).filter(it => it.length > 0)
+-  setMetadata(presentation.metadata.DisabledFeatures, new Set(disabledFeatures))
+-
+-  setMetadata(recorder.metadata.StreamUrl, config.STREAM_URL)
+-  setMetadata(textEditor.metadata.Collaborator, config.COLLABORATOR)
+-  setMetadata(communication.metadata.Enabled, config.COMMUNICATION_API_ENABLED === 'true')
+-
+-  if (config.MODEL_VERSION != null) {
+-    console.log('Minimal Model version requirement', config.MODEL_VERSION)
+-    setMetadata(presentation.metadata.ModelVersion, config.MODEL_VERSION)
+-  }
+-  if (config.VERSION != null) {
+-    console.log('Minimal version requirement', config.VERSION)
+-    setMetadata(presentation.metadata.FrontVersion, config.VERSION)
+-  }
+-  setMetadata(telegram.metadata.TelegramURL, config.TELEGRAM_URL ?? 'http://localhost:8086')
+-  setMetadata(telegram.metadata.BotUrl, config.TELEGRAM_BOT_URL ?? 'http://huly.local:4020')
+-  setMetadata(gmail.metadata.GmailURL, config.GMAIL_URL ?? 'http://localhost:8087')
+-  setMetadata(calendar.metadata.CalendarServiceURL, config.CALENDAR_URL ?? 'http://localhost:8095')
+-  setMetadata(calendar.metadata.PublicScheduleURL, config.PUBLIC_SCHEDULE_URL)
+-  setMetadata(calendar.metadata.CalDavServerURL, config.CALDAV_SERVER_URL)
+-  setMetadata(notification.metadata.PushPublicKey, config.PUSH_PUBLIC_KEY)
+-  setMetadata(analyticsCollector.metadata.EndpointURL, config.ANALYTICS_COLLECTOR_URL)
+-  setMetadata(aiBot.metadata.EndpointURL, config.AI_URL)
+-
+-  setMetadata(github.metadata.GithubApplication, config.GITHUB_APP ?? '')
+-  setMetadata(github.metadata.GithubClientID, config.GITHUB_CLIENTID ?? '')
+-  setMetadata(github.metadata.GithubURL, config.GITHUB_URL)
+-
+-  setMetadata(rekoni.metadata.RekoniUrl, config.REKONI_URL)
+-
+-  setMetadata(uiPlugin.metadata.DefaultApplication, login.component.LoginApp)
+-  setMetadata(contactPlugin.metadata.LastNameFirst, myBranding.lastNameFirst === 'true')
+-  setMetadata(love.metadata.ServiceEndpoint, config.LOVE_ENDPOINT)
+-  setMetadata(love.metadata.WebSocketURL, config.LIVEKIT_WS)
+-  setMetadata(print.metadata.PrintURL, config.PRINT_URL)
+-  setMetadata(sign.metadata.SignURL, config.SIGN_URL)
+-  setMetadata(presence.metadata.PresenceUrl, config.PRESENCE_URL ?? '')
+-  setMetadata(exportPlugin.metadata.ExportUrl, config.EXPORT_URL ?? '')
+-
+-  setMetadata(billingPlugin.metadata.BillingURL, config.BILLING_URL ?? '')
+-  setMetadata(presentation.metadata.PaymentUrl, config.PAYMENT_URL ?? '')
+-
+-  setMetadata(presentation.metadata.HulylakeUrl, config.HULYLAKE_URL ?? '')
+-
+-  setMetadata(support.metadata.SupportLink, myBranding.support?.supportLink ?? supportLink)
+-  setMetadata(support.metadata.ReportBugLink, myBranding.support?.reportBugLink ?? reportBugLink)
+-  setMetadata(support.metadata.DocsLink, myBranding.support?.docsLink ?? docsLink)
+-  setMetadata(support.metadata.PrivacyPolicyLink, myBranding.support?.privacyPolicyLink ?? privacyPolicyLink)
+-
+-  const languages = myBranding.languages
+-    ? myBranding.languages.split(',').map((l) => l.trim())
+-    : ['en', 'ru', 'es', 'pl', 'pt', 'pt-br', 'zh', 'fr', 'cs', 'it', 'de', 'ja', 'ko', 'tr']
+-
+-  setMetadata(uiPlugin.metadata.Languages, languages)
+-
+-  setMetadata(
+-    uiPlugin.metadata.Routes,
+-    new Map([
+-      [workbenchId, workbench.component.WorkbenchApp],
+-      [loginId, login.component.LoginApp],
+-      [onboardId, onboard.component.OnboardApp],
+-      [githubId, github.component.ConnectApp],
+-      [calendarId, calendar.component.ConnectApp],
+-      [guestId, guest.component.GuestApp],
+-      [globalProfileRoute, globalProfile.component.GlobalProfileApp],
+-      ['meetings', love.component.GuestMeetingApp]
+-    ])
+-  )
+-
+-  addLocation(coreId, async () => ({ default: async () => ({}) }))
+-  addLocation(presentationId, async () => ({ default: async () => ({}) }))
+-
+-  addLocation(clientId, async () => await import(/* webpackChunkName: "client" */ '@hcengineering/client-resources'))
+-  addLocation(loginId, async () => await import(/* webpackChunkName: "login" */ '@hcengineering/login-resources'))
+-  addLocation(onboardId, async () => await import(/* webpackChunkName: "onboard" */ '@hcengineering/onboard-resources'))
+-  addLocation(
+-    workbenchId,
+-    async () => await import(/* webpackChunkName: "workbench" */ '@hcengineering/workbench-resources')
+-  )
+-  addLocation(viewId, async () => await import(/* webpackChunkName: "view" */ '@hcengineering/view-resources'))
+-  addLocation(converterId, async () => await import(/* webpackChunkName: "converter" */ '@hcengineering/converter-resources'))
+-  addLocation(taskId, async () => await import(/* webpackChunkName: "task" */ '@hcengineering/task-resources'))
+-  addLocation(contactId, async () => await import(/* webpackChunkName: "contact" */ '@hcengineering/contact-resources'))
+-  addLocation(chunterId, async () => await import(/* webpackChunkName: "chunter" */ '@hcengineering/chunter-resources'))
+-  addLocation(recruitId, async () => await import(/* webpackChunkName: "recruit" */ '@hcengineering/recruit-resources'))
+-  addLocation(
+-    activityId,
+-    async () => await import(/* webpackChunkName: "activity" */ '@hcengineering/activity-resources')
+-  )
+-  addLocation(settingId, async () => await import(/* webpackChunkName: "setting" */ '@hcengineering/setting-resources'))
+-  addLocation(leadId, async () => await import(/* webpackChunkName: "lead" */ '@hcengineering/lead-resources'))
+-  addLocation(
+-    telegramId,
+-    async () => await import(/* webpackChunkName: "telegram" */ '@hcengineering/telegram-resources')
+-  )
+-  addLocation(
+-    attachmentId,
+-    async () => await import(/* webpackChunkName: "attachment" */ '@hcengineering/attachment-resources')
+-  )
+-  addLocation(gmailId, async () => await import(/* webpackChunkName: "gmail" */ '@hcengineering/gmail-resources'))
+-  addLocation(
+-    imageCropperId,
+-    async () => await import(/* webpackChunkName: "image-cropper" */ '@hcengineering/image-cropper-resources')
+-  )
+-  addLocation(
+-    inventoryId,
+-    async () => await import(/* webpackChunkName: "inventory" */ '@hcengineering/inventory-resources')
+-  )
+-  addLocation(
+-    templatesId,
+-    async () => await import(/* webpackChunkName: "templates" */ '@hcengineering/templates-resources')
+-  )
+-  addLocation(
+-    notificationId,
+-    async () => await import(/* webpackChunkName: "notification" */ '@hcengineering/notification-resources')
+-  )
+-  addLocation(tagsId, async () => await import(/* webpackChunkName: "tags" */ '@hcengineering/tags-resources'))
+-  addLocation(
+-    calendarId,
+-    async () => await import(/* webpackChunkName: "calendar" */ '@hcengineering/calendar-resources')
+-  )
+-  addLocation(
+-    diffviewId,
+-    async () => await import(/* webpackChunkName: "diffview" */ '@hcengineering/diffview-resources')
+-  )
+-  addLocation(timeId, async () => await import(/* webpackChunkName: "time" */ '@hcengineering/time-resources'))
+-  addLocation(
+-    desktopPreferencesId,
+-    async () =>
+-      await import(/* webpackChunkName: "desktop-preferences" */ '@hcengineering/desktop-preferences-resources')
+-  )
+-  addLocation(analyticsCollectorId, async () => await import('@hcengineering/analytics-collector-resources'))
+-  addLocation(aiBotId, async () => await import('@hcengineering/ai-bot-resources'))
+-
+-  addLocation(trackerId, async () => await import(/* webpackChunkName: "tracker" */ '@hcengineering/tracker-resources'))
+-  addLocation(boardId, async () => await import(/* webpackChunkName: "board" */ '@hcengineering/board-resources'))
+-  addLocation(hrId, async () => await import(/* webpackChunkName: "hr" */ '@hcengineering/hr-resources'))
+-  addLocation(bitrixId, async () => await import(/* webpackChunkName: "bitrix" */ '@hcengineering/bitrix-resources'))
+-  addLocation(requestId, async () => await import(/* webpackChunkName: "request" */ '@hcengineering/request-resources'))
+-  addLocation(driveId, async () => await import(/* webpackChunkName: "drive" */ '@hcengineering/drive-resources'))
+-  addLocation(supportId, async () => await import(/* webpackChunkName: "support" */ '@hcengineering/support-resources'))
+-
+-  addLocation(
+-    documentId,
+-    async () => await import(/* webpackChunkName: "document" */ '@hcengineering/document-resources')
+-  )
+-  addLocation(githubId, async () => await import(/* webpackChunkName: "github" */ '@hcengineering/github-resources'))
+-  addLocation(
+-    questionsId,
+-    async () => await import(/* webpackChunkName: "training" */ '@hcengineering/questions-resources')
+-  )
+-  addLocation(
+-    trainingId,
+-    async () => await import(/* webpackChunkName: "training" */ '@hcengineering/training-resources')
+-  )
+-  addLocation(
+-    productsId,
+-    async () => await import(/* webpackChunkName: "products" */ '@hcengineering/products-resources')
+-  )
+-  addLocation(
+-    documentsId,
+-    async () => await import(/* webpackChunkName: "documents" */ '@hcengineering/controlled-documents-resources')
+-  )
+-  addLocation(guestId, async () => await import(/* webpackChunkName: "guest" */ '@hcengineering/guest-resources'))
+-  addLocation(
+-    globalProfileId,
+-    async () => await import(/* webpackChunkName: "global-profile" */ '@hcengineering/global-profile-resources')
+-  )
+-  addLocation(loveId, async () => await import(/* webpackChunkName: "love" */ '@hcengineering/love-resources'))
+-  addLocation(printId, async () => await import(/* webpackChunkName: "print" */ '@hcengineering/print-resources'))
+-  addLocation(exportId, async () => await import(/* webpackChunkName: "export" */ '@hcengineering/export-resources'))
+-  addLocation(
+-    textEditorId,
+-    async () => await import(/* webpackChunkName: "text-editor" */ '@hcengineering/text-editor-resources')
+-  )
+-  addLocation(
+-    uploaderId,
+-    async () => await import(/* webpackChunkName: "uploader" */ '@hcengineering/uploader-resources')
+-  )
+-  addLocation(
+-    recorderId,
+-    async () => await import(/* webpackChunkName: "recorder" */ '@hcengineering/recorder-resources')
+-  )
+-  addLocation(mediaId, async () => await import(/* webpackChunkName: "media" */ '@hcengineering/media-resources'))
+-
+-  addLocation(
+-    testManagementId,
+-    async () => await import(/* webpackChunkName: "test-management" */ '@hcengineering/test-management-resources')
+-  )
+-  addLocation(surveyId, async () => await import(/* webpackChunkName: "survey" */ '@hcengineering/survey-resources'))
+-  addLocation(
+-    presenceId,
+-    async () => await import(/* webpackChunkName: "presence" */ '@hcengineering/presence-resources')
+-  )
+-  addLocation(cardId, async () => await import(/* webpackChunkName: "card" */ '@hcengineering/card-resources'))
+-  addLocation(chatId, async () => await import(/* webpackChunkName: "chat" */ '@hcengineering/chat-resources'))
+-  addLocation(processId, async () => await import(/* webpackChunkName: "process" */ '@hcengineering/process-resources'))
+-  addLocation(
+-    achievementId,
+-    async () => await import(/* webpackChunkName: "achievement" */ '@hcengineering/achievement-resources')
+-  )
+-  addLocation(
+-    communicationId,
+-    async () => await import(/* webpackChunkName: "communication" */ '@hcengineering/communication-resources')
+-  )
+-  addLocation(emojiId, async () => await import(/* webpackChunkName: "emoji" */ '@hcengineering/emoji-resources'))
+-  if ((config.BILLING_URL ?? '') !== '') {
+-    addLocation(
+-      billingId,
+-      async () => await import(/* webpackChunkName: "billing" */ '@hcengineering/billing-resources')
+-    )
+-  }
+-  addLocation(
+-    hulyMailId,
+-    async () => await import(/* webpackChunkName: "hulyMail" */ '@hcengineering/huly-mail-resources')
+-  )
+-  addLocation(
+-    aiAssistantId,
+-    async () => await import(/* webpackChunkName: "ai-assistant" */ '@hcengineering/ai-assistant-resources')
+-  )
+-  addLocation(inboxId, async () => await import(/* webpackChunkName: "inbox" */ '@hcengineering/inbox-resources'))
+-  addLocation(ratingId, async () => await import(/* webpackChunkName: "rating" */ '@hcengineering/rating-resources'))
+-
+-  setMetadata(client.metadata.FilterModel, 'ui')
+-  setMetadata(client.metadata.ExtraFilter, disabledFeatures)
+-  setMetadata(client.metadata.ExtraPlugins, ['preference' as Plugin, pulseId as Plugin])
+-  setMetadata(login.metadata.TransactorOverride, config.TRANSACTOR_OVERRIDE)
+-
+-  // Use binary response transfer for faster performance and small transfer sizes.
+-  const binaryOverride = localStorage.getItem(client.metadata.UseBinaryProtocol)
+-  setMetadata(
+-    client.metadata.UseBinaryProtocol,
+-    binaryOverride != null ? binaryOverride === 'true' : (config.USE_BINARY_PROTOCOL ?? true)
+-  )
+-
+-  // Disable for now, since it causes performance issues on linux/docker/kubernetes boxes for now.
+-  setMetadata(client.metadata.UseProtocolCompression, true)
+-
+-  setMetadata(uiPlugin.metadata.PlatformTitle, title)
+-  setMetadata(workbench.metadata.PlatformTitle, title)
+-  setDefaultLanguage(myBranding.defaultLanguage ?? 'en')
+-  setMetadata(workbench.metadata.DefaultApplication, myBranding.defaultApplication ?? 'tracker')
+-  setMetadata(workbench.metadata.DefaultSpace, myBranding.defaultSpace ?? tracker.project.DefaultProject)
+-  setMetadata(workbench.metadata.DefaultSpecial, myBranding.defaultSpecial ?? 'issues')
+-
+-  setMetadata(setting.metadata.DefaultInviteRole, myBranding.defaultInviteRole)
+-  setMetadata(setting.metadata.DefaultInviteLinkGeneratorRoles, myBranding.inviteLinkGeneratorRoles)
+-
+-  try {
+-    const parsed = JSON.parse(config.EXCLUDED_APPLICATIONS_FOR_ANONYMOUS ?? '')
+-    setMetadata(workbench.metadata.ExcludedApplicationsForAnonymous, Array.isArray(parsed) ? parsed : [])
+-  } catch (err) {
+-    setMetadata(workbench.metadata.ExcludedApplicationsForAnonymous, [])
+-  }
+-
+-  setMetadata(setting.metadata.BackupUrl, config.BACKUP_URL ?? '')
+-
+-  initThemeStore()
+-}
++//
++// Copyright © 2022, 2023, 2025 Hardcore Engineering Inc.
++//
++// Licensed under the Eclipse Public License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License. You may
++// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++//
++// See the License for the specific language governing permissions and
++// limitations under the License.
++//
++
++import platform, { type Plugin, addLocation, addStringsLoader, platformId } from '@hcengineering/platform'
++
++import { activityId } from '@hcengineering/activity'
++import aiBot, { aiBotId } from '@hcengineering/ai-bot'
++import analyticsCollector, { analyticsCollectorId } from '@hcengineering/analytics-collector'
++import { attachmentId } from '@hcengineering/attachment'
++import { boardId } from '@hcengineering/board'
++import calendar, { calendarId } from '@hcengineering/calendar'
++import { cardId } from '@hcengineering/card'
++import { chunterId } from '@hcengineering/chunter'
++import client, { clientId } from '@hcengineering/client'
++import contactPlugin, { contactId } from '@hcengineering/contact'
++import { converterId } from '@hcengineering/converter'
++import { documentsId } from '@hcengineering/controlled-documents'
++import { desktopPreferencesId } from '@hcengineering/desktop-preferences'
++import { diffviewId } from '@hcengineering/diffview'
++import { documentId } from '@hcengineering/document'
++import { driveId } from '@hcengineering/drive'
++import exportPlugin, { exportId } from '@hcengineering/export'
++import gmail, { gmailId } from '@hcengineering/gmail'
++import globalProfile, { globalProfileId, globalProfileRoute } from '@hcengineering/global-profile'
++import guest, { guestId } from '@hcengineering/guest'
++import { hrId } from '@hcengineering/hr'
++import { imageCropperId } from '@hcengineering/image-cropper'
++import { inventoryId } from '@hcengineering/inventory'
++import { leadId } from '@hcengineering/lead'
++import login, { loginId } from '@hcengineering/login'
++import love, { loveId } from '@hcengineering/love'
++import notification, { notificationId } from '@hcengineering/notification'
++import onboard, { onboardId } from '@hcengineering/onboard'
++import presence, { presenceId } from '@hcengineering/presence'
++import { pulseId } from '@hcengineering/pulse'
++import print, { printId } from '@hcengineering/print'
++import { processId } from '@hcengineering/process'
++import { productsId } from '@hcengineering/products'
++import { questionsId } from '@hcengineering/questions'
++import { recruitId } from '@hcengineering/recruit'
++import rekoni from '@hcengineering/rekoni'
++import { requestId } from '@hcengineering/request'
++import setting, { settingId } from '@hcengineering/setting'
++import sign from '@hcengineering/sign'
++import support, { supportId, supportLink, reportBugLink, docsLink, privacyPolicyLink } from '@hcengineering/support'
++import { surveyId } from '@hcengineering/survey'
++import { tagsId } from '@hcengineering/tags'
++import { taskId } from '@hcengineering/task'
++import telegram, { telegramId } from '@hcengineering/telegram'
++import { templatesId } from '@hcengineering/templates'
++import { testManagementId } from '@hcengineering/test-management'
++import textEditor, { textEditorId } from '@hcengineering/text-editor'
++import { timeId } from '@hcengineering/time'
++import tracker, { trackerId } from '@hcengineering/tracker'
++import { trainingId } from '@hcengineering/training'
++import uiPlugin from '@hcengineering/ui'
++import { uploaderId } from '@hcengineering/uploader'
++import { mediaId } from '@hcengineering/media'
++import recorder, { recorderId } from '@hcengineering/recorder'
++import { viewId } from '@hcengineering/view'
++import workbench, { workbenchId } from '@hcengineering/workbench'
++import { mailId } from '@hcengineering/mail'
++import { chatId } from '@hcengineering/chat'
++import github, { githubId } from '@hcengineering/github'
++import { bitrixId } from '@hcengineering/bitrix'
++import { inboxId } from '@hcengineering/inbox'
++import { achievementId } from '@hcengineering/achievement'
++import communication, { communicationId } from '@hcengineering/communication'
++import { emojiId } from '@hcengineering/emoji'
++import billingPlugin, { billingId } from '@hcengineering/billing'
++import { hulyMailId } from '@hcengineering/huly-mail'
++import { aiAssistantId } from '@hcengineering/ai-assistant'
++import { ratingId } from '@hcengineering/rating'
++
++import '@hcengineering/activity-assets'
++import '@hcengineering/analytics-collector-assets'
++import '@hcengineering/attachment-assets'
++import '@hcengineering/bitrix-assets'
++import '@hcengineering/board-assets'
++import '@hcengineering/calendar-assets'
++import '@hcengineering/card-assets'
++import '@hcengineering/chunter-assets'
++import '@hcengineering/contact-assets'
++import '@hcengineering/controlled-documents-assets'
++import '@hcengineering/desktop-preferences-assets'
++import '@hcengineering/diffview-assets'
++import '@hcengineering/document-assets'
++import '@hcengineering/drive-assets'
++import '@hcengineering/export-assets'
++import '@hcengineering/gmail-assets'
++import '@hcengineering/guest-assets'
++import '@hcengineering/global-profile-assets'
++import '@hcengineering/hr-assets'
++import '@hcengineering/inventory-assets'
++import '@hcengineering/lead-assets'
++import '@hcengineering/login-assets'
++import '@hcengineering/love-assets'
++import '@hcengineering/notification-assets'
++import '@hcengineering/preference-assets'
++import '@hcengineering/print-assets'
++import '@hcengineering/process-assets'
++import '@hcengineering/products-assets'
++import '@hcengineering/questions-assets'
++import '@hcengineering/recruit-assets'
++import '@hcengineering/request-assets'
++import '@hcengineering/setting-assets'
++import '@hcengineering/support-assets'
++import '@hcengineering/survey-assets'
++import '@hcengineering/tags-assets'
++import '@hcengineering/task-assets'
++import '@hcengineering/telegram-assets'
++import '@hcengineering/templates-assets'
++import '@hcengineering/test-management-assets'
++import '@hcengineering/text-editor-assets'
++import '@hcengineering/time-assets'
++import '@hcengineering/tracker-assets'
++import '@hcengineering/training-assets'
++import '@hcengineering/uploader-assets'
++import '@hcengineering/recorder-assets'
++import '@hcengineering/media-assets'
++import '@hcengineering/view-assets'
++import '@hcengineering/workbench-assets'
++import '@hcengineering/chat-assets'
++import '@hcengineering/inbox-assets'
++import '@hcengineering/mail-assets'
++import '@hcengineering/github-assets'
++import '@hcengineering/achievement-assets'
++import '@hcengineering/communication-assets'
++import '@hcengineering/emoji-assets'
++import '@hcengineering/billing-assets'
++import '@hcengineering/huly-mail-assets'
++import '@hcengineering/ai-assistant-assets'
++import '@hcengineering/rating-assets'
++
++import { coreId } from '@hcengineering/core'
++import presentation, { loadServerConfig, createFileStorage, presentationId } from '@hcengineering/presentation'
++
++import { setMetadata } from '@hcengineering/platform'
++import { initThemeStore, setDefaultLanguage } from '@hcengineering/theme'
++
++import { preferenceId } from '@hcengineering/preference'
++import { uiId } from '@hcengineering/ui/src/plugin'
++import { configureAnalytics } from './analytics'
++import { Analytics } from '@hcengineering/analytics'
++
++export interface Config {
++  ACCOUNTS_URL: string
++  UPLOAD_URL: string
++  FILES_URL: string
++  DATALAKE_URL?: string
++  MODEL_VERSION: string
++  VERSION: string
++  COLLABORATOR_URL: string
++  COLLABORATOR?: string
++  REKONI_URL: string
++  TELEGRAM_URL: string
++  GMAIL_URL: string
++  CALENDAR_URL: string
++  PUSH_PUBLIC_KEY: string
++  APP_PROTOCOL?: string
++  GITHUB_APP?: string
++  GITHUB_CLIENTID?: string
++  GITHUB_URL: string
++  LOVE_ENDPOINT?: string
++  LIVEKIT_WS?: string
++  SIGN_URL?: string
++  PRINT_URL?: string
++  ANALYTICS_COLLECTOR_URL?: string
++  BRANDING_URL?: string
++  TELEGRAM_BOT_URL?: string
++  AI_URL?: string
++  DISABLE_SIGNUP?: string
++  HIDE_LOCAL_LOGIN?: string
++  LINK_PREVIEW_URL?: string
++  PASSWORD_STRICTNESS?: 'very_strict' | 'strict' | 'normal' | 'none'
++  // Could be defined for dev environment
++  FRONT_URL?: string
++  PREVIEW_URL?: string
++  STATS_URL?: string
++  PRESENCE_URL?: string
++  USE_BINARY_PROTOCOL?: boolean
++  TRANSACTOR_OVERRIDE?: string
++  BACKUP_URL?: string
++  STREAM_URL?: string
++  PUBLIC_SCHEDULE_URL?: string
++  CALDAV_SERVER_URL?: string
++  EXPORT_URL?: string
++  MAIL_URL?: string
++  COMMUNICATION_API_ENABLED?: string
++  BILLING_URL?: string
++  PAYMENT_URL?: string
++  EXCLUDED_APPLICATIONS_FOR_ANONYMOUS?: string
++  HULYLAKE_URL?: string
++  DISABLED_FEATURES?: string
++  SIGNUP_URL?: string
++}
++
++export interface Branding {
++  title?: string
++  links?: Array<{
++    rel: string
++    href: string
++    type?: string
++    sizes?: string
++  }>
++  support?: {
++    supportLink?: string
++    reportBugLink?: string
++    docsLink?: string
++    privacyPolicyLink?: string
++  }
++  languages?: string
++  lastNameFirst?: string
++  defaultLanguage?: string
++  defaultApplication?: string
++  defaultSpace?: string
++  defaultSpecial?: string
++  initWorkspace?: string
++  defaultInviteRole?: string
++  inviteLinkGeneratorRoles?: string[]
++}
++
++export type BrandingMap = Record<string, Branding>
++
++const clientType = process.env.CLIENT_TYPE
++const configs: Record<string, string> = {
++  'dev-production': '/config-dev.json',
++  'dev-huly': '/config-huly.json',
++  'dev-bold': '/config.json',
++  'dev-server': '/config.json',
++  'dev-server-test': '/config-test.json',
++  'dev-worker': '/config-worker.json',
++  'dev-worker-local': '/config-worker-local.json'
++}
++
++const PASSWORD_REQUIREMENTS: Record<NonNullable<Config['PASSWORD_STRICTNESS']>, Record<string, number>> = {
++  very_strict: {
++    MinDigits: 4,
++    MinLength: 32,
++    MinLowerChars: 4,
++    MinSpecialChars: 4,
++    MinUpperChars: 4
++  },
++  strict: {
++    MinDigits: 2,
++    MinLength: 16,
++    MinLowerChars: 2,
++    MinSpecialChars: 2,
++    MinUpperChars: 2
++  },
++  normal: {
++    MinDigits: 1,
++    MinLength: 8,
++    MinLowerChars: 1,
++    MinSpecialChars: 1,
++    MinUpperChars: 1
++  },
++  none: {
++    MinDigits: 0,
++    MinLength: 0,
++    MinLowerChars: 0,
++    MinSpecialChars: 0,
++    MinUpperChars: 0
++  }
++}
++
++function configureI18n(): void {
++  // Add localization
++  addStringsLoader(
++    platformId,
++    async (lang: string) =>
++      await import(
++        /* webpackInclude: /\.json$/ */
++        /* webpackMode: "lazy" */
++        /* webpackChunkName: "lang-[request]" */
++        `@hcengineering/platform/lang/${lang}.json`
++      )
++  )
++  addStringsLoader(
++    coreId,
++    async (lang: string) =>
++      await import(
++        /* webpackInclude: /\.json$/ */
++        /* webpackMode: "lazy" */
++        /* webpackChunkName: "lang-[request]" */
++        `@hcengineering/core/lang/${lang}.json`
++      )
++  )
++  addStringsLoader(
++    presentationId,
++    async (lang: string) => await import(`@hcengineering/presentation/lang/${lang}.json`)
++  )
++  addStringsLoader(
++    textEditorId,
++    async (lang: string) => await import(`@hcengineering/text-editor-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(uiId, async (lang: string) => await import(`@hcengineering/ui/lang/${lang}.json`))
++  addStringsLoader(uploaderId, async (lang: string) => await import(`@hcengineering/uploader-assets/lang/${lang}.json`))
++  addStringsLoader(recorderId, async (lang: string) => await import(`@hcengineering/recorder-assets/lang/${lang}.json`))
++  addStringsLoader(mediaId, async (lang: string) => await import(`@hcengineering/media-assets/lang/${lang}.json`))
++  addStringsLoader(activityId, async (lang: string) => await import(`@hcengineering/activity-assets/lang/${lang}.json`))
++  addStringsLoader(
++    attachmentId,
++    async (lang: string) => await import(`@hcengineering/attachment-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(bitrixId, async (lang: string) => await import(`@hcengineering/bitrix-assets/lang/${lang}.json`))
++  addStringsLoader(boardId, async (lang: string) => await import(`@hcengineering/board-assets/lang/${lang}.json`))
++  addStringsLoader(calendarId, async (lang: string) => await import(`@hcengineering/calendar-assets/lang/${lang}.json`))
++  addStringsLoader(chunterId, async (lang: string) => await import(`@hcengineering/chunter-assets/lang/${lang}.json`))
++  addStringsLoader(contactId, async (lang: string) => await import(`@hcengineering/contact-assets/lang/${lang}.json`))
++  addStringsLoader(driveId, async (lang: string) => await import(`@hcengineering/drive-assets/lang/${lang}.json`))
++  addStringsLoader(gmailId, async (lang: string) => await import(`@hcengineering/gmail-assets/lang/${lang}.json`))
++  addStringsLoader(hrId, async (lang: string) => await import(`@hcengineering/hr-assets/lang/${lang}.json`))
++  addStringsLoader(
++    inventoryId,
++    async (lang: string) => await import(`@hcengineering/inventory-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(leadId, async (lang: string) => await import(`@hcengineering/lead-assets/lang/${lang}.json`))
++  addStringsLoader(loginId, async (lang: string) => await import(`@hcengineering/login-assets/lang/${lang}.json`))
++  addStringsLoader(
++    notificationId,
++    async (lang: string) => await import(`@hcengineering/notification-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(onboardId, async (lang: string) => await import(`@hcengineering/onboard-assets/lang/${lang}.json`))
++  addStringsLoader(
++    preferenceId,
++    async (lang: string) => await import(`@hcengineering/preference-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(recruitId, async (lang: string) => await import(`@hcengineering/recruit-assets/lang/${lang}.json`))
++  addStringsLoader(requestId, async (lang: string) => await import(`@hcengineering/request-assets/lang/${lang}.json`))
++  addStringsLoader(settingId, async (lang: string) => await import(`@hcengineering/setting-assets/lang/${lang}.json`))
++  addStringsLoader(supportId, async (lang: string) => await import(`@hcengineering/support-assets/lang/${lang}.json`))
++  addStringsLoader(tagsId, async (lang: string) => await import(`@hcengineering/tags-assets/lang/${lang}.json`))
++  addStringsLoader(taskId, async (lang: string) => await import(`@hcengineering/task-assets/lang/${lang}.json`))
++  addStringsLoader(telegramId, async (lang: string) => await import(`@hcengineering/telegram-assets/lang/${lang}.json`))
++  addStringsLoader(
++    templatesId,
++    async (lang: string) => await import(`@hcengineering/templates-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(trackerId, async (lang: string) => await import(`@hcengineering/tracker-assets/lang/${lang}.json`))
++  addStringsLoader(viewId, async (lang: string) => await import(`@hcengineering/view-assets/lang/${lang}.json`))
++  addStringsLoader(
++    workbenchId,
++    async (lang: string) => await import(`@hcengineering/workbench-assets/lang/${lang}.json`)
++  )
++
++  addStringsLoader(
++    desktopPreferencesId,
++    async (lang: string) => await import(`@hcengineering/desktop-preferences-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(diffviewId, async (lang: string) => await import(`@hcengineering/diffview-assets/lang/${lang}.json`))
++  addStringsLoader(documentId, async (lang: string) => await import(`@hcengineering/document-assets/lang/${lang}.json`))
++  addStringsLoader(timeId, async (lang: string) => await import(`@hcengineering/time-assets/lang/${lang}.json`))
++  addStringsLoader(githubId, async (lang: string) => await import(`@hcengineering/github-assets/lang/${lang}.json`))
++  addStringsLoader(
++    documentsId,
++    async (lang: string) => await import(`@hcengineering/controlled-documents-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(productsId, async (lang: string) => await import(`@hcengineering/products-assets/lang/${lang}.json`))
++  addStringsLoader(
++    questionsId,
++    async (lang: string) => await import(`@hcengineering/questions-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(trainingId, async (lang: string) => await import(`@hcengineering/training-assets/lang/${lang}.json`))
++  addStringsLoader(guestId, async (lang: string) => await import(`@hcengineering/guest-assets/lang/${lang}.json`))
++  addStringsLoader(
++    globalProfileId,
++    async (lang: string) => await import(`@hcengineering/global-profile-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(loveId, async (lang: string) => await import(`@hcengineering/love-assets/lang/${lang}.json`))
++  addStringsLoader(printId, async (lang: string) => await import(`@hcengineering/print-assets/lang/${lang}.json`))
++  addStringsLoader(exportId, async (lang: string) => await import(`@hcengineering/export-assets/lang/${lang}.json`))
++  addStringsLoader(
++    analyticsCollectorId,
++    async (lang: string) => await import(`@hcengineering/analytics-collector-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(
++    testManagementId,
++    async (lang: string) => await import(`@hcengineering/test-management-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(surveyId, async (lang: string) => await import(`@hcengineering/survey-assets/lang/${lang}.json`))
++  addStringsLoader(cardId, async (lang: string) => await import(`@hcengineering/card-assets/lang/${lang}.json`))
++  addStringsLoader(mailId, async (lang: string) => await import(`@hcengineering/mail-assets/lang/${lang}.json`))
++  addStringsLoader(chatId, async (lang: string) => await import(`@hcengineering/chat-assets/lang/${lang}.json`))
++  addStringsLoader(processId, async (lang: string) => await import(`@hcengineering/process-assets/lang/${lang}.json`))
++  addStringsLoader(
++    achievementId,
++    async (lang: string) => await import(`@hcengineering/achievement-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(
++    communicationId,
++    async (lang: string) => await import(`@hcengineering/communication-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(inboxId, async (lang: string) => await import(`@hcengineering/inbox-assets/lang/${lang}.json`))
++  addStringsLoader(emojiId, async (lang: string) => await import(`@hcengineering/emoji-assets/lang/${lang}.json`))
++  addStringsLoader(billingId, async (lang: string) => await import(`@hcengineering/billing-assets/lang/${lang}.json`))
++  addStringsLoader(
++    hulyMailId,
++    async (lang: string) => await import(`@hcengineering/huly-mail-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(
++    aiAssistantId,
++    async (lang: string) => await import(`@hcengineering/ai-assistant-assets/lang/${lang}.json`)
++  )
++  addStringsLoader(ratingId, async (lang: string) => await import(`@hcengineering/rating-assets/lang/${lang}.json`))
++}
++
++export async function configurePlatform() {
++  setMetadata(platform.metadata.LoadHelper, async (loader) => {
++    for (let i = 0; i < 5; i++) {
++      try {
++        return await loader()
++      } catch (err: any) {
++        if (err.message.includes('Loading chunk') && i != 4) {
++          continue
++        }
++        Analytics.handleError(err)
++        console.error(err)
++        location.reload()
++      }
++    }
++  })
++  configureI18n()
++
++  const config: Config = await loadServerConfig(configs[clientType ?? ''] ?? '/config.json')
++  const branding: BrandingMap =
++    config.BRANDING_URL !== undefined ? await (await fetch(config.BRANDING_URL, { keepalive: true })).json() : {}
++  const myBranding = branding[window.location.host] ?? {}
++
++  console.log('loading configuration', config)
++  console.log('loaded branding', myBranding)
++
++  const title = myBranding.title ?? 'Chief Executive Suite'
++
++  // apply branding
++  window.document.title = title
++
++  const links = myBranding.links ?? []
++  if (links.length > 0) {
++    // remove the default favicon
++    // it's only needed for Safari which cannot use dynamically added links for favicons
++    document.getElementById('default-favicon')?.remove()
++
++    for (const link of links) {
++      const htmlLink = document.createElement('link')
++      htmlLink.rel = link.rel
++      if (link.rel.split(/\s+/).includes('icon') && document.getElementById('workspace-favicon') !== null) {
++        // Preserve the startup icon until workspace settings are available.
++        htmlLink.dataset.defaultHref = link.href
++      } else {
++        htmlLink.href = link.href
++      }
++
++      if (link.type !== undefined) {
++        htmlLink.type = link.type
++      }
++
++      if (link.sizes !== undefined) {
++        htmlLink.setAttribute('sizes', link.sizes)
++      }
++
++      document.head.appendChild(htmlLink)
++    }
++  }
++
++  configureAnalytics(config)
++  // tryOpenInDesktopApp(config.APP_PROTOCOL ?? 'huly://')
++
++  setMetadata(login.metadata.AccountsUrl, config.ACCOUNTS_URL)
++  setMetadata(login.metadata.DisableSignUp, config.DISABLE_SIGNUP === 'true')
++  setMetadata(login.metadata.HideLocalLogin, config.HIDE_LOCAL_LOGIN === 'true')
++
++  setMetadata(login.metadata.PasswordValidations, PASSWORD_REQUIREMENTS[config.PASSWORD_STRICTNESS ?? 'none'])
++
++  setMetadata(presentation.metadata.UploadURL, config.UPLOAD_URL)
++  setMetadata(presentation.metadata.DatalakeUrl, config.DATALAKE_URL)
++  setMetadata(
++    presentation.metadata.FileStorage,
++    createFileStorage(config.UPLOAD_URL, config.DATALAKE_URL, config.HULYLAKE_URL)
++  )
++  setMetadata(presentation.metadata.CollaboratorUrl, config.COLLABORATOR_URL)
++
++  setMetadata(presentation.metadata.FrontUrl, config.FRONT_URL)
++  setMetadata(presentation.metadata.PreviewUrl, config.PREVIEW_URL)
++  setMetadata(presentation.metadata.StatsUrl, config.STATS_URL)
++  setMetadata(presentation.metadata.LinkPreviewUrl, config.LINK_PREVIEW_URL)
++  setMetadata(presentation.metadata.MailUrl, config.MAIL_URL)
++  setMetadata(presentation.metadata.SignupUrl, config.SIGNUP_URL ?? 'https://huly.io/signup')
++
++  const disabledFeatures = (config.DISABLED_FEATURES ??'').split(',').map(it => it.trim()).filter(it => it.length > 0)
++  setMetadata(presentation.metadata.DisabledFeatures, new Set(disabledFeatures))
++
++  setMetadata(recorder.metadata.StreamUrl, config.STREAM_URL)
++  setMetadata(textEditor.metadata.Collaborator, config.COLLABORATOR)
++  setMetadata(communication.metadata.Enabled, config.COMMUNICATION_API_ENABLED === 'true')
++
++  if (config.MODEL_VERSION != null) {
++    console.log('Minimal Model version requirement', config.MODEL_VERSION)
++    setMetadata(presentation.metadata.ModelVersion, config.MODEL_VERSION)
++  }
++  if (config.VERSION != null) {
++    console.log('Minimal version requirement', config.VERSION)
++    setMetadata(presentation.metadata.FrontVersion, config.VERSION)
++  }
++  setMetadata(telegram.metadata.TelegramURL, config.TELEGRAM_URL ?? 'http://localhost:8086')
++  setMetadata(telegram.metadata.BotUrl, config.TELEGRAM_BOT_URL ?? 'http://huly.local:4020')
++  setMetadata(gmail.metadata.GmailURL, config.GMAIL_URL ?? 'http://localhost:8087')
++  setMetadata(calendar.metadata.CalendarServiceURL, config.CALENDAR_URL ?? 'http://localhost:8095')
++  setMetadata(calendar.metadata.PublicScheduleURL, config.PUBLIC_SCHEDULE_URL)
++  setMetadata(calendar.metadata.CalDavServerURL, config.CALDAV_SERVER_URL)
++  setMetadata(notification.metadata.PushPublicKey, config.PUSH_PUBLIC_KEY)
++  setMetadata(analyticsCollector.metadata.EndpointURL, config.ANALYTICS_COLLECTOR_URL)
++  setMetadata(aiBot.metadata.EndpointURL, config.AI_URL)
++
++  setMetadata(github.metadata.GithubApplication, config.GITHUB_APP ?? '')
++  setMetadata(github.metadata.GithubClientID, config.GITHUB_CLIENTID ?? '')
++  setMetadata(github.metadata.GithubURL, config.GITHUB_URL)
++
++  setMetadata(rekoni.metadata.RekoniUrl, config.REKONI_URL)
++
++  setMetadata(uiPlugin.metadata.DefaultApplication, login.component.LoginApp)
++  setMetadata(contactPlugin.metadata.LastNameFirst, myBranding.lastNameFirst === 'true')
++  setMetadata(love.metadata.ServiceEndpoint, config.LOVE_ENDPOINT)
++  setMetadata(love.metadata.WebSocketURL, config.LIVEKIT_WS)
++  setMetadata(print.metadata.PrintURL, config.PRINT_URL)
++  setMetadata(sign.metadata.SignURL, config.SIGN_URL)
++  setMetadata(presence.metadata.PresenceUrl, config.PRESENCE_URL ?? '')
++  setMetadata(exportPlugin.metadata.ExportUrl, config.EXPORT_URL ?? '')
++
++  setMetadata(billingPlugin.metadata.BillingURL, config.BILLING_URL ?? '')
++  setMetadata(presentation.metadata.PaymentUrl, config.PAYMENT_URL ?? '')
++
++  setMetadata(presentation.metadata.HulylakeUrl, config.HULYLAKE_URL ?? '')
++
++  setMetadata(support.metadata.SupportLink, myBranding.support?.supportLink ?? supportLink)
++  setMetadata(support.metadata.ReportBugLink, myBranding.support?.reportBugLink ?? reportBugLink)
++  setMetadata(support.metadata.DocsLink, myBranding.support?.docsLink ?? docsLink)
++  setMetadata(support.metadata.PrivacyPolicyLink, myBranding.support?.privacyPolicyLink ?? privacyPolicyLink)
++
++  const languages = myBranding.languages
++    ? myBranding.languages.split(',').map((l) => l.trim())
++    : ['en', 'ru', 'es', 'pl', 'pt', 'pt-br', 'zh', 'fr', 'cs', 'it', 'de', 'ja', 'ko', 'tr']
++
++  setMetadata(uiPlugin.metadata.Languages, languages)
++
++  setMetadata(
++    uiPlugin.metadata.Routes,
++    new Map([
++      [workbenchId, workbench.component.WorkbenchApp],
++      [loginId, login.component.LoginApp],
++      [onboardId, onboard.component.OnboardApp],
++      [githubId, github.component.ConnectApp],
++      [calendarId, calendar.component.ConnectApp],
++      [guestId, guest.component.GuestApp],
++      [globalProfileRoute, globalProfile.component.GlobalProfileApp],
++      ['meetings', love.component.GuestMeetingApp]
++    ])
++  )
++
++  addLocation(coreId, async () => ({ default: async () => ({}) }))
++  addLocation(presentationId, async () => ({ default: async () => ({}) }))
++
++  addLocation(clientId, async () => await import(/* webpackChunkName: "client" */ '@hcengineering/client-resources'))
++  addLocation(loginId, async () => await import(/* webpackChunkName: "login" */ '@hcengineering/login-resources'))
++  addLocation(onboardId, async () => await import(/* webpackChunkName: "onboard" */ '@hcengineering/onboard-resources'))
++  addLocation(
++    workbenchId,
++    async () => await import(/* webpackChunkName: "workbench" */ '@hcengineering/workbench-resources')
++  )
++  addLocation(viewId, async () => await import(/* webpackChunkName: "view" */ '@hcengineering/view-resources'))
++  addLocation(converterId, async () => await import(/* webpackChunkName: "converter" */ '@hcengineering/converter-resources'))
++  addLocation(taskId, async () => await import(/* webpackChunkName: "task" */ '@hcengineering/task-resources'))
++  addLocation(contactId, async () => await import(/* webpackChunkName: "contact" */ '@hcengineering/contact-resources'))
++  addLocation(chunterId, async () => await import(/* webpackChunkName: "chunter" */ '@hcengineering/chunter-resources'))
++  addLocation(recruitId, async () => await import(/* webpackChunkName: "recruit" */ '@hcengineering/recruit-resources'))
++  addLocation(
++    activityId,
++    async () => await import(/* webpackChunkName: "activity" */ '@hcengineering/activity-resources')
++  )
++  addLocation(settingId, async () => await import(/* webpackChunkName: "setting" */ '@hcengineering/setting-resources'))
++  addLocation(leadId, async () => await import(/* webpackChunkName: "lead" */ '@hcengineering/lead-resources'))
++  addLocation(
++    telegramId,
++    async () => await import(/* webpackChunkName: "telegram" */ '@hcengineering/telegram-resources')
++  )
++  addLocation(
++    attachmentId,
++    async () => await import(/* webpackChunkName: "attachment" */ '@hcengineering/attachment-resources')
++  )
++  addLocation(gmailId, async () => await import(/* webpackChunkName: "gmail" */ '@hcengineering/gmail-resources'))
++  addLocation(
++    imageCropperId,
++    async () => await import(/* webpackChunkName: "image-cropper" */ '@hcengineering/image-cropper-resources')
++  )
++  addLocation(
++    inventoryId,
++    async () => await import(/* webpackChunkName: "inventory" */ '@hcengineering/inventory-resources')
++  )
++  addLocation(
++    templatesId,
++    async () => await import(/* webpackChunkName: "templates" */ '@hcengineering/templates-resources')
++  )
++  addLocation(
++    notificationId,
++    async () => await import(/* webpackChunkName: "notification" */ '@hcengineering/notification-resources')
++  )
++  addLocation(tagsId, async () => await import(/* webpackChunkName: "tags" */ '@hcengineering/tags-resources'))
++  addLocation(
++    calendarId,
++    async () => await import(/* webpackChunkName: "calendar" */ '@hcengineering/calendar-resources')
++  )
++  addLocation(
++    diffviewId,
++    async () => await import(/* webpackChunkName: "diffview" */ '@hcengineering/diffview-resources')
++  )
++  addLocation(timeId, async () => await import(/* webpackChunkName: "time" */ '@hcengineering/time-resources'))
++  addLocation(
++    desktopPreferencesId,
++    async () =>
++      await import(/* webpackChunkName: "desktop-preferences" */ '@hcengineering/desktop-preferences-resources')
++  )
++  addLocation(analyticsCollectorId, async () => await import('@hcengineering/analytics-collector-resources'))
++  addLocation(aiBotId, async () => await import('@hcengineering/ai-bot-resources'))
++
++  addLocation(trackerId, async () => await import(/* webpackChunkName: "tracker" */ '@hcengineering/tracker-resources'))
++  addLocation(boardId, async () => await import(/* webpackChunkName: "board" */ '@hcengineering/board-resources'))
++  addLocation(hrId, async () => await import(/* webpackChunkName: "hr" */ '@hcengineering/hr-resources'))
++  addLocation(bitrixId, async () => await import(/* webpackChunkName: "bitrix" */ '@hcengineering/bitrix-resources'))
++  addLocation(requestId, async () => await import(/* webpackChunkName: "request" */ '@hcengineering/request-resources'))
++  addLocation(driveId, async () => await import(/* webpackChunkName: "drive" */ '@hcengineering/drive-resources'))
++  addLocation(supportId, async () => await import(/* webpackChunkName: "support" */ '@hcengineering/support-resources'))
++
++  addLocation(
++    documentId,
++    async () => await import(/* webpackChunkName: "document" */ '@hcengineering/document-resources')
++  )
++  addLocation(githubId, async () => await import(/* webpackChunkName: "github" */ '@hcengineering/github-resources'))
++  addLocation(
++    questionsId,
++    async () => await import(/* webpackChunkName: "training" */ '@hcengineering/questions-resources')
++  )
++  addLocation(
++    trainingId,
++    async () => await import(/* webpackChunkName: "training" */ '@hcengineering/training-resources')
++  )
++  addLocation(
++    productsId,
++    async () => await import(/* webpackChunkName: "products" */ '@hcengineering/products-resources')
++  )
++  addLocation(
++    documentsId,
++    async () => await import(/* webpackChunkName: "documents" */ '@hcengineering/controlled-documents-resources')
++  )
++  addLocation(guestId, async () => await import(/* webpackChunkName: "guest" */ '@hcengineering/guest-resources'))
++  addLocation(
++    globalProfileId,
++    async () => await import(/* webpackChunkName: "global-profile" */ '@hcengineering/global-profile-resources')
++  )
++  addLocation(loveId, async () => await import(/* webpackChunkName: "love" */ '@hcengineering/love-resources'))
++  addLocation(printId, async () => await import(/* webpackChunkName: "print" */ '@hcengineering/print-resources'))
++  addLocation(exportId, async () => await import(/* webpackChunkName: "export" */ '@hcengineering/export-resources'))
++  addLocation(
++    textEditorId,
++    async () => await import(/* webpackChunkName: "text-editor" */ '@hcengineering/text-editor-resources')
++  )
++  addLocation(
++    uploaderId,
++    async () => await import(/* webpackChunkName: "uploader" */ '@hcengineering/uploader-resources')
++  )
++  addLocation(
++    recorderId,
++    async () => await import(/* webpackChunkName: "recorder" */ '@hcengineering/recorder-resources')
++  )
++  addLocation(mediaId, async () => await import(/* webpackChunkName: "media" */ '@hcengineering/media-resources'))
++
++  addLocation(
++    testManagementId,
++    async () => await import(/* webpackChunkName: "test-management" */ '@hcengineering/test-management-resources')
++  )
++  addLocation(surveyId, async () => await import(/* webpackChunkName: "survey" */ '@hcengineering/survey-resources'))
++  addLocation(
++    presenceId,
++    async () => await import(/* webpackChunkName: "presence" */ '@hcengineering/presence-resources')
++  )
++  addLocation(cardId, async () => await import(/* webpackChunkName: "card" */ '@hcengineering/card-resources'))
++  addLocation(chatId, async () => await import(/* webpackChunkName: "chat" */ '@hcengineering/chat-resources'))
++  addLocation(processId, async () => await import(/* webpackChunkName: "process" */ '@hcengineering/process-resources'))
++  addLocation(
++    achievementId,
++    async () => await import(/* webpackChunkName: "achievement" */ '@hcengineering/achievement-resources')
++  )
++  addLocation(
++    communicationId,
++    async () => await import(/* webpackChunkName: "communication" */ '@hcengineering/communication-resources')
++  )
++  addLocation(emojiId, async () => await import(/* webpackChunkName: "emoji" */ '@hcengineering/emoji-resources'))
++  if ((config.BILLING_URL ?? '') !== '') {
++    addLocation(
++      billingId,
++      async () => await import(/* webpackChunkName: "billing" */ '@hcengineering/billing-resources')
++    )
++  }
++  addLocation(
++    hulyMailId,
++    async () => await import(/* webpackChunkName: "hulyMail" */ '@hcengineering/huly-mail-resources')
++  )
++  addLocation(
++    aiAssistantId,
++    async () => await import(/* webpackChunkName: "ai-assistant" */ '@hcengineering/ai-assistant-resources')
++  )
++  addLocation(inboxId, async () => await import(/* webpackChunkName: "inbox" */ '@hcengineering/inbox-resources'))
++  addLocation(ratingId, async () => await import(/* webpackChunkName: "rating" */ '@hcengineering/rating-resources'))
++
++  setMetadata(client.metadata.FilterModel, 'ui')
++  setMetadata(client.metadata.ExtraFilter, disabledFeatures)
++  setMetadata(client.metadata.ExtraPlugins, ['preference' as Plugin, pulseId as Plugin])
++  setMetadata(login.metadata.TransactorOverride, config.TRANSACTOR_OVERRIDE)
++
++  // Use binary response transfer for faster performance and small transfer sizes.
++  const binaryOverride = localStorage.getItem(client.metadata.UseBinaryProtocol)
++  setMetadata(
++    client.metadata.UseBinaryProtocol,
++    binaryOverride != null ? binaryOverride === 'true' : (config.USE_BINARY_PROTOCOL ?? true)
++  )
++
++  // Disable for now, since it causes performance issues on linux/docker/kubernetes boxes for now.
++  setMetadata(client.metadata.UseProtocolCompression, true)
++
++  setMetadata(uiPlugin.metadata.PlatformTitle, title)
++  setMetadata(workbench.metadata.PlatformTitle, title)
++  setDefaultLanguage(myBranding.defaultLanguage ?? 'en')
++  setMetadata(workbench.metadata.DefaultApplication, myBranding.defaultApplication ?? 'tracker')
++  setMetadata(workbench.metadata.DefaultSpace, myBranding.defaultSpace ?? tracker.project.DefaultProject)
++  setMetadata(workbench.metadata.DefaultSpecial, myBranding.defaultSpecial ?? 'issues')
++
++  setMetadata(setting.metadata.DefaultInviteRole, myBranding.defaultInviteRole)
++  setMetadata(setting.metadata.DefaultInviteLinkGeneratorRoles, myBranding.inviteLinkGeneratorRoles)
++
++  try {
++    const parsed = JSON.parse(config.EXCLUDED_APPLICATIONS_FOR_ANONYMOUS ?? '')
++    setMetadata(workbench.metadata.ExcludedApplicationsForAnonymous, Array.isArray(parsed) ? parsed : [])
++  } catch (err) {
++    setMetadata(workbench.metadata.ExcludedApplicationsForAnonymous, [])
++  }
++
++  setMetadata(setting.metadata.BackupUrl, config.BACKUP_URL ?? '')
++
++  initThemeStore()
++}
+diff --git a/packages/ui/src/components/internal/ChiefBrand.svelte b/packages/ui/src/components/internal/ChiefBrand.svelte
+new file mode 100644
+index 0000000..12cf2e4
+--- /dev/null
++++ b/packages/ui/src/components/internal/ChiefBrand.svelte
+@@ -0,0 +1,60 @@
++<!--
++// Copyright © 2026 Intabia Fusion.
++// Licensed under the Eclipse Public License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License. You may
++// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++-->
++<script lang="ts">
++  import { onMount } from 'svelte'
++  let chiefSlot: HTMLDivElement
++  onMount(() => {
++    let hostOrigin: string | undefined
++    const report = (): void => {
++      if (hostOrigin === undefined || chiefSlot === undefined) return
++      const { x, y, width, height } = chiefSlot.getBoundingClientRect()
++      window.parent.postMessage({ type: 'chief:workspace:slot', rect: { x, y, width, height } }, hostOrigin)
++    }
++    const connect = (event: MessageEvent): void => {
++      if (window.parent === window || event.source !== window.parent || event.data?.type !== 'chief:workspace:hello') return
++      try {
++        const origin = new URL(event.origin)
++        if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(origin.hostname) || origin.hostname === window.location.hostname) return
++        hostOrigin = origin.origin
++        report()
++      } catch { /* Ignore invalid origins; this bridge only reports layout. */ }
++    }
++    window.addEventListener('message', connect)
++    if (window.parent !== window) window.parent.postMessage({ type: 'chief:workspace:ready' }, '*')
++    window.addEventListener('resize', report)
++    const observer = new ResizeObserver(report)
++    observer.observe(chiefSlot)
++    return () => {
++      observer.disconnect()
++      window.removeEventListener('message', connect)
++      window.removeEventListener('resize', report)
++    }
++  })
++
++</script>
++<div bind:this={chiefSlot} class="chief-brand-slot" aria-label="Chief Executive Suite">
++  <img src="/chief/avatar.svg" alt="" width="24" height="24" />
++  <span>Chief</span>
++</div>
++<style>
++  .chief-brand-slot {
++    display: flex;
++    flex: 0 0 112px;
++    width: 112px;
++    height: 32px;
++    align-items: center;
++    gap: 8px;
++    font-size: 14px;
++    font-weight: 600;
++  }
++
++</style>
+diff --git a/packages/ui/src/components/internal/Root.svelte b/packages/ui/src/components/internal/Root.svelte
+index ed1bd99..0236ec5 100644
+--- a/packages/ui/src/components/internal/Root.svelte
++++ b/packages/ui/src/components/internal/Root.svelte
+@@ -1,398 +1,400 @@
+-<script lang="ts">
+-  import platform, { OK, PlatformEvent, Severity, Status, addEventListener, getMetadata } from '@hcengineering/platform'
+-  import { onDestroy, onMount } from 'svelte'
+-  import type { AnyComponent, WidthType } from '../../types'
+-  import { deviceSizes, deviceWidths } from '../../types'
+-  // import { applicationShortcutKey } from '../../utils'
+-  import { Theme, themeStore } from '@hcengineering/theme'
+-  import {
+-    IconArrowLeft,
+-    IconArrowRight,
+-    checkMobile,
+-    deviceOptionsStore as deviceInfo,
+-    checkAdaptiveMatching,
+-    getLocalWeekStart
+-  } from '../../'
+-  import { desktopPlatform, getCurrentLocation, location, locationStorageKeyId, navigate } from '../../location'
+-  import uiPlugin from '../../plugin'
+-  import Component from '../Component.svelte'
+-  import Label from '../Label.svelte'
+-  import StatusComponent from '../Status.svelte'
+-  import Clock from './Clock.svelte'
+-  import RootBarExtension from './RootBarExtension.svelte'
+-  import Settings from './Settings.svelte'
+-  import { isAppFocusedStore } from '../../stores'
+-
+-  let application: AnyComponent | undefined
+-
+-  function updateAppFocused (isFocused: boolean): void {
+-    const isFocusedCurrent = $isAppFocusedStore
+-    const isFocusedNew = isFocused && !document.hidden && document.hasFocus()
+-    if (isFocusedCurrent !== isFocusedNew) {
+-      isAppFocusedStore.set(isFocusedNew)
+-    }
+-  }
+-  function visibilityChangeHandler (): void {
+-    updateAppFocused(!document.hidden)
+-  }
+-  function handleWindowFocus (): void {
+-    updateAppFocused(true)
+-  }
+-  function handleWindowBlur (): void {
+-    updateAppFocused(false)
+-  }
+-  function handleWindowBeforeUnload (): void {
+-    // Many text inputs across the platform rely on the blur event to persist state,
+-    // but they don’t account for cases where the tab is forcefully closed, navigated away from, or destroyed.
+-    // Handling beforeunload for every input individually is impractical,
+-    // so leveraging existing blur behavior is a more maintainable approach.
+-    // While not foolproof—since most blur handlers are async and may not complete in time, it’s sufficient for most cases.
+-    // A more robust solution, such as tracking pending async mutations to block tab unload,
+-    // would require significant reworks across the board.
+-    ;(document.activeElement as HTMLElement)?.blur?.()
+-  }
+-
+-  onMount(() => {
+-    document.addEventListener('visibilitychange', visibilityChangeHandler)
+-    window.addEventListener('wheel', handleWindowFocus)
+-    window.addEventListener('focus', handleWindowFocus)
+-    window.addEventListener('blur', handleWindowBlur)
+-    window.addEventListener('beforeunload', handleWindowBeforeUnload)
+-  })
+-
+-  onDestroy(() => {
+-    document.removeEventListener('visibilitychange', visibilityChangeHandler)
+-    window.removeEventListener('wheel', handleWindowFocus)
+-    window.removeEventListener('focus', handleWindowFocus)
+-    window.removeEventListener('blur', handleWindowBlur)
+-    window.removeEventListener('beforeunload', handleWindowBeforeUnload)
+-  })
+-
+-  onDestroy(
+-    location.subscribe((loc) => {
+-      const routes = getMetadata(uiPlugin.metadata.Routes) ?? new Map()
+-      const component = loc.path[0]
+-
+-      application = routes.get(component)
+-      if (application === undefined && Array.from(routes.values()).includes(component as AnyComponent)) {
+-        // if component id is used
+-        application = component as AnyComponent
+-      }
+-
+-      if (application === undefined) {
+-        let last = loc.path[1] !== undefined ? localStorage.getItem(`${locationStorageKeyId}_${loc.path[1]}`) : null
+-        if (last === null) {
+-          last = localStorage.getItem(locationStorageKeyId)
+-        }
+-        let useDefault = true
+-        if (last !== null) {
+-          const storedLoc = JSON.parse(last)
+-          const key = storedLoc.path?.[0]
+-          if (Array.from(routes.values()).includes(key) || Array.from(routes.keys()).includes(key)) {
+-            useDefault = false
+-            navigate(storedLoc)
+-          }
+-        }
+-        if (useDefault) {
+-          application = getMetadata(uiPlugin.metadata.DefaultApplication)
+-          if (application !== undefined) {
+-            const loc = getCurrentLocation()
+-            loc.path = [application]
+-            navigate(loc)
+-          }
+-        }
+-      }
+-    })
+-  )
+-
+-  let status = OK
+-  let readonlyAccount = false
+-  let systemAccount = false
+-  let maintenanceTime = -1
+-  let maintenanceMessage: string | undefined
+-
+-  addEventListener(PlatformEvent, async (_event, _status: Status) => {
+-    if (_status.code === platform.status.MaintenanceWarning) {
+-      maintenanceTime = _status.params.time
+-      maintenanceMessage = _status.params.message
+-    } else {
+-      if (_status.code === platform.status.RegularAccount) {
+-        readonlyAccount = false
+-        _status = OK
+-      }
+-      if (readonlyAccount) return
+-      if (_status.code === platform.status.ReadOnlyAccount) {
+-        readonlyAccount = true
+-      }
+-      if (_status.code === platform.status.SystemAccount) {
+-        systemAccount = true
+-        return
+-      }
+-      status = _status
+-    }
+-  })
+-
+-  let docWidth: number = window.innerWidth
+-  let docHeight: number = window.innerHeight
+-
+-  let isMobile: boolean
+-  const alwaysMobile: boolean = false
+-  $: isMobile = alwaysMobile || checkMobile()
+-  let isPortrait: boolean
+-  $: isPortrait = docWidth <= docHeight
+-
+-  $: $deviceInfo.docWidth = docWidth
+-  $: $deviceInfo.docHeight = docHeight
+-  $: $deviceInfo.isPortrait = isPortrait
+-  $: $deviceInfo.isMobile = isMobile
+-  $: $deviceInfo.minWidth = docWidth <= 480
+-  $: $deviceInfo.twoRows = docWidth <= 680
+-  $: $deviceInfo.language = $themeStore.language
+-  $: $deviceInfo.fontSize = $themeStore.fontSize
+-
+-  $: document.documentElement.style.setProperty('--app-height', `${docHeight}px`)
+-
+-  let doubleTouchStartTimestamp = 0
+-  document.addEventListener('touchstart', (event) => {
+-    const now = +new Date()
+-    if (doubleTouchStartTimestamp + 500 > now) {
+-      event.preventDefault()
+-    }
+-    doubleTouchStartTimestamp = now
+-  })
+-  document.addEventListener('dblclick', (event) => {
+-    event.preventDefault()
+-  })
+-
+-  let remove: any = null
+-  const sizes: Record<WidthType, boolean> = { xs: false, sm: false, md: false, lg: false, xl: false, xxl: false }
+-  const css: Record<WidthType, string> = { xs: '', sm: '', md: '', lg: '', xl: '', xxl: '' }
+-  deviceSizes.forEach((ds, i) => {
+-    if (i === 0) css[ds] = `(max-width: ${deviceWidths[i]}px)`
+-    else if (i === deviceSizes.length - 1) css[ds] = `(min-width: ${deviceWidths[i - 1]}.01px)`
+-    else css[ds] = `(min-width: ${deviceWidths[i - 1]}.01px) and (max-width: ${deviceWidths[i]}px)`
+-  })
+-  const getSize = (width: number): WidthType => {
+-    return deviceSizes[
+-      deviceWidths.findIndex((it) => (it === -1 ? deviceWidths[deviceWidths.length - 2] < width : it > width))
+-    ]
+-  }
+-  const updateDeviceSize = () => {
+-    if (remove !== null) remove()
+-    const size = getSize(docWidth)
+-    const mqString = css[size]
+-    const media = matchMedia(mqString)
+-
+-    deviceWidths.forEach((_, i) => (sizes[deviceSizes[i]] = false))
+-    deviceWidths.forEach((dw, i) => {
+-      sizes[deviceSizes[i]] =
+-        dw === -1 ? deviceWidths[deviceWidths.length - 2] < docWidth : docWidth > dw || size === deviceSizes[i]
+-    })
+-    $deviceInfo.size = size
+-    $deviceInfo.sizes = sizes
+-    media.addEventListener('change', updateDeviceSize)
+-    remove = () => {
+-      media.removeEventListener('change', updateDeviceSize)
+-    }
+-  }
+-  updateDeviceSize()
+-
+-  $: secondRow = checkAdaptiveMatching($deviceInfo.size, 'xs')
+-  $: appsMini =
+-    $deviceInfo.isMobile &&
+-    (($deviceInfo.isPortrait && $deviceInfo.docWidth <= 480) ||
+-      (!$deviceInfo.isPortrait && $deviceInfo.docHeight <= 480))
+-
+-  const weekInfoFirstDay: number = getLocalWeekStart()
+-  const savedFirstDayOfWeek = localStorage.getItem('firstDayOfWeek') ?? 'system'
+-  $deviceInfo.firstDayOfWeek =
+-    parseInt(savedFirstDayOfWeek === 'system' ? weekInfoFirstDay.toString() : savedFirstDayOfWeek, 10) ??
+-    weekInfoFirstDay
+-</script>
+-
+-<svelte:window
+-  bind:innerWidth={docWidth}
+-  bind:innerHeight={docHeight}
+-  on:dragover|preventDefault
+-  on:drop|preventDefault
+-/>
+-
+-<Theme>
+-  <div id="ui-root" class:mobile-theme={isMobile}>
+-    <div class="antiStatusBar">
+-      <div class="flex-row-center h-full content-color gap-3 px-4">
+-        {#if desktopPlatform}
+-          <div class="history-box flex-row-center gap-3">
+-            <button
+-              id="statusbar-back"
+-              class="antiButton ghost jf-center bs-none no-focus resetIconSize statusButton square"
+-              style:color={'var(--theme-dark-color)'}
+-              on:click={() => {
+-                history.back()
+-              }}
+-            >
+-              <IconArrowLeft size={'small'} />
+-            </button>
+-            <button
+-              id="statusbar-forward"
+-              class="antiButton ghost jf-center bs-none no-focus resetIconSize statusButton square"
+-              style:color={'var(--theme-dark-color)'}
+-              on:click={() => {
+-                history.forward()
+-              }}
+-            >
+-              <IconArrowRight size={'small'} />
+-            </button>
+-          </div>
+-        {/if}
+-        {#if !secondRow}
+-          <div
+-            class="flex-row-center left-items flex-gap-1"
+-            class:ml-14={appsMini}
+-            style:-webkit-app-region={'no-drag'}
+-          >
+-            <RootBarExtension position="left" />
+-          </div>
+-        {/if}
+-        <div
+-          class="flex-row-center justify-center status-info"
+-          style:margin-left={(isPortrait && docWidth <= 480) || (!isPortrait && docHeight <= 480) ? '1.5rem' : '0'}
+-        >
+-          {#if maintenanceTime > 0}
+-            <div class="flex-grow flex-center flex-row-center" class:maintenanceScheduled={maintenanceTime > 0}>
+-              {#if maintenanceMessage !== undefined && maintenanceMessage.trim() !== ''}
+-                {maintenanceMessage}
+-              {:else}
+-                <Label label={platform.status.MaintenanceWarning} />
+-              {/if}
+-              <Label label={platform.status.MaintenanceWarningTime} params={{ time: maintenanceTime }} />
+-            </div>
+-          {:else if status.severity !== Severity.OK}
+-            <StatusComponent {status} />
+-          {/if}
+-          {#if systemAccount}
+-            <div class="flex-row-center maintenanceScheduled">
+-              <Label label={platform.status.SystemAccount} />
+-            </div>
+-          {/if}
+-        </div>
+-        <div class="flex-row-reverse flex-gap-0-5" style:-webkit-app-region={'no-drag'}>
+-          <Settings />
+-          <Clock />
+-          <div class="flex-row-center flex-gap-0-5">
+-            {#if !secondRow}
+-              <RootBarExtension position="right" />
+-            {/if}
+-          </div>
+-        </div>
+-      </div>
+-      {#if secondRow}
+-        <div class="flex-between h-full content-color gap-3 px-2 second-row" style:-webkit-app-region={'no-drag'}>
+-          <div class="flex-row-center flex-gap-0-5">
+-            <RootBarExtension position="left" />
+-          </div>
+-          <div class="flex-row-center flex-gap-0-5">
+-            <RootBarExtension position="right" />
+-          </div>
+-        </div>
+-      {/if}
+-    </div>
+-    <div class="app">
+-      {#if application}
+-        <Component is={application} appLoading={true} props={{}} />
+-      {:else}
+-        <div class="error">
+-          Application not found: {application}
+-        </div>
+-      {/if}
+-    </div>
+-  </div>
+-</Theme>
+-
+-<style lang="scss">
+-  #ui-root {
+-    position: relative;
+-    display: flex;
+-    flex-direction: column;
+-    // height: 100vh;
+-    height: calc(100% - var(--huly-top-indent, 0rem));
+-    height: calc(100dvh - var(--huly-top-indent, 0rem));
+-    // height: var(--app-height);
+-
+-    .antiStatusBar {
+-      -webkit-app-region: drag;
+-      min-width: 0;
+-      min-height: var(--status-bar-height);
+-      height: var(--status-bar-height);
+-      // min-width: 600px;
+-      font-size: 0.75rem;
+-      line-height: 150%;
+-      background-color: var(--theme-statusbar-color);
+-      z-index: 1;
+-
+-      .history-box {
+-        -webkit-app-region: no-drag;
+-        margin-left: var(--huly-history-box-left-indent, 4.625rem);
+-      }
+-      .maintenanceScheduled {
+-        padding: 0 0.5rem;
+-        width: fit-content;
+-        height: 1.25rem;
+-        max-width: 22rem;
+-        color: var(--tooltip-bg-color);
+-        background-color: var(--highlight-red);
+-        border-radius: 0.625rem;
+-      }
+-
+-      .status-info {
+-        flex-grow: 1;
+-        text-align: center;
+-      }
+-      .logo-status {
+-        font-weight: 500;
+-        font-size: 14px;
+-        color: var(--theme-content-color);
+-      }
+-
+-      .second-row {
+-        display: none;
+-      }
+-
+-      @media print {
+-        display: none;
+-      }
+-    }
+-
+-    .app {
+-      display: flex;
+-      height: calc(100% - var(--status-bar-height));
+-
+-      .error {
+-        margin-top: 45vh;
+-        text-align: center;
+-      }
+-
+-      @media print {
+-        flex-direction: column;
+-      }
+-    }
+-  }
+-
+-  .left-items {
+-    overflow-x: auto;
+-  }
+-
+-  @media (max-width: 480px) {
+-    #ui-root:has(.workbench-container) .antiStatusBar {
+-      display: flex;
+-      flex-direction: column;
+-      gap: 2px;
+-      padding: 2px 0;
+-      width: 100%;
+-
+-      .second-row {
+-        display: flex;
+-      }
+-    }
+-  }
+-</style>
++<script lang="ts">
++  import platform, { OK, PlatformEvent, Severity, Status, addEventListener, getMetadata } from '@hcengineering/platform'
++  import { onDestroy, onMount } from 'svelte'
++  import type { AnyComponent, WidthType } from '../../types'
++  import { deviceSizes, deviceWidths } from '../../types'
++  // import { applicationShortcutKey } from '../../utils'
++  import { Theme, themeStore } from '@hcengineering/theme'
++  import {
++    IconArrowLeft,
++    IconArrowRight,
++    checkMobile,
++    deviceOptionsStore as deviceInfo,
++    checkAdaptiveMatching,
++    getLocalWeekStart
++  } from '../../'
++  import { desktopPlatform, getCurrentLocation, location, locationStorageKeyId, navigate } from '../../location'
++  import uiPlugin from '../../plugin'
++  import Component from '../Component.svelte'
++  import Label from '../Label.svelte'
++  import StatusComponent from '../Status.svelte'
++  import Clock from './Clock.svelte'
++  import ChiefBrand from './ChiefBrand.svelte'
++  import RootBarExtension from './RootBarExtension.svelte'
++  import Settings from './Settings.svelte'
++  import { isAppFocusedStore } from '../../stores'
++
++  let application: AnyComponent | undefined
++
++  function updateAppFocused (isFocused: boolean): void {
++    const isFocusedCurrent = $isAppFocusedStore
++    const isFocusedNew = isFocused && !document.hidden && document.hasFocus()
++    if (isFocusedCurrent !== isFocusedNew) {
++      isAppFocusedStore.set(isFocusedNew)
++    }
++  }
++  function visibilityChangeHandler (): void {
++    updateAppFocused(!document.hidden)
++  }
++  function handleWindowFocus (): void {
++    updateAppFocused(true)
++  }
++  function handleWindowBlur (): void {
++    updateAppFocused(false)
++  }
++  function handleWindowBeforeUnload (): void {
++    // Many text inputs across the platform rely on the blur event to persist state,
++    // but they don’t account for cases where the tab is forcefully closed, navigated away from, or destroyed.
++    // Handling beforeunload for every input individually is impractical,
++    // so leveraging existing blur behavior is a more maintainable approach.
++    // While not foolproof—since most blur handlers are async and may not complete in time, it’s sufficient for most cases.
++    // A more robust solution, such as tracking pending async mutations to block tab unload,
++    // would require significant reworks across the board.
++    ;(document.activeElement as HTMLElement)?.blur?.()
++  }
++
++  onMount(() => {
++    document.addEventListener('visibilitychange', visibilityChangeHandler)
++    window.addEventListener('wheel', handleWindowFocus)
++    window.addEventListener('focus', handleWindowFocus)
++    window.addEventListener('blur', handleWindowBlur)
++    window.addEventListener('beforeunload', handleWindowBeforeUnload)
++  })
++
++  onDestroy(() => {
++    document.removeEventListener('visibilitychange', visibilityChangeHandler)
++    window.removeEventListener('wheel', handleWindowFocus)
++    window.removeEventListener('focus', handleWindowFocus)
++    window.removeEventListener('blur', handleWindowBlur)
++    window.removeEventListener('beforeunload', handleWindowBeforeUnload)
++  })
++
++  onDestroy(
++    location.subscribe((loc) => {
++      const routes = getMetadata(uiPlugin.metadata.Routes) ?? new Map()
++      const component = loc.path[0]
++
++      application = routes.get(component)
++      if (application === undefined && Array.from(routes.values()).includes(component as AnyComponent)) {
++        // if component id is used
++        application = component as AnyComponent
++      }
++
++      if (application === undefined) {
++        let last = loc.path[1] !== undefined ? localStorage.getItem(`${locationStorageKeyId}_${loc.path[1]}`) : null
++        if (last === null) {
++          last = localStorage.getItem(locationStorageKeyId)
++        }
++        let useDefault = true
++        if (last !== null) {
++          const storedLoc = JSON.parse(last)
++          const key = storedLoc.path?.[0]
++          if (Array.from(routes.values()).includes(key) || Array.from(routes.keys()).includes(key)) {
++            useDefault = false
++            navigate(storedLoc)
++          }
++        }
++        if (useDefault) {
++          application = getMetadata(uiPlugin.metadata.DefaultApplication)
++          if (application !== undefined) {
++            const loc = getCurrentLocation()
++            loc.path = [application]
++            navigate(loc)
++          }
++        }
++      }
++    })
++  )
++
++  let status = OK
++  let readonlyAccount = false
++  let systemAccount = false
++  let maintenanceTime = -1
++  let maintenanceMessage: string | undefined
++
++  addEventListener(PlatformEvent, async (_event, _status: Status) => {
++    if (_status.code === platform.status.MaintenanceWarning) {
++      maintenanceTime = _status.params.time
++      maintenanceMessage = _status.params.message
++    } else {
++      if (_status.code === platform.status.RegularAccount) {
++        readonlyAccount = false
++        _status = OK
++      }
++      if (readonlyAccount) return
++      if (_status.code === platform.status.ReadOnlyAccount) {
++        readonlyAccount = true
++      }
++      if (_status.code === platform.status.SystemAccount) {
++        systemAccount = true
++        return
++      }
++      status = _status
++    }
++  })
++
++  let docWidth: number = window.innerWidth
++  let docHeight: number = window.innerHeight
++
++  let isMobile: boolean
++  const alwaysMobile: boolean = false
++  $: isMobile = alwaysMobile || checkMobile()
++  let isPortrait: boolean
++  $: isPortrait = docWidth <= docHeight
++
++  $: $deviceInfo.docWidth = docWidth
++  $: $deviceInfo.docHeight = docHeight
++  $: $deviceInfo.isPortrait = isPortrait
++  $: $deviceInfo.isMobile = isMobile
++  $: $deviceInfo.minWidth = docWidth <= 480
++  $: $deviceInfo.twoRows = docWidth <= 680
++  $: $deviceInfo.language = $themeStore.language
++  $: $deviceInfo.fontSize = $themeStore.fontSize
++
++  $: document.documentElement.style.setProperty('--app-height', `${docHeight}px`)
++
++  let doubleTouchStartTimestamp = 0
++  document.addEventListener('touchstart', (event) => {
++    const now = +new Date()
++    if (doubleTouchStartTimestamp + 500 > now) {
++      event.preventDefault()
++    }
++    doubleTouchStartTimestamp = now
++  })
++  document.addEventListener('dblclick', (event) => {
++    event.preventDefault()
++  })
++
++  let remove: any = null
++  const sizes: Record<WidthType, boolean> = { xs: false, sm: false, md: false, lg: false, xl: false, xxl: false }
++  const css: Record<WidthType, string> = { xs: '', sm: '', md: '', lg: '', xl: '', xxl: '' }
++  deviceSizes.forEach((ds, i) => {
++    if (i === 0) css[ds] = `(max-width: ${deviceWidths[i]}px)`
++    else if (i === deviceSizes.length - 1) css[ds] = `(min-width: ${deviceWidths[i - 1]}.01px)`
++    else css[ds] = `(min-width: ${deviceWidths[i - 1]}.01px) and (max-width: ${deviceWidths[i]}px)`
++  })
++  const getSize = (width: number): WidthType => {
++    return deviceSizes[
++      deviceWidths.findIndex((it) => (it === -1 ? deviceWidths[deviceWidths.length - 2] < width : it > width))
++    ]
++  }
++  const updateDeviceSize = () => {
++    if (remove !== null) remove()
++    const size = getSize(docWidth)
++    const mqString = css[size]
++    const media = matchMedia(mqString)
++
++    deviceWidths.forEach((_, i) => (sizes[deviceSizes[i]] = false))
++    deviceWidths.forEach((dw, i) => {
++      sizes[deviceSizes[i]] =
++        dw === -1 ? deviceWidths[deviceWidths.length - 2] < docWidth : docWidth > dw || size === deviceSizes[i]
++    })
++    $deviceInfo.size = size
++    $deviceInfo.sizes = sizes
++    media.addEventListener('change', updateDeviceSize)
++    remove = () => {
++      media.removeEventListener('change', updateDeviceSize)
++    }
++  }
++  updateDeviceSize()
++
++  $: secondRow = checkAdaptiveMatching($deviceInfo.size, 'xs')
++  $: appsMini =
++    $deviceInfo.isMobile &&
++    (($deviceInfo.isPortrait && $deviceInfo.docWidth <= 480) ||
++      (!$deviceInfo.isPortrait && $deviceInfo.docHeight <= 480))
++
++  const weekInfoFirstDay: number = getLocalWeekStart()
++  const savedFirstDayOfWeek = localStorage.getItem('firstDayOfWeek') ?? 'system'
++  $deviceInfo.firstDayOfWeek =
++    parseInt(savedFirstDayOfWeek === 'system' ? weekInfoFirstDay.toString() : savedFirstDayOfWeek, 10) ??
++    weekInfoFirstDay
++</script>
++
++<svelte:window
++  bind:innerWidth={docWidth}
++  bind:innerHeight={docHeight}
++  on:dragover|preventDefault
++  on:drop|preventDefault
++/>
++
++<Theme>
++  <div id="ui-root" class:mobile-theme={isMobile}>
++    <div class="antiStatusBar">
++      <div class="flex-row-center h-full content-color gap-3 px-4">
++        <ChiefBrand />
++        {#if desktopPlatform}
++          <div class="history-box flex-row-center gap-3">
++            <button
++              id="statusbar-back"
++              class="antiButton ghost jf-center bs-none no-focus resetIconSize statusButton square"
++              style:color={'var(--theme-dark-color)'}
++              on:click={() => {
++                history.back()
++              }}
++            >
++              <IconArrowLeft size={'small'} />
++            </button>
++            <button
++              id="statusbar-forward"
++              class="antiButton ghost jf-center bs-none no-focus resetIconSize statusButton square"
++              style:color={'var(--theme-dark-color)'}
++              on:click={() => {
++                history.forward()
++              }}
++            >
++              <IconArrowRight size={'small'} />
++            </button>
++          </div>
++        {/if}
++        {#if !secondRow}
++          <div
++            class="flex-row-center left-items flex-gap-1"
++            class:ml-14={appsMini}
++            style:-webkit-app-region={'no-drag'}
++          >
++            <RootBarExtension position="left" />
++          </div>
++        {/if}
++        <div
++          class="flex-row-center justify-center status-info"
++          style:margin-left={(isPortrait && docWidth <= 480) || (!isPortrait && docHeight <= 480) ? '1.5rem' : '0'}
++        >
++          {#if maintenanceTime > 0}
++            <div class="flex-grow flex-center flex-row-center" class:maintenanceScheduled={maintenanceTime > 0}>
++              {#if maintenanceMessage !== undefined && maintenanceMessage.trim() !== ''}
++                {maintenanceMessage}
++              {:else}
++                <Label label={platform.status.MaintenanceWarning} />
++              {/if}
++              <Label label={platform.status.MaintenanceWarningTime} params={{ time: maintenanceTime }} />
++            </div>
++          {:else if status.severity !== Severity.OK}
++            <StatusComponent {status} />
++          {/if}
++          {#if systemAccount}
++            <div class="flex-row-center maintenanceScheduled">
++              <Label label={platform.status.SystemAccount} />
++            </div>
++          {/if}
++        </div>
++        <div class="flex-row-reverse flex-gap-0-5" style:-webkit-app-region={'no-drag'}>
++          <Settings />
++          <Clock />
++          <div class="flex-row-center flex-gap-0-5">
++            {#if !secondRow}
++              <RootBarExtension position="right" />
++            {/if}
++          </div>
++        </div>
++      </div>
++      {#if secondRow}
++        <div class="flex-between h-full content-color gap-3 px-2 second-row" style:-webkit-app-region={'no-drag'}>
++          <div class="flex-row-center flex-gap-0-5">
++            <RootBarExtension position="left" />
++          </div>
++          <div class="flex-row-center flex-gap-0-5">
++            <RootBarExtension position="right" />
++          </div>
++        </div>
++      {/if}
++    </div>
++    <div class="app">
++      {#if application}
++        <Component is={application} appLoading={true} props={{}} />
++      {:else}
++        <div class="error">
++          Application not found: {application}
++        </div>
++      {/if}
++    </div>
++  </div>
++</Theme>
++
++<style lang="scss">
++  #ui-root {
++    position: relative;
++    display: flex;
++    flex-direction: column;
++    // height: 100vh;
++    height: calc(100% - var(--huly-top-indent, 0rem));
++    height: calc(100dvh - var(--huly-top-indent, 0rem));
++    // height: var(--app-height);
++
++    .antiStatusBar {
++      -webkit-app-region: drag;
++      min-width: 0;
++      min-height: var(--status-bar-height);
++      height: var(--status-bar-height);
++      // min-width: 600px;
++      font-size: 0.75rem;
++      line-height: 150%;
++      background-color: var(--theme-statusbar-color);
++      z-index: 1;
++
++      .history-box {
++        -webkit-app-region: no-drag;
++        margin-left: var(--huly-history-box-left-indent, 4.625rem);
++      }
++      .maintenanceScheduled {
++        padding: 0 0.5rem;
++        width: fit-content;
++        height: 1.25rem;
++        max-width: 22rem;
++        color: var(--tooltip-bg-color);
++        background-color: var(--highlight-red);
++        border-radius: 0.625rem;
++      }
++
++      .status-info {
++        flex-grow: 1;
++        text-align: center;
++      }
++      .logo-status {
++        font-weight: 500;
++        font-size: 14px;
++        color: var(--theme-content-color);
++      }
++
++      .second-row {
++        display: none;
++      }
++
++      @media print {
++        display: none;
++      }
++    }
++
++    .app {
++      display: flex;
++      height: calc(100% - var(--status-bar-height));
++
++      .error {
++        margin-top: 45vh;
++        text-align: center;
++      }
++
++      @media print {
++        flex-direction: column;
++      }
++    }
++  }
++
++  .left-items {
++    overflow-x: auto;
++  }
++
++  @media (max-width: 480px) {
++    #ui-root:has(.workbench-container) .antiStatusBar {
++      display: flex;
++      flex-direction: column;
++      gap: 2px;
++      padding: 2px 0;
++      width: 100%;
++
++      .second-row {
++        display: flex;
++      }
++    }
++  }
++</style>
+diff --git a/plugins/login-resources/src/components/LoginAppBase.svelte b/plugins/login-resources/src/components/LoginAppBase.svelte
+index 18dfe71..6b7531c 100644
+--- a/plugins/login-resources/src/components/LoginAppBase.svelte
++++ b/plugins/login-resources/src/components/LoginAppBase.svelte
+@@ -1,338 +1,338 @@
+-<!--
+-// Copyright © 2020, 2021 Anticrm Platform Contributors.
+-// Copyright © 2021, 2022 Hardcore Engineering Inc.
+-// Copyright © 2026 Intabia Fusion
+-//
+-// Licensed under the Eclipse Public License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License. You may
+-// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-//
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+--->
+-<script lang="ts">
+-  import platform, { getMetadata } from '@hcengineering/platform'
+-  import { Popup, Scroller, deviceOptionsStore as deviceInfo, themeStore } from '@hcengineering/ui'
+-  import workbench from '@hcengineering/workbench'
+-  import { onMount } from 'svelte'
+-  import login from '../plugin'
+-
+-  // Resolve static asset URLs at runtime to avoid requiring image module declarations
+-  // (prevents TypeScript / diagnostics errors when module types are missing)
+-  import loginBack from '../../img/login_back.png'
+-  import loginBack2x from '../../img/login_back_2x.png'
+-  import loginBackAvif from '../../img/login_back.avif'
+-  import loginBack2xAvif from '../../img/login_back_2x.avif'
+-  import loginBackWebp from '../../img/login_back.webp'
+-  import loginBack2xWebp from '../../img/login_back_2x.webp'
+-
+-  export let wide: boolean = false
+-
+-  import { loginTheme, setLoginTheme, type LoginThemeName } from '../theme'
+-
+-  onMount(() => {
+-    // Initialize login theme from platform metadata if provided
+-    const lTheme = getMetadata(login.metadata.LoginTheme) as LoginThemeName | undefined
+-    if (lTheme === 'huly') {
+-      setLoginTheme(lTheme)
+-    }
+-  })
+-
+-  // activeTheme is used everywhere for rendering (prefers override if set)
+-  $: activeTheme = $loginTheme
+-
+-  // themeStyle resolves to override theme vars when override is active, otherwise to store theme vars
+-  function onDevThemeChange (e: Event): void {
+-    const v = (e.target as HTMLSelectElement).value as LoginThemeName
+-    // set local override and apply accent class immediately (no store change)
+-    setLoginTheme(v)
+-  }
+-</script>
+-
+-<div
+-  class="w-full h-full backd"
+-  class:paneld={$deviceInfo.docWidth <= 768}
+-  class:login-theme-huly={activeTheme.name === 'huly'}
+->
+-  <div class="bg-image clear-mins p-4 back">
+-    {#if activeTheme.backgroundComponent}
+-      <div class="back-image" style:display={'block'}>
+-        <svelte:component this={activeTheme.backgroundComponent} />
+-      </div>
+-    {:else}
+-      <picture>
+-        <source srcset={`${loginBackAvif}, ${loginBack2xAvif} 2x`} type="image/avif" />
+-        <source srcset={`${loginBackWebp}, ${loginBack2xWebp} 2x`} type="image/webp" />
+-
+-        <img
+-          class="back-image"
+-          src={loginBack}
+-          style:display={'block'}
+-          srcset={`${loginBack} 1x, ${loginBack2x} 2x`}
+-          alt=""
+-        />
+-      </picture>
+-    {/if}
+-
+-    <div
+-      style:position="fixed"
+-      style:left={$deviceInfo.docWidth <= 480 ? '.75rem' : '1.75rem'}
+-      style:top={'3rem'}
+-      style:z-index={10001}
+-      class="flex-row-center"
+-    >
+-      <svelte:component this={activeTheme.logoComponent} />
+-      {#if activeTheme.showTitle}
+-        <span class="fs-title ml-2">{getMetadata(workbench.metadata.PlatformTitle)}</span>
+-      {/if}
+-    </div>
+-
+-    {#if getMetadata(platform.metadata.DevModel)}
+-      <div style:position="fixed" style:left={'0px'} style:top={'0px'} style:z-index={10000} class="flex-row-center">
+-        <select class="select small" value={$loginTheme.name} on:change={onDevThemeChange}>
+-          <option value="huly">Huly</option>
+-        </select>
+-      </div>
+-    {/if}
+-
+-    <div class:panel-base={!wide} class="panel" class:wide>
+-      <Scroller padding={'1rem 0'}>
+-        <div class="form-content">
+-          <slot name="form-content" />
+-        </div>
+-        <slot name="extra-form-content" />
+-      </Scroller>
+-    </div>
+-
+-    <Popup />
+-  </div>
+-</div>
+-
+-<style lang="scss">
+-  .wide {
+-    position: fixed !important;
+-    top: 10rem !important;
+-    left: 2rem !important;
+-    right: 2rem !important;
+-    bottom: 2rem !important;
+-
+-    transform: none !important;
+-    /* width: calc(100% - 4rem) !important;
+-    height: calc(100% - 5rem) !important; */
+-  }
+-
+-  .back-image {
+-    position: fixed;
+-    top: 32px;
+-    left: 0;
+-    width: 100%;
+-    height: 100%;
+-    object-fit: cover;
+-    object-position: left top;
+-    /* Ensure the background stays behind content and doesn't capture pointer events */
+-    z-index: -2;
+-    pointer-events: none;
+-  }
+-
+-  /* Page layout helpers */
+-  .backd {
+-    position: relative;
+-  }
+-  .bg-image {
+-    display: flex;
+-    justify-content: center;
+-    align-items: center;
+-    width: 100%;
+-    height: 100%;
+-  }
+-
+-  .fs-title {
+-    color: var(--login-content-color, var(--theme-content-color));
+-  }
+-
+-  /* Centralized layout: panel sizing/positioning is identical across themes.
+-     Themes control visuals only (colors, gradients, images). */
+-  .panel-base {
+-    position: fixed !important;
+-    z-index: 1000 !important;
+-    display: flex;
+-    flex-direction: column;
+-    justify-content: center;
+-    width: 24% !important;
+-    width: 460px !important;
+-    height: auto;
+-    left: 50% !important;
+-    top: 50% !important;
+-    transform: translate(-50%, -50%) !important;
+-  }
+-
+-  .panel {
+-    position: relative;
+-    z-index: 1000;
+-    display: flex;
+-    flex-direction: column;
+-    justify-content: center;
+-    height: auto;
+-    background: var(--login-panel-bg, rgba(45, 50, 160, 0.5));
+-    mix-blend-mode: normal;
+-    box-shadow: -30px 1.52px 173.87px #121437;
+-    backdrop-filter: blur(157.855px);
+-    border-radius: 1rem;
+-  }
+-
+-  .panel::after {
+-    overflow: hidden;
+-    position: absolute;
+-    content: '';
+-    inset: 0;
+-    background: var(--login-panel-gradient);
+-    border-radius: 1rem;
+-    z-index: -1;
+-  }
+-
+-  .panel::before {
+-    position: absolute;
+-    content: '';
+-    inset: 0;
+-    padding: 1px;
+-    background: conic-gradient(
+-        rgba(255, 255, 255, 0.18) 10%,
+-        rgba(126, 120, 165, 0.5),
+-        rgba(191, 216, 253, 0.5),
+-        rgba(246, 247, 249, 0.32),
+-        rgba(219, 229, 242, 0.34) 60%,
+-        rgba(163, 203, 255, 0.24) 90%
+-      )
+-      border-box;
+-    -webkit-mask:
+-      linear-gradient(#000 0 0) content-box,
+-      linear-gradient(#000 0 0);
+-    -webkit-mask-composite: xor;
+-    mask-composite: exclude;
+-    border-radius: 1rem;
+-    transform: rotate(180deg);
+-    transition: opacity 0.15s var(--timing-main);
+-    opacity: 0.7;
+-    pointer-events: none;
+-  }
+-
+-  @supports not (mask-composite: exclude) {
+-    .panel::before {
+-      z-index: -1;
+-    }
+-  }
+-  @supports not (-webkit-mask-composite: xor) {
+-    .panel::before {
+-      z-index: -1;
+-    }
+-  }
+-
+-  /* Content wrapper inside the panel */
+-  .panel .form-content {
+-    display: flex;
+-    flex-direction: column;
+-    justify-content: center;
+-    /* flex-grow: 1; */
+-    height: 100%;
+-  }
+-
+-  /* Intabia-scoped primary button visuals */
+-  .login-theme-intabia .antiButton.primary {
+-    border-radius: var(--primary-button-border-radius, 0.5rem);
+-    padding: var(--primary-button-padding, 0 1.5rem);
+-    height: var(--primary-button-height, 3.5rem);
+-    font-size: var(--primary-button-font-size, 1rem);
+-    font-weight: var(--primary-button-font-weight, 600);
+-    background-color: var(--login-primary-button-default);
+-    color: var(--login-button-text-color, #ffffff);
+-  }
+-  .login-theme-intabia .antiButton.primary:hover {
+-    background-color: var(--login-primary-button-hovered);
+-  }
+-  .login-theme-intabia .antiButton.primary:active {
+-    background-color: var(--login-primary-button-pressed);
+-  }
+-  .login-theme-intabia .antiButton.primary:focus-visible {
+-    outline: 0;
+-    box-shadow: 0 0 0 4px var(--login-primary-button-focus-ring);
+-    border-color: var(--login-primary-button-focused);
+-  }
+-  .login-theme-intabia .antiButton.primary[disabled],
+-  .login-theme-intabia .antiButton.primary:disabled {
+-    background: var(--login-button-contrast-disabled);
+-    color: var(--login-button-contrast-disabled-color);
+-    cursor: not-allowed;
+-    opacity: 1;
+-    box-shadow: none;
+-    border-color: var(--login-button-contrast-border);
+-  }
+-  /* Localized popup label color for login theme (applies only inside login UI) */
+-  .login-theme-intabia .login-popup .hulyPopup-row__label {
+-    color: var(--login-content-color, var(--theme-content-color));
+-  }
+-
+-  /* Huly-scoped primary button visuals (contrast) */
+-  .login-theme-huly .antiButton.primary {
+-    border-radius: var(--primary-button-border-radius, 0.5rem);
+-    padding: var(--primary-button-padding, 0 1.5rem);
+-    height: var(--primary-button-height, 3.5rem);
+-    font-size: var(--primary-button-font-size, 1rem);
+-    font-weight: var(--primary-button-font-weight, 600);
+-    background-color: var(--login-button-contrast-enabled, rgb(255, 255, 255));
+-    color: var(--login-button-contrast-color, rgb(0, 0, 0));
+-    border-color: var(--login-button-contrast-border, rgba(255, 255, 255, 0.2));
+-  }
+-  .login-theme-huly .antiButton.primary:hover {
+-    background-color: var(--login-button-contrast-hovered, #ffffff);
+-  }
+-  .login-theme-huly .antiButton.primary:active {
+-    background-color: var(--login-button-contrast-pressed, rgba(255, 255, 255, 0.6));
+-  }
+-  .login-theme-huly .antiButton.primary:focus-visible {
+-    outline: 0;
+-    box-shadow: 0 0 0 4px var(--login-primary-button-focus-ring);
+-    border-color: var(--login-primary-button-focused);
+-  }
+-  .login-theme-huly .antiButton.primary[disabled],
+-  .login-theme-huly .antiButton.primary:disabled {
+-    background: var(--login-button-contrast-disabled);
+-    color: var(--login-button-contrast-disabled-color);
+-    cursor: not-allowed;
+-    opacity: 1;
+-    box-shadow: none;
+-    border-color: var(--login-button-contrast-border);
+-  }
+-  /* Localized popup label color for Huly login theme (applies only inside login UI) */
+-  .login-theme-huly .login-popup .hulyPopup-row__label {
+-    color: var(--login-content-color, var(--theme-content-color));
+-  }
+-
+-  /* Mobile fallbacks: make panel full-width and ensure panel-base padding/background
+-     so the login container looks correct on smaller screens and is controlled centrally. */
+-  @media (max-width: 768px) {
+-    /* Keep a small margin from the screen edges on narrow devices */
+-    .panel,
+-    .panel-base {
+-      position: static !important;
+-      left: auto !important;
+-      top: auto !important;
+-      transform: none !important;
+-      width: calc(100% - 2rem) !important;
+-      min-width: 0 !important;
+-      max-width: calc(100% - 2rem) !important;
+-      margin-left: 1rem !important;
+-      margin-right: 1rem !important;
+-    }
+-
+-    .backd.paneld .panel-base,
+-    .backd .paneld .panel-base {
+-      width: calc(100% - 2rem) !important;
+-      margin-left: 1rem !important;
+-      margin-right: 1rem !important;
+-    }
+-  }
+-</style>
++<!--
++// Copyright © 2020, 2021 Anticrm Platform Contributors.
++// Copyright © 2021, 2022 Hardcore Engineering Inc.
++// Copyright © 2026 Intabia Fusion
++//
++// Licensed under the Eclipse Public License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License. You may
++// obtain a copy of the License at https://www.eclipse.org/legal/epl-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++//
++// See the License for the specific language governing permissions and
++// limitations under the License.
++-->
++<script lang="ts">
++  import platform, { getMetadata } from '@hcengineering/platform'
++  import { Popup, Scroller, deviceOptionsStore as deviceInfo, themeStore } from '@hcengineering/ui'
++  import workbench from '@hcengineering/workbench'
++  import { onMount } from 'svelte'
++  import login from '../plugin'
++
++  // Resolve static asset URLs at runtime to avoid requiring image module declarations
++  // (prevents TypeScript / diagnostics errors when module types are missing)
++  import loginBack from '../../img/login_back.png'
++  import loginBack2x from '../../img/login_back_2x.png'
++  import loginBackAvif from '../../img/login_back.avif'
++  import loginBack2xAvif from '../../img/login_back_2x.avif'
++  import loginBackWebp from '../../img/login_back.webp'
++  import loginBack2xWebp from '../../img/login_back_2x.webp'
++
++  export let wide: boolean = false
++
++  import { loginTheme, setLoginTheme, type LoginThemeName } from '../theme'
++
++  onMount(() => {
++    // Initialize login theme from platform metadata if provided
++    const lTheme = getMetadata(login.metadata.LoginTheme) as LoginThemeName | undefined
++    if (lTheme === 'huly') {
++      setLoginTheme(lTheme)
++    }
++  })
++
++  // activeTheme is used everywhere for rendering (prefers override if set)
++  $: activeTheme = $loginTheme
++
++  // themeStyle resolves to override theme vars when override is active, otherwise to store theme vars
++  function onDevThemeChange (e: Event): void {
++    const v = (e.target as HTMLSelectElement).value as LoginThemeName
++    // set local override and apply accent class immediately (no store change)
++    setLoginTheme(v)
++  }
++</script>
++
++<div
++  class="w-full h-full backd"
++  class:paneld={$deviceInfo.docWidth <= 768}
++  class:login-theme-huly={activeTheme.name === 'huly'}
++>
++  <div class="bg-image clear-mins p-4 back">
++    {#if activeTheme.backgroundComponent}
++      <div class="back-image" style:display={'block'}>
++        <svelte:component this={activeTheme.backgroundComponent} />
++      </div>
++    {:else}
++      <picture>
++        <source srcset={`${loginBackAvif}, ${loginBack2xAvif} 2x`} type="image/avif" />
++        <source srcset={`${loginBackWebp}, ${loginBack2xWebp} 2x`} type="image/webp" />
++
++        <img
++          class="back-image"
++          src={loginBack}
++          style:display={'block'}
++          srcset={`${loginBack} 1x, ${loginBack2x} 2x`}
++          alt=""
++        />
++      </picture>
++    {/if}
++
++    <div
++      style:position="fixed"
++      style:left={$deviceInfo.docWidth <= 480 ? '.75rem' : '1.75rem'}
++      style:top={'3rem'}
++      style:z-index={10001}
++      class="flex-row-center"
++    >
++      <img src="/chief/avatar.svg" alt="" width="32" height="32" />
++      {#if activeTheme.showTitle}
++        <span class="fs-title ml-2">{getMetadata(workbench.metadata.PlatformTitle)}</span>
++      {/if}
++    </div>
++
++    {#if getMetadata(platform.metadata.DevModel)}
++      <div style:position="fixed" style:left={'0px'} style:top={'0px'} style:z-index={10000} class="flex-row-center">
++        <select class="select small" value={$loginTheme.name} on:change={onDevThemeChange}>
++          <option value="huly">Huly</option>
++        </select>
++      </div>
++    {/if}
++
++    <div class:panel-base={!wide} class="panel" class:wide>
++      <Scroller padding={'1rem 0'}>
++        <div class="form-content">
++          <slot name="form-content" />
++        </div>
++        <slot name="extra-form-content" />
++      </Scroller>
++    </div>
++
++    <Popup />
++  </div>
++</div>
++
++<style lang="scss">
++  .wide {
++    position: fixed !important;
++    top: 10rem !important;
++    left: 2rem !important;
++    right: 2rem !important;
++    bottom: 2rem !important;
++
++    transform: none !important;
++    /* width: calc(100% - 4rem) !important;
++    height: calc(100% - 5rem) !important; */
++  }
++
++  .back-image {
++    position: fixed;
++    top: 32px;
++    left: 0;
++    width: 100%;
++    height: 100%;
++    object-fit: cover;
++    object-position: left top;
++    /* Ensure the background stays behind content and doesn't capture pointer events */
++    z-index: -2;
++    pointer-events: none;
++  }
++
++  /* Page layout helpers */
++  .backd {
++    position: relative;
++  }
++  .bg-image {
++    display: flex;
++    justify-content: center;
++    align-items: center;
++    width: 100%;
++    height: 100%;
++  }
++
++  .fs-title {
++    color: var(--login-content-color, var(--theme-content-color));
++  }
++
++  /* Centralized layout: panel sizing/positioning is identical across themes.
++     Themes control visuals only (colors, gradients, images). */
++  .panel-base {
++    position: fixed !important;
++    z-index: 1000 !important;
++    display: flex;
++    flex-direction: column;
++    justify-content: center;
++    width: 24% !important;
++    width: 460px !important;
++    height: auto;
++    left: 50% !important;
++    top: 50% !important;
++    transform: translate(-50%, -50%) !important;
++  }
++
++  .panel {
++    position: relative;
++    z-index: 1000;
++    display: flex;
++    flex-direction: column;
++    justify-content: center;
++    height: auto;
++    background: var(--login-panel-bg, rgba(45, 50, 160, 0.5));
++    mix-blend-mode: normal;
++    box-shadow: -30px 1.52px 173.87px #121437;
++    backdrop-filter: blur(157.855px);
++    border-radius: 1rem;
++  }
++
++  .panel::after {
++    overflow: hidden;
++    position: absolute;
++    content: '';
++    inset: 0;
++    background: var(--login-panel-gradient);
++    border-radius: 1rem;
++    z-index: -1;
++  }
++
++  .panel::before {
++    position: absolute;
++    content: '';
++    inset: 0;
++    padding: 1px;
++    background: conic-gradient(
++        rgba(255, 255, 255, 0.18) 10%,
++        rgba(126, 120, 165, 0.5),
++        rgba(191, 216, 253, 0.5),
++        rgba(246, 247, 249, 0.32),
++        rgba(219, 229, 242, 0.34) 60%,
++        rgba(163, 203, 255, 0.24) 90%
++      )
++      border-box;
++    -webkit-mask:
++      linear-gradient(#000 0 0) content-box,
++      linear-gradient(#000 0 0);
++    -webkit-mask-composite: xor;
++    mask-composite: exclude;
++    border-radius: 1rem;
++    transform: rotate(180deg);
++    transition: opacity 0.15s var(--timing-main);
++    opacity: 0.7;
++    pointer-events: none;
++  }
++
++  @supports not (mask-composite: exclude) {
++    .panel::before {
++      z-index: -1;
++    }
++  }
++  @supports not (-webkit-mask-composite: xor) {
++    .panel::before {
++      z-index: -1;
++    }
++  }
++
++  /* Content wrapper inside the panel */
++  .panel .form-content {
++    display: flex;
++    flex-direction: column;
++    justify-content: center;
++    /* flex-grow: 1; */
++    height: 100%;
++  }
++
++  /* Intabia-scoped primary button visuals */
++  .login-theme-intabia .antiButton.primary {
++    border-radius: var(--primary-button-border-radius, 0.5rem);
++    padding: var(--primary-button-padding, 0 1.5rem);
++    height: var(--primary-button-height, 3.5rem);
++    font-size: var(--primary-button-font-size, 1rem);
++    font-weight: var(--primary-button-font-weight, 600);
++    background-color: var(--login-primary-button-default);
++    color: var(--login-button-text-color, #ffffff);
++  }
++  .login-theme-intabia .antiButton.primary:hover {
++    background-color: var(--login-primary-button-hovered);
++  }
++  .login-theme-intabia .antiButton.primary:active {
++    background-color: var(--login-primary-button-pressed);
++  }
++  .login-theme-intabia .antiButton.primary:focus-visible {
++    outline: 0;
++    box-shadow: 0 0 0 4px var(--login-primary-button-focus-ring);
++    border-color: var(--login-primary-button-focused);
++  }
++  .login-theme-intabia .antiButton.primary[disabled],
++  .login-theme-intabia .antiButton.primary:disabled {
++    background: var(--login-button-contrast-disabled);
++    color: var(--login-button-contrast-disabled-color);
++    cursor: not-allowed;
++    opacity: 1;
++    box-shadow: none;
++    border-color: var(--login-button-contrast-border);
++  }
++  /* Localized popup label color for login theme (applies only inside login UI) */
++  .login-theme-intabia .login-popup .hulyPopup-row__label {
++    color: var(--login-content-color, var(--theme-content-color));
++  }
++
++  /* Huly-scoped primary button visuals (contrast) */
++  .login-theme-huly .antiButton.primary {
++    border-radius: var(--primary-button-border-radius, 0.5rem);
++    padding: var(--primary-button-padding, 0 1.5rem);
++    height: var(--primary-button-height, 3.5rem);
++    font-size: var(--primary-button-font-size, 1rem);
++    font-weight: var(--primary-button-font-weight, 600);
++    background-color: var(--login-button-contrast-enabled, rgb(255, 255, 255));
++    color: var(--login-button-contrast-color, rgb(0, 0, 0));
++    border-color: var(--login-button-contrast-border, rgba(255, 255, 255, 0.2));
++  }
++  .login-theme-huly .antiButton.primary:hover {
++    background-color: var(--login-button-contrast-hovered, #ffffff);
++  }
++  .login-theme-huly .antiButton.primary:active {
++    background-color: var(--login-button-contrast-pressed, rgba(255, 255, 255, 0.6));
++  }
++  .login-theme-huly .antiButton.primary:focus-visible {
++    outline: 0;
++    box-shadow: 0 0 0 4px var(--login-primary-button-focus-ring);
++    border-color: var(--login-primary-button-focused);
++  }
++  .login-theme-huly .antiButton.primary[disabled],
++  .login-theme-huly .antiButton.primary:disabled {
++    background: var(--login-button-contrast-disabled);
++    color: var(--login-button-contrast-disabled-color);
++    cursor: not-allowed;
++    opacity: 1;
++    box-shadow: none;
++    border-color: var(--login-button-contrast-border);
++  }
++  /* Localized popup label color for Huly login theme (applies only inside login UI) */
++  .login-theme-huly .login-popup .hulyPopup-row__label {
++    color: var(--login-content-color, var(--theme-content-color));
++  }
++
++  /* Mobile fallbacks: make panel full-width and ensure panel-base padding/background
++     so the login container looks correct on smaller screens and is controlled centrally. */
++  @media (max-width: 768px) {
++    /* Keep a small margin from the screen edges on narrow devices */
++    .panel,
++    .panel-base {
++      position: static !important;
++      left: auto !important;
++      top: auto !important;
++      transform: none !important;
++      width: calc(100% - 2rem) !important;
++      min-width: 0 !important;
++      max-width: calc(100% - 2rem) !important;
++      margin-left: 1rem !important;
++      margin-right: 1rem !important;
++    }
++
++    .backd.paneld .panel-base,
++    .backd .paneld .panel-base {
++      width: calc(100% - 2rem) !important;
++      margin-left: 1rem !important;
++      margin-right: 1rem !important;
++    }
++  }
++</style>

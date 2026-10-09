@@ -72,11 +72,9 @@ export function SidebarFooterNav({ density }: { density: SidebarDensity }) {
     <nav data-tour="tools" aria-label={t("sidebar.tools")} className="flex flex-col gap-0.5">
       {sharedWorkspaceAvailable && <a
         href="/workspace"
-        target="chief-shared-workspace"
-        rel="noopener noreferrer"
         data-sidebar-nav="shared-workspace"
         aria-label={iconsOnly ? "Shared workspace" : undefined}
-        title="Shared workspace (opens in another window)"
+        title="Shared workspace"
         className={cn(
           "relative flex w-full items-center rounded-xl text-left text-ink transition-colors hover:bg-raised/50",
           iconsOnly ? "min-h-10 justify-center px-2 py-2" : "min-h-9 gap-3 px-3 py-1.5",

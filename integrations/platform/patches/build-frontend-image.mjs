@@ -40,7 +40,7 @@ if (recording.passed !== true || recording.syntheticOnly !== true || recording.f
     recording.rawPatchSha256 !== patchStack.patchHashes['0004-bounded-raw-recording.patch']) {
   throw new Error('Matching successful synthetic raw-recording browser acceptance is required.');
 }
-for (const name of ['build-frontend.mjs', 'frontend-minify-options.mjs']) {
+for (const name of ['build-frontend.mjs', 'frontend-minify-options.mjs', 'frontend-memory-policy.mjs']) {
   if (hash(await readFile(new URL(name, import.meta.url))) !== build.buildRecipe?.[name]) throw new Error(`Build recipe changed: ${name}`);
 }
 for (const [name, expected] of Object.entries(build.inputs)) {
@@ -65,7 +65,10 @@ for (const [name, asset] of Object.entries(build.assets)) {
   await copy(from, join(context, 'dist', name));
 }
 // Match upstream front packaging: public tracked assets, excluding runtime config.json.
-const publicFiles = execFileSync('git', ['-C', source, 'ls-files', '-z', 'dev/prod/public'], { encoding: 'utf8' }).split('\0').filter(Boolean);
+const publicFiles = [...new Set([
+  ...execFileSync('git', ['-C', source, 'ls-files', '-z', 'dev/prod/public'], { encoding: 'utf8' }).split('\0').filter(Boolean),
+  ...Object.keys(build.inputs).filter(name => name.startsWith('dev/prod/public/')),
+])];
 for (const name of publicFiles) {
   const relative = name.slice('dev/prod/public/'.length);
   if (relative === 'config.json') continue;
@@ -90,6 +93,10 @@ await copy(join(root,'integrations/platform/patches/device-label-provenance.json
 await copy(join(root,'integrations/platform/patches/MEDIA_DEVICE_LABELS.md'),join(notices,'MEDIA_DEVICE_LABELS.md'));
 await copy(join(root,'integrations/platform/patches/embedded-playback-provenance.json'),join(notices,'embedded-playback-provenance.json'));
 await copy(join(root,'integrations/platform/patches/EMBEDDED_PLAYBACK.md'),join(notices,'EMBEDDED_PLAYBACK.md'));
+await copy(join(root,'integrations/platform/patches/chief-branding-provenance.json'),join(notices,'chief-branding-provenance.json'));
+await copy(join(root,'integrations/platform/patches/chief-login-logo-provenance.json'),join(notices,'chief-login-logo-provenance.json'));
+await copy(join(root,'integrations/platform/patches/chief-login-icon-provenance.json'),join(notices,'chief-login-icon-provenance.json'));
+await copy(join(root,'integrations/platform/patches/CHIEF_BRANDING.md'),join(notices,'CHIEF_BRANDING.md'));
 await writeFile(join(notices,'embedded-playback-browser.json'),embeddedBytes);
 await writeFile(join(notices,'card-template-browser.json'),templateBytes);
 await writeFile(join(notices, 'recording-browser.json'), recordingBytes);

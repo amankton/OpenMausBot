@@ -1,0 +1,35 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-09T21:37:41.823Z",
+  "patch": "0010-chief-login-wordmark.patch",
+  "patchSha256": "3f3679145d0bc7436c9847faceb21832ccf6e994a9c4fad17d9671bdae45ca1d",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+    "0007-visible-media-devices.patch": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+    "0008-embedded-media-playback.patch": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+    "0009-chief-branding-workspace-shell.patch": "cc7b4817114f8c5ce15d425582015a265cbf6618dce63e1f0052a0e8c69e86d9"
+  },
+  "assetSource": "public/brand/chief-lockup-full-color-on-ink.svg",
+  "inputs": [
+    {
+      "file": "plugins/login-resources/src/components/LoginApp.svelte",
+      "beforeSha256": "8ea47c38ec4c53d546f85d07f6591bc8758d4bce95c9789df9ce22e98184fbef",
+      "sha256": "16847fbb650872e5b74baccea540acc2cd720ce4b64925c37cbbb80fadd5a10f"
+    },
+    {
+      "file": "plugins/login-resources/src/components/LoginAppBase.svelte",
+      "beforeSha256": "7ed731a57d75d3d8bcd6c4f0409fa1a64e2b414fde41cc48b6e386d65ad2697d",
+      "sha256": "90d5fdc31bed0d173df157cf7118ac0b448720d518176583ebe5bfcb49b374ef"
+    },
+    {
+      "file": "dev/prod/public/chief/wordmark-white.svg",
+      "beforeSha256": null,
+      "sha256": "6e5a96860403043c7cc64c803b39cbb45dbae4da57737fe89541825b0e87ae9f"
+    }
+  ]
+}

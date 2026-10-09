@@ -1,0 +1,394 @@
+{
+  "checkedAt": "2026-10-09T22:17:30.826Z",
+  "candidateConfigSha256": "454eea7305206a340ee8aef4af74c9b133c563bc0aa97797ea8df3e23669391b",
+  "previousConfigSha256": "f3a828e02b29f65e06550c238802f91fb9733f9b1805c4b5a312cb7f8a3d1edc",
+  "before": [
+    {
+      "id": "926e2a1ac0fb2cd12be9ea5e5f1c55146cb4ff555f7711ffdabfb2d4af5066da",
+      "service": "account",
+      "image": "sha256:39715cb2edd146393ce3151ad90e6e62e3a30c7937038696670145281cc4f131",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "fe1e1b0bd56270ce9e148dc02fc7de73b14aff0b76b6563a6bf8d2c7563ae512",
+      "service": "cockroach",
+      "image": "sha256:885d9b0e3243f262976763717e547dbbe75ca999548f7a4ea95fcd30a9aee66c",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_cr_certs/_data",
+          "destination": "/cockroach/certs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_cr_data/_data",
+          "destination": "/cockroach/cockroach-data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "463ab23be69e99aa499b1ffa2a684eef096907aa56cff22de2157aa2158dece0",
+      "service": "collaborator",
+      "image": "sha256:3c79023e3510d898b6ecaf4f63d1a4cea3a1e75bf6a67fd500cdaeaf902edb57",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "de7f20ae339b405bfefed19715654aeadf7e92de5bc1bc4f3793f73b9ac1e559",
+      "service": "elastic",
+      "image": "sha256:f05ab7f4d2aa5040813a0ea4eb76fa99bb31459937a4539efe2f2c2dbb2109fb",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_elastic/_data",
+          "destination": "/usr/share/elasticsearch/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "613459b46f7602f4da07aefa47c3c04571dcf7b73090a412b3c9ce3e07221933",
+      "service": "front",
+      "image": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "576701a3d557da91b522c34e110f75a701fe962c348b3ffd7fb68b3a2601feda",
+      "service": "fulltext",
+      "image": "sha256:5a442c2f4aeafca27a4fa975c63b02f0283252af08b4ca32ffe86dd0ce136d00",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "8bcb1702e7e67e5920a7d33a61624ca53bf72bcf7d6e0b841add203929ff7922",
+      "service": "kvs",
+      "image": "sha256:765ca15bb643e4f8d42dba9bc0bf0d0e668ee5ced8fb1c432abb142946b09d4f",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "7af9adf1f200d8a60127dd5c5488a82eb5727965fbb42c810743820fd3729fb0",
+      "service": "livekit",
+      "image": "sha256:d0c04791bf63ca8dcea123571827d56ba9504bd57c8d5de60ee03b5408cc3154",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\livekit.json",
+          "destination": "/etc/livekit.json",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "3ff3353d331c64ee9b65969fec11a692bb2d68afbaf687ecb3b2b367a9ff62d0",
+      "service": "love",
+      "image": "sha256:9507248f82c2402c40fe679f622c7c1533774c9f7e0d99384f0551edef14aaa9",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_capture_metadata/_data",
+          "destination": "/var/lib/chief-capture",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "ba51d33c8e61299f332d9bd3bf25208ca6a131cf5afc46d4011010a1851a1f93",
+      "service": "minio",
+      "image": "sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_files/_data",
+          "destination": "/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "d9a1f73a493df5f6833ebe7de07c483361565b8f5b33d4332c671a9a2ee2c781",
+      "service": "nginx",
+      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
+          "destination": "/etc/nginx/conf.d/default.conf",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "04b717979b0ff3aa38c6b332b3ddbd48b2140ac7a049103b82220d17e83bc6a0",
+      "service": "print",
+      "image": "sha256:545e72ee2c896da1d264ef38d843488c04768cf807997cf3ffcc1f5e4ccc43c9",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "8c6874435bdc5f6a50b9a744e0b4c968a8ec87b9660810f984f38e8c25b1486a",
+      "service": "redpanda",
+      "image": "sha256:04baa40ed34edf86028396f762be802f3b6b0acaab65e9de696a3f15d54c550f",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_redpanda/_data",
+          "destination": "/var/lib/redpanda/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "56f0337794453f357f1280e12112864fe0f56396c726c3790333a310b80f1bab",
+      "service": "rekoni",
+      "image": "sha256:13099c41001b368ec887f2c52efb4a5d6be767b43f007be988893c21c1a5451d",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "5896868fd8014e1c6d0a20ae0daf0326196a4e3852bcde776b4b3a1340e09b78",
+      "service": "stats",
+      "image": "sha256:940dae1aeaebc41b3a9123cab68c630bf1e6b21bbf520ba29921bf72f4aa27c3",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "06345f38c377efc5b43fc8693db4057e5611672d5503c7d001970a12d7b1d102",
+      "service": "transactor",
+      "image": "sha256:8d115eaa4250e3efff4399998171256274ff2bbd0a754a86e21151ff0a37ac64",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "daa00e57d4ced21af672c9fc088a21ce6137f0ec08771a73b702d347d4e5d140",
+      "service": "workspace",
+      "image": "sha256:1b6c679990a88306500467b08411b83f4acbd5959b25d5abe4e0e03a5b1e59ff",
+      "running": true,
+      "health": null,
+      "mounts": []
+    }
+  ],
+  "applied": true,
+  "passed": true,
+  "after": [
+    {
+      "id": "926e2a1ac0fb2cd12be9ea5e5f1c55146cb4ff555f7711ffdabfb2d4af5066da",
+      "service": "account",
+      "image": "sha256:39715cb2edd146393ce3151ad90e6e62e3a30c7937038696670145281cc4f131",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "fe1e1b0bd56270ce9e148dc02fc7de73b14aff0b76b6563a6bf8d2c7563ae512",
+      "service": "cockroach",
+      "image": "sha256:885d9b0e3243f262976763717e547dbbe75ca999548f7a4ea95fcd30a9aee66c",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_cr_certs/_data",
+          "destination": "/cockroach/certs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_cr_data/_data",
+          "destination": "/cockroach/cockroach-data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "463ab23be69e99aa499b1ffa2a684eef096907aa56cff22de2157aa2158dece0",
+      "service": "collaborator",
+      "image": "sha256:3c79023e3510d898b6ecaf4f63d1a4cea3a1e75bf6a67fd500cdaeaf902edb57",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "de7f20ae339b405bfefed19715654aeadf7e92de5bc1bc4f3793f73b9ac1e559",
+      "service": "elastic",
+      "image": "sha256:f05ab7f4d2aa5040813a0ea4eb76fa99bb31459937a4539efe2f2c2dbb2109fb",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_elastic/_data",
+          "destination": "/usr/share/elasticsearch/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "613459b46f7602f4da07aefa47c3c04571dcf7b73090a412b3c9ce3e07221933",
+      "service": "front",
+      "image": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "576701a3d557da91b522c34e110f75a701fe962c348b3ffd7fb68b3a2601feda",
+      "service": "fulltext",
+      "image": "sha256:5a442c2f4aeafca27a4fa975c63b02f0283252af08b4ca32ffe86dd0ce136d00",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "8bcb1702e7e67e5920a7d33a61624ca53bf72bcf7d6e0b841add203929ff7922",
+      "service": "kvs",
+      "image": "sha256:765ca15bb643e4f8d42dba9bc0bf0d0e668ee5ced8fb1c432abb142946b09d4f",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "7af9adf1f200d8a60127dd5c5488a82eb5727965fbb42c810743820fd3729fb0",
+      "service": "livekit",
+      "image": "sha256:d0c04791bf63ca8dcea123571827d56ba9504bd57c8d5de60ee03b5408cc3154",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\livekit.json",
+          "destination": "/etc/livekit.json",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "3ff3353d331c64ee9b65969fec11a692bb2d68afbaf687ecb3b2b367a9ff62d0",
+      "service": "love",
+      "image": "sha256:9507248f82c2402c40fe679f622c7c1533774c9f7e0d99384f0551edef14aaa9",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_capture_metadata/_data",
+          "destination": "/var/lib/chief-capture",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "ba51d33c8e61299f332d9bd3bf25208ca6a131cf5afc46d4011010a1851a1f93",
+      "service": "minio",
+      "image": "sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_files/_data",
+          "destination": "/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "d9a1f73a493df5f6833ebe7de07c483361565b8f5b33d4332c671a9a2ee2c781",
+      "service": "nginx",
+      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
+          "destination": "/etc/nginx/conf.d/default.conf",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "04b717979b0ff3aa38c6b332b3ddbd48b2140ac7a049103b82220d17e83bc6a0",
+      "service": "print",
+      "image": "sha256:545e72ee2c896da1d264ef38d843488c04768cf807997cf3ffcc1f5e4ccc43c9",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "8c6874435bdc5f6a50b9a744e0b4c968a8ec87b9660810f984f38e8c25b1486a",
+      "service": "redpanda",
+      "image": "sha256:04baa40ed34edf86028396f762be802f3b6b0acaab65e9de696a3f15d54c550f",
+      "running": true,
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/chief-platform_redpanda/_data",
+          "destination": "/var/lib/redpanda/data",
+          "rw": true
+        }
+      ]
+    },
+    {
+      "id": "56f0337794453f357f1280e12112864fe0f56396c726c3790333a310b80f1bab",
+      "service": "rekoni",
+      "image": "sha256:13099c41001b368ec887f2c52efb4a5d6be767b43f007be988893c21c1a5451d",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "5896868fd8014e1c6d0a20ae0daf0326196a4e3852bcde776b4b3a1340e09b78",
+      "service": "stats",
+      "image": "sha256:940dae1aeaebc41b3a9123cab68c630bf1e6b21bbf520ba29921bf72f4aa27c3",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "06345f38c377efc5b43fc8693db4057e5611672d5503c7d001970a12d7b1d102",
+      "service": "transactor",
+      "image": "sha256:8d115eaa4250e3efff4399998171256274ff2bbd0a754a86e21151ff0a37ac64",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "daa00e57d4ced21af672c9fc088a21ce6137f0ec08771a73b702d347d4e5d140",
+      "service": "workspace",
+      "image": "sha256:1b6c679990a88306500467b08411b83f4acbd5959b25d5abe4e0e03a5b1e59ff",
+      "running": true,
+      "health": null,
+      "mounts": []
+    }
+  ],
+  "allContainersAndMountsPreserved": true
+}

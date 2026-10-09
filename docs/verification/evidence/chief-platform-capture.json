@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "mode": "compiled",
+  "verifiedAt": "2026-10-09T22:02:28.471Z",
+  "syntheticOnly": true,
+  "fakeInputsOnly": true,
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "capturePatchSha256": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+  "loveImage": "sha256:9507248f82c2402c40fe679f622c7c1533774c9f7e0d99384f0551edef14aaa9",
+  "workerInputs": {
+    "worker.py": "ddb2547583a90c82c3fe3fe958da0b5933a7bc4bddd56f0aa5659d3a255f3832",
+    "worker_core.py": "1ffdf415ffbc7b392c284cca8220d6b9a3105ff8fd0e098f2b6e83124b5adc5f"
+  },
+  "compiledAssets": 137,
+  "checks": [
+    "Opening and requesting notes never acquires media; requester must explicitly consent before listen-only worker connects",
+    "Late participant joining stops the first capture and receives no access to its prior transcript",
+    "One member declining cancels the two-member request without starting audio capture",
+    "Unanimous consent permits real generated microphone audio over LiveKit; partner Stop removes exact listener; local ASR preserves speaker, both participants can review, and acknowledged raw audio is deleted",
+    "Anonymous, invalid-token and independent-workspace users cannot read the transcript",
+    "Reviewed JSON export requires selection and confirmation; transcript remains excluded by default; Card stays open"
+  ],
+  "localAsr": "tiny.en CPU int8",
+  "exportedFixtureSha256": "3204c3a22fb6ca146660040d1ef8c7952fd40a1c738ca24ac9c689c7844ee6d7"
+}

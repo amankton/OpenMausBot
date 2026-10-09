@@ -1,5 +1,7 @@
 # Chief capability audit — October 9, 2026
 
+Continuation: [Stage 0 completion report](CHIEF_STAGE0_COMPLETION_2026-10-09.md) supplies the remaining mapping, provenance inventory, baseline fixtures and explicit later acceptance gates. The observations below describe the earlier pass and are retained as historical evidence.
+
 Scope: bounded repository/source review, isolated focused tests and container status inspection. No customer records were changed. This is the first Stage 0 audit, not a complete security, load, licensing or production-readiness certification.
 
 ## Baseline

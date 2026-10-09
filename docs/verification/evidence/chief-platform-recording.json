@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-09T22:01:39.724Z",
+  "passed": true,
+  "mode": "compiled",
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "rawPatchSha256": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "syntheticOnly": true,
+  "fakeInputsOnly": true,
+  "deploymentModified": false,
+  "servedBuiltAssets": 139,
+  "checks": [
+    "Opening/cancelling requests no capture; explicit synthetic capture cancelled before upload leaves no successful upload",
+    "Cancellation of a transport-held upload ends inputs; confirmed route.abort completes before unroute, recorder closes and blob read is 404",
+    "Discarding an uploaded unsaved recording deletes only its generated blob",
+    "Card Activity recorder Save creates a draft; explicit comment Send persists its WebM attachment and parent comment on the synthetic Card, with dimensions and exact blob size",
+    "Persisted Card Activity comment attachment reopens after reload and native playback, dimensions, finite duration and seeking pass",
+    "Anonymous, invalid-token, valid outsider and cross-workspace file GET/POST/DELETE are denied; original member blob remains readable"
+  ],
+  "captureRequests": [
+    {
+      "audio": false,
+      "video": true
+    },
+    {
+      "audio": false,
+      "video": true
+    },
+    {
+      "audio": false,
+      "video": true
+    },
+    {
+      "audio": false,
+      "video": true
+    }
+  ],
+  "attachment": {
+    "name": "Chief synthetic mv1ifd6z.webm",
+    "bytes": 93455,
+    "sha256": "596679e20a05f4857e2939fc2aec55c7b0e7edbf259d04339bfca405b39db224",
+    "width": 640,
+    "height": 360,
+    "duration": 2.916
+  },
+  "auth": [
+    {
+      "case": "anonymous",
+      "get": 401,
+      "delete": 403,
+      "post": 403
+    },
+    {
+      "case": "invalid bearer",
+      "get": 401,
+      "delete": 401,
+      "post": 401
+    },
+    {
+      "case": "valid outsider",
+      "get": 403,
+      "delete": 403,
+      "post": 403
+    },
+    {
+      "case": "member wrong workspace URL",
+      "get": 403,
+      "delete": 403,
+      "post": 403
+    }
+  ],
+  "remainingLimits": [
+    "Existing file authorization is workspace-wide, not target-document ACL",
+    "Transport-held cancellation does not prove transactional rollback of a server-side upload commit race"
+  ]
+}

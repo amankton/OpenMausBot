@@ -2,6 +2,14 @@
 
 Date: October 9, 2026
 Status: Structured implementation backlog. No feature completion implied.
+Stage 0 continuation: baseline/build-map gate completed October 9; see [completion evidence and remaining acceptance gaps](CHIEF_STAGE0_COMPLETION_2026-10-09.md) and [canonical records/member execution/storage contracts](../architecture/chief-stage0-contracts.md). M1 and later remain unimplemented as a unified lifecycle.
+
+October 9 delivery update: consumer branding, full-frame workspace controls,
+same-tab workspace navigation, the exact white icon with its title, and embedded
+login persistence are deployed. These foundation improvements do not complete
+M1. Secure member pairing and real recoverable specialist dispatch remain next.
+See [login/session verification](../verification/chief-session-persistence.md)
+and [current branding verification](../verification/chief-login-icon-title.md).
 Source: C:/Users/amank/Desktop/Chief_Executive_Suite_Codex_Handoff.md and owner review in this conversation.
 
 ## Delivery objective

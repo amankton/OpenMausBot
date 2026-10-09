@@ -77,6 +77,7 @@ Use only mapped, tested commands:
 - [Fleet: many workspaces on one server](fleet.md)
 - [Workspaces screen and the fleet agent](workspaces.md)
 - [Hosted workspace sign-in and revocation](hosted-workspaces.md)
+- [Chief embedded workspace session persistence](chief-session-persistence.md)
 - [Shared-workspace trust: loopback, card answerers, decision log](shared-workspace-trust.md)
 - [Shared-workspace governance: bot visibility and admin activity](shared-workspace-governance.md)
 - [Usage ledger](usage-ledger.md)
@@ -258,6 +259,10 @@ The [Group and Goal Local VM recipe](group-local-vm.md) checks per-speaker
 desktop routing, cancellation, and computer authority cleanup.
 
 ## Evidence
+
+The [Chief Stage 0 baseline](chief-stage0.md) inventories retained source/image
+provenance and verifies two isolated personal runtimes plus synthetic Platform
+capture tenancy. It does not claim implemented member-to-agent pairing.
 
 The [persistence responsiveness benchmark](persistence-performance.md) measures
 synthetic message/log bursts and history scans, with isolated chat, visibility

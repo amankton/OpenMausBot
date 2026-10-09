@@ -1,0 +1,48 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-09T18:58:40.263Z",
+  "patch": "0009-chief-branding-workspace-shell.patch",
+  "patchSha256": "cc7b4817114f8c5ce15d425582015a265cbf6618dce63e1f0052a0e8c69e86d9",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+    "0007-visible-media-devices.patch": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+    "0008-embedded-media-playback.patch": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd"
+  },
+  "inputs": [
+    {
+      "file": "packages/ui/src/components/internal/Root.svelte",
+      "beforeSha256": "ef4aaa5c0c93b9ca1418779647df8bc0ba42dfc0ffb6a12a1612889d18f255f2",
+      "sha256": "80f2952d33da4126c2860a1f9e76f658d215e9b6a13496e22b0139f6f9c164fc"
+    },
+    {
+      "file": "packages/ui/src/components/internal/ChiefBrand.svelte",
+      "beforeSha256": null,
+      "sha256": "85e89adeb768ffd3e18bd716c8a1e9485d3e60ca1b3684d070c392d293ab5de6"
+    },
+    {
+      "file": "plugins/login-resources/src/components/LoginAppBase.svelte",
+      "beforeSha256": "b96ba307f235f9704ceac094d26aa0ede21a54371ffdff9a9324658f206b1c3e",
+      "sha256": "7ed731a57d75d3d8bcd6c4f0409fa1a64e2b414fde41cc48b6e386d65ad2697d"
+    },
+    {
+      "file": "dev/prod/src/platform.ts",
+      "beforeSha256": "a9cb6a385fbe6621d42ea79017dd0597fe67979ce888b5ef6bc77ad2a9407aa0",
+      "sha256": "52c0ac488d14bcef9058f339c226e1a0bdfbf0abc19879237566fab58ba378f6"
+    },
+    {
+      "file": "dev/prod/src/index.ejs",
+      "beforeSha256": "e5f7f2253e4ea6fd3a203fed3847e4e60aadbad9f7fd5ae79a4cdec66b1dd45c",
+      "sha256": "e7255f61721c5cf1031923da3461fcfacfb18c1adc0653babe767ab3f0de1eca"
+    },
+    {
+      "file": "dev/prod/public/chief/avatar.svg",
+      "beforeSha256": null,
+      "sha256": "c41a7ac6dfa94ca28a661d8fced00a39d6ab4df5b4959cbdf3e4394eea6bb52a"
+    }
+  ]
+}

@@ -36,13 +36,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("sidebar footer places", () => {
-  it.each(["comfortable", "compact", "icons"] as const)("keeps personal agents open when entering Shared workspace (%s)", density => {
+  it.each(["comfortable", "compact", "icons"] as const)("opens Shared workspace without requiring a popup (%s)", density => {
     const { html, nodes: tree } = render(density);
     const link = tree.find(node => node.props["data-sidebar-nav"] === "shared-workspace")!;
     expect(link.type).toBe("a");
     expect(link.props.href).toBe("/workspace");
-    expect(link.props.target).toBe("chief-shared-workspace");
-    expect(link.props.rel).toBe("noopener noreferrer");
+    expect(link.props.target).toBeUndefined();
+    expect(link.props.title).toBe("Shared workspace");
     expect(link.props.onClick).toBeUndefined();
     expect(fixture.dispatch).not.toHaveBeenCalled();
     expect(html).toContain("Shared workspace");

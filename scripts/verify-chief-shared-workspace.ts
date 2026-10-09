@@ -139,6 +139,7 @@ try {
   const probeGate = new Promise<void>(resolve => { releaseProbe = resolve; });
   const probeSeen = new Promise<void>(resolve => { probeStarted = resolve; });
   await shared.route("**/api/shared-workspace", async route => { probeStarted(); await probeGate; await route.continue(); }, { times: 1 });
+  if (await shared.getByRole("button", { name: "Chief workspace menu", exact: true }).getAttribute("aria-expanded") !== "true") await shared.getByRole("button", { name: "Chief workspace menu", exact: true }).click();
   await shared.getByRole("button", { name: "Retry connection", exact: true }).click();
   await probeSeen;
   try {
@@ -152,11 +153,11 @@ try {
   expect(requests.some(request => request.path === "/config.json")).toBe(true);
   expect(requests.some(request => request.path === "/workbench/fixture/contact/persons")).toBe(true);
   expect(requests.every(request => !request.cookie && !request.authorization && !request.referer)).toBe(true);
-  await shared.screenshot({ path: join(evidenceDir, "chief-shared-workspace-host.png"), fullPage: true });
+  await shared.screenshot({ path: join(evidenceDir, "chief-branded-workspace-host.png"), fullPage: true });
   await shared.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => shared.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(embedded.getByRole("button", { name: "Test embedded interaction", exact: true })).toBeVisible();
-  await shared.screenshot({ path: join(evidenceDir, "chief-shared-workspace-host-mobile.png"), fullPage: true });
+  await shared.screenshot({ path: join(evidenceDir, "chief-branded-workspace-host-mobile.png"), fullPage: true });
 
   await shared.goto(`${origin}/office?token=retired-fixture-token#invite=retired-fixture-invite`);
   await shared.waitForURL(hostUrl);
@@ -164,18 +165,19 @@ try {
   expect(requests.every(request => !request.path.includes("retired-fixture"))).toBe(true);
 
   available = false;
+  if (await shared.getByRole("button", { name: "Chief workspace menu", exact: true }).getAttribute("aria-expanded") !== "true") await shared.getByRole("button", { name: "Chief workspace menu", exact: true }).click();
   await shared.getByRole("button", { name: "Retry connection", exact: true }).click();
   await expect(shared.getByRole("heading", { name: "Shared workspace is not available yet", exact: true })).toBeVisible();
   await expect(shared.locator("iframe")).toHaveCount(0);
   expect(personal.isClosed()).toBe(false);
-  await shared.screenshot({ path: join(evidenceDir, "chief-shared-workspace-host-unavailable.png"), fullPage: true });
+  await shared.screenshot({ path: join(evidenceDir, "chief-branded-workspace-host-unavailable.png"), fullPage: true });
   available = true;
   await shared.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(embedded.getByRole("heading", { name: "Synthetic collaboration fixture", exact: true })).toBeVisible();
 
   const evidence = { verifiedAt: new Date().toISOString(), scope: "Host integration only — synthetic collaboration service, NOT Contacts acceptance", source: "Real Chief isolated fake-engine server, real Vite/React host, fresh Chrome context", chiefUrl: hostUrl, syntheticPlatformUrl: platformUrl, serverLog: fixture.info.logPath,
     checks: ["trusted local owner API and cross-site denial", "real server availability probe", "sidebar opens separate host window and personal Team map remains", "retired Shared Office navigation is absent and Team map opens Shared Workspace", "legacy office URL redirects to workspace without forwarding old credentials", "interactive iframe on distinct hostname", "no cookies/authorization/referrer forwarded", "no parent access or private storage", "sandbox blocks top navigation", "media and local-network policy delegated only to exact iframe origin; clipboard/geolocation remain denied", "no initial media acquisition; explicit fake camera/microphone start succeeds and Stop ends all tracks", "successful availability retry retains frame and unsaved draft", "390px layout", "unavailable state unmounts iframe", "retry recovers"], fakeDevicesOnly: true, screenCaptureInvoked: false, mediaStarted, isolation, requests };
-  writeFileSync(join(evidenceDir, "chief-shared-workspace-host.json"), JSON.stringify(evidence, null, 2));
+  writeFileSync(join(evidenceDir, "chief-branded-workspace-host.json"), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify(evidence, null, 2));
 } finally {
   await browser?.close();

@@ -1,0 +1,38 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-09T21:52:01.069Z",
+  "patch": "0011-chief-login-icon-title.patch",
+  "patchSha256": "4293f53026bfabf7c72b82a7f2c2a62acd33f2f4462b920279623966d5788a92",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+    "0007-visible-media-devices.patch": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+    "0008-embedded-media-playback.patch": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+    "0009-chief-branding-workspace-shell.patch": "cc7b4817114f8c5ce15d425582015a265cbf6618dce63e1f0052a0e8c69e86d9",
+    "0010-chief-login-wordmark.patch": "3f3679145d0bc7436c9847faceb21832ccf6e994a9c4fad17d9671bdae45ca1d"
+  },
+  "assetSource": "Owner-supplied chief-mark-one-color-ink.svg",
+  "assetSha256": "1b5b8bf94db4fc4081c8ab546c1d53ae65106ff8a1874490cd1c490dd4a49ef3",
+  "rendering": "Unmodified SVG displayed in white using CSS brightness(0) invert(1)",
+  "inputs": [
+    {
+      "file": "plugins/login-resources/src/components/LoginApp.svelte",
+      "beforeSha256": "16847fbb650872e5b74baccea540acc2cd720ce4b64925c37cbbb80fadd5a10f",
+      "sha256": "fde49b506e8483a3fdf8ebca85737dd00fdbdc6f8f5c75e5130b97891766f176"
+    },
+    {
+      "file": "plugins/login-resources/src/components/LoginAppBase.svelte",
+      "beforeSha256": "90d5fdc31bed0d173df157cf7118ac0b448720d518176583ebe5bfcb49b374ef",
+      "sha256": "10473964950411f6086dc9b1e9c3367aee2587a6680b4c09611332dd9362b06f"
+    },
+    {
+      "file": "dev/prod/public/chief/icon-ink.svg",
+      "beforeSha256": null,
+      "sha256": "1b5b8bf94db4fc4081c8ab546c1d53ae65106ff8a1874490cd1c490dd4a49ef3"
+    }
+  ]
+}

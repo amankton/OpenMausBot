@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "mode": "baseline",
+  "checkedAt": "2026-10-09T22:17:15.571Z",
+  "syntheticOnly": true,
+  "freshLoginTestsSeedAuthentication": false,
+  "legacyCookieSeededOnlyForLogoutRegression": false,
+  "checks": [
+    "Fresh password login through actual embedded form reaches the synthetic workspace",
+    "Before fix: page reload loses embedded authentication and shows login again"
+  ],
+  "cookieMetadata": [],
+  "nginxConfigSha256": "f3a828e02b29f65e06550c238802f91fb9733f9b1805c4b5a312cb7f8a3d1edc"
+}

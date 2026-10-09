@@ -1,0 +1,71 @@
+diff --git a/dev/prod/public/chief/icon-ink.svg b/dev/prod/public/chief/icon-ink.svg
+new file mode 100644
+index 0000000..37c4fc5
+--- /dev/null
++++ b/dev/prod/public/chief/icon-ink.svg
+@@ -0,0 +1,19 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 770.22 868.1" width="770.22" height="868.1"><title>c.h.i.e.f.</title>
++<g stroke="#0B0C10" stroke-width="62.5" stroke-linecap="round">
++<line x1="385.11" y1="270.65" x2="385.11" y2="68.75"/>
++<line x1="526.62" y1="352.35" x2="701.47" y2="251.4"/>
++<line x1="526.62" y1="515.75" x2="701.47" y2="616.7"/>
++<line x1="385.11" y1="597.45" x2="385.11" y2="799.35"/>
++<line x1="243.6" y1="515.75" x2="68.75" y2="616.7"/>
++<line x1="243.6" y1="352.35" x2="68.75" y2="251.4"/>
++</g>
++<g fill="#0B0C10">
++<circle cx="385.11" cy="68.75" r="68.75"/>
++<circle cx="701.47" cy="251.4" r="68.75"/>
++<circle cx="701.47" cy="616.7" r="68.75"/>
++<circle cx="385.11" cy="799.35" r="68.75"/>
++<circle cx="68.75" cy="616.7" r="68.75"/>
++<circle cx="68.75" cy="251.4" r="68.75"/>
++</g>
++<circle cx="385.11" cy="434.05" r="100" fill="#0B0C10"/>
++</svg>
+diff --git a/plugins/login-resources/src/components/LoginApp.svelte b/plugins/login-resources/src/components/LoginApp.svelte
+index d52872a..9ce6794 100644
+--- a/plugins/login-resources/src/components/LoginApp.svelte
++++ b/plugins/login-resources/src/components/LoginApp.svelte
+@@ -16,6 +16,7 @@
+ <script lang="ts">
+   import { getMetadata, setMetadata } from '@hcengineering/platform'
+   import presentation from '@hcengineering/presentation'
++  import workbench from '@hcengineering/workbench'
+   import {
+     Location,
+     Popup,
+@@ -148,7 +149,8 @@
+         style:top={'calc(3rem + var(--huly-top-indent, 0rem))'}
+         class="flex-row-center"
+       >
+-        <img src="/chief/wordmark-white.svg" alt="Chief Executive Suite" width="232" height="42" />
++        <img src="/chief/icon-ink.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1)" />
++        <span class="fs-title ml-2">{getMetadata(workbench.metadata.PlatformTitle)}</span>
+       </div>
+ 
+       <div class="panel-base" class:panel={$deviceInfo.docWidth > 768} class:white={!$themeStore.dark}>
+diff --git a/plugins/login-resources/src/components/LoginAppBase.svelte b/plugins/login-resources/src/components/LoginAppBase.svelte
+index a5cea24..a0adf60 100644
+--- a/plugins/login-resources/src/components/LoginAppBase.svelte
++++ b/plugins/login-resources/src/components/LoginAppBase.svelte
+@@ -16,6 +16,7 @@
+ -->
+ <script lang="ts">
+   import platform, { getMetadata } from '@hcengineering/platform'
++  import workbench from '@hcengineering/workbench'
+   import { Popup, Scroller, deviceOptionsStore as deviceInfo, themeStore } from '@hcengineering/ui'
+   import { onMount } from 'svelte'
+   import login from '../plugin'
+@@ -84,7 +85,10 @@
+       style:z-index={10001}
+       class="flex-row-center"
+     >
+-      <img src="/chief/wordmark-white.svg" alt="Chief Executive Suite" width="232" height="42" />
++      <img src="/chief/icon-ink.svg" alt="" width="24" height="24" style="filter: brightness(0) invert(1)" />
++      {#if activeTheme.showTitle}
++        <span class="fs-title ml-2">{getMetadata(workbench.metadata.PlatformTitle)}</span>
++      {/if}
+     </div>
+ 
+     {#if getMetadata(platform.metadata.DevModel)}

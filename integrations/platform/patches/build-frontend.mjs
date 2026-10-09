@@ -7,24 +7,27 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { frontendMinifyOptions } from './frontend-minify-options.mjs';
+import { frontendMemoryPolicy } from './frontend-memory-policy.mjs';
 
 const source = fileURLToPath(new URL('../../../.chief-local/platform-source/', import.meta.url));
 const omitDebugArtifacts = process.argv.includes('--omit-debug-artifacts');
 const nativeMinify = process.argv.includes('--native-minify');
-if (process.argv.slice(2).some(argument => !['--omit-debug-artifacts', '--native-minify'].includes(argument))) throw new Error('Unknown build argument.');
+const constrainedMemory = process.argv.includes('--constrained-memory');
+if (process.argv.slice(2).some(argument => !['--omit-debug-artifacts', '--native-minify', '--constrained-memory'].includes(argument))) throw new Error('Unknown build argument.');
 if (process.platform !== 'win32') throw new Error('This bounded local runner requires the reviewed Windows memory guard.');
 const availableHostKiB = () => Number(execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory'], { encoding: 'utf8', windowsHide: true }).trim());
 const heapLimitMiB = getHeapStatistics().heap_size_limit / 1024 ** 2;
-const minimumStartKiB = (heapLimitMiB > 2240 ? 5 : heapLimitMiB > 1728 ? 4.5 : 3.5) * 1024 ** 2;
+const memoryPolicy = frontendMemoryPolicy(heapLimitMiB, { constrained: constrainedMemory });
+console.log(`Host memory profile: ${memoryPolicy.profile}; start ${memoryPolicy.minimumStartMiB} MiB, running minimum ${memoryPolicy.minimumRunningMiB} MiB.`);
 const memoryMeasurements = [];
 function checkMemory(minimumKiB) {
   const availableKiB = availableHostKiB();
   memoryMeasurements.push({ at: new Date().toISOString(), availableKiB, rssMiB: Math.round(process.memoryUsage().rss / 1024 ** 2) });
   if (!Number.isFinite(availableKiB) || availableKiB < minimumKiB) throw new Error(`Host memory ${Math.round(availableKiB / 1024)} MiB is below the coordinated ${minimumKiB / 1024} MiB build guard.`);
 }
-checkMemory(minimumStartKiB);
+checkMemory(memoryPolicy.minimumStartMiB * 1024);
 const memoryMonitor = setInterval(() => {
-  try { checkMemory(2 * 1024 ** 2); } catch (error) {
+  try { checkMemory(memoryPolicy.minimumRunningMiB * 1024); } catch (error) {
     console.error(error.message);
     process.exit(2); // Terminate only this owned build; never stop apps or containers.
   }
@@ -54,15 +57,11 @@ const hashInputs = async () => Object.fromEntries(await Promise.all(inputFiles.m
   [file, createHash('sha256').update(await readFile(join(source, file))).digest('hex')]
 )));
 const inputs = await hashInputs();
-const buildRecipe = Object.fromEntries(await Promise.all(['build-frontend.mjs', 'frontend-minify-options.mjs'].map(async name =>
+const buildRecipe = Object.fromEntries(await Promise.all(['build-frontend.mjs', 'frontend-minify-options.mjs', 'frontend-memory-policy.mjs'].map(async name =>
   [name, createHash('sha256').update(await readFile(new URL(name, import.meta.url))).digest('hex')]
 )));
 const startedAt = new Date().toISOString();
-// Node 24 adds up to 192 MiB of young-generation space to the old-space cap.
-// Coordinated retries: 2048 MiB requires >=4.5 GiB free; 2560 MiB requires >=5 GiB.
-if (getHeapStatistics().heap_size_limit > 2752 * 1024 ** 2) {
-  throw new Error('Run with the coordinated 1536, 2048 or 2560 MiB old-space cap and its memory guard.');
-}
+// Heap limits and host headroom were validated before loading the compiler.
 process.env.NODE_ENV = 'production';
 process.env.DO_VALIDATE = 'false'; // Package/Svelte validation runs separately, serially.
 process.env.GOMAXPROCS = '1';
@@ -140,7 +139,7 @@ await writeFile(join(source, '..', 'platform-build-logs', 'production-build-rece
   omitDebugArtifacts,
   minifier: nativeMinify ? { name: 'EsbuildPlugin', esbuildVersion: esbuild.version, ...frontendMinifyOptions, serial: true } : { name: 'TerserPlugin', parallel: false },
   configurationDifferences: ['Sequential configurations', 'webpack parallelism=1', nativeMinify ? 'Pinned native EsbuildPlugin replaces Terser; transforms serialized and IIFE-scoped per chunk' : 'Terser parallel=false', 'Separate TypeScript/Svelte validation', ...(omitDebugArtifacts ? ['webpack devtool=false', 'esbuild source maps disabled', 'Svelte preprocess/compiler source maps disabled', 'BundleAnalyzerPlugin omitted'] : [])],
-    imageDeployed: false, buildRecipe, memoryMeasurements, inputs, assets: Object.fromEntries([...assets.entries()].sort())
+    imageDeployed: false, buildRecipe, memoryPolicy, memoryMeasurements, inputs, assets: Object.fromEntries([...assets.entries()].sort())
 }, null, 2));
 clearInterval(memoryMonitor);
 

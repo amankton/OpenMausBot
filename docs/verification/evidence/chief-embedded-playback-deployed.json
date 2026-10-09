@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "mode": "deployed",
+  "verifiedAt": "2026-10-09T22:18:07.861Z",
+  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "patchSha256": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+  "syntheticOnly": true,
+  "fakeDevicesOnly": true,
+  "checks": [
+    "Global recorder saves a generated camera clip to Drive inside the sandboxed cross-site iframe; native playback advances with decoded frames and no live capture tracks",
+    "Persisted Drive recording reopens inside the iframe with authenticated bytes, finite duration and working seek",
+    "File cookie stays host-only and workspace-scoped; it plays under its original top-level site but is withheld under a different site and from an unpartitioned anonymous request"
+  ],
+  "servedBuiltAssets": 0,
+  "recording": {
+    "name": "Chief embedded playback 1791584285577.webm",
+    "duration": 2.916,
+    "width": 640,
+    "height": 360,
+    "decodedFrames": 14
+  },
+  "partitionedCookieVerified": true
+}

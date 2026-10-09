@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "mode": "deployed",
+  "checkedAt": "2026-10-09T22:17:39.175Z",
+  "syntheticOnly": true,
+  "freshLoginTestsSeedAuthentication": false,
+  "legacyCookieSeededOnlyForLogoutRegression": true,
+  "checks": [
+    "Fresh password login through actual embedded form reaches the synthetic workspace",
+    "Page reload restores login without injected cookies or local storage",
+    "Leaving and reopening the embedded workspace retains login",
+    "Full browser close/restart with its persistent test profile retains login",
+    "Different top-level site and direct workspace page do not inherit the embedded session",
+    "Standalone password login and refresh also work",
+    "Standalone logout expires both current and legacy unpartitioned account cookies",
+    "Actual logout endpoint clears the embedded session; reload cannot sign back in"
+  ],
+  "cookieMetadata": [],
+  "nginxConfigSha256": "454eea7305206a340ee8aef4af74c9b133c563bc0aa97797ea8df3e23669391b"
+}

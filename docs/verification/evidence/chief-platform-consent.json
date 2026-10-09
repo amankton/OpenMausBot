@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T22:03:43.347Z",
+  "scope": "Compiled frontend opening, settings preview, recorder explicit opt-in and cancellation; does not assert connected meeting consent",
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "buildReceiptSha256": "8bb3f7f1eeb7f9de99d48a143c0bb81c5b90ae1f0dcc0cbde85fbe94e79c98bd",
+  "consentChecksPassed": true,
+  "isolatedSyntheticAccount": true,
+  "fakeDevicesOnly": true,
+  "servedBuiltAssets": 138,
+  "checks": [
+    "Actual built frontend loads synthetic Contacts without requesting media",
+    "Compact Office exposes room actions without blocking avatar dragging; opening and closing its invitation picker preserves the Card and requests no capture",
+    "Opening retained Office does not request media",
+    "Opening shared media settings and expanding camera settings does not request capture",
+    "Explicit shared camera preview starts only a synthetic video track",
+    "Stopping preview and closing camera settings both end every synthetic input track",
+    "Drive Record opens the actual recorder with camera and microphone off and recording disabled",
+    "Explicit recorder microphone/camera controls acquire only selected synthetic inputs; cancellation ends every captured input track without recording or upload"
+  ],
+  "pending": [
+    "Connected two-member compact Office acceptance of this image after deployment (coordinator-owned)",
+    "Recorder upload/encoding requires Stream service validation"
+  ],
+  "image": "sha256:c79fa3251ded2d6e6a3ff6e949e9c2d3138dd939b47ad393401a29b3b111cec7",
+  "baseImage": "platformcollective/front@sha256:03c16b1ab7ab590f988d781cea345bb2ba06b7f792b819cdb0dd0b39bf14bebe",
+  "deploymentChanged": false
+}
