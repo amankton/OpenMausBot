@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { ROOT, PROJECT, dockerEnvironment, validateBoundaries } from './configure-chief-platform.mjs';
 import { mergeMeetingConfig } from './launch-chief-platform-meetings.mjs';
 import { verifyFrontendPatchStack } from '../integrations/platform/patches/verify-frontend-patch-stack.mjs';
+import { accountOverlayArgs } from './chief-account-overlay.mjs';
 
 const apply = process.argv.includes('--apply');
 if (process.argv.slice(2).some(arg => !['--apply', '--check'].includes(arg))) throw Error('Use --check or --apply');
@@ -20,7 +21,7 @@ const run = args => {
 const compose = (...args) => ['compose', '--project-name', PROJECT, '--project-directory', integration,
   '--env-file', join(local, 'platform.env'), '--env-file', join(local, 'meetings.env'),
   '--env-file', join(ROOT, '.chief-local/meeting-capture/capture.env'), '--env-file', join(local, 'meeting-images.env'),
-  '--file', join(integration, 'compose.json'), '--file', join(integration, 'meetings.compose.json'), ...args];
+  '--file', join(integration, 'compose.json'), '--file', join(integration, 'meetings.compose.json'), ...accountOverlayArgs(ROOT), ...args];
 const snapshot = () => {
   const ids = run(['ps', '-a', '--filter', `label=com.docker.compose.project=${PROJECT}`, '--format', '{{.ID}}']).split(/\r?\n/).filter(Boolean);
   if (ids.length !== 17) throw Error('Expected exactly 17 existing Chief services.');

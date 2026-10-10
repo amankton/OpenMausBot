@@ -1,8 +1,8 @@
 {
   "passed": true,
   "mode": "deployed",
-  "verifiedAt": "2026-10-09T22:18:07.861Z",
-  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "verifiedAt": "2026-10-10T19:41:49.269Z",
+  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
   "patchSha256": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
   "syntheticOnly": true,
   "fakeDevicesOnly": true,
@@ -13,8 +13,8 @@
   ],
   "servedBuiltAssets": 0,
   "recording": {
-    "name": "Chief embedded playback 1791584285577.webm",
-    "duration": 2.916,
+    "name": "Chief embedded playback 1791661306957.webm",
+    "duration": 2.948,
     "width": 640,
     "height": 360,
     "decodedFrames": 14

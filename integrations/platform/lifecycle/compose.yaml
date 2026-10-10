@@ -1,0 +1,45 @@
+# Opt-in service overlay. No published port, database creation, migration, or
+# grant provisioning occurs when this file is merely present in the repository.
+services:
+  chief-lifecycle:
+    image: ${CHIEF_LIFECYCLE_IMAGE:?Set a verified immutable lifecycle image}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: node
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      CHIEF_LIFECYCLE_MODE: production
+      CHIEF_LIFECYCLE_HOST: 0.0.0.0
+      CHIEF_LIFECYCLE_PORT: '8097'
+      CHIEF_LIFECYCLE_ORIGIN: ${CHIEF_LIFECYCLE_ORIGIN:?Set the exact HTTPS workspace origin}
+      CHIEF_LIFECYCLE_ACCOUNTS_URL: ${CHIEF_LIFECYCLE_ACCOUNTS_URL:?Set the private Accounts endpoint}
+      CHIEF_LIFECYCLE_TRANSACTOR_URL: ${CHIEF_LIFECYCLE_TRANSACTOR_URL:?Set the private caller-scoped REST endpoint}
+      CHIEF_LIFECYCLE_DATABASE_URL_FILE: /run/secrets/database_url
+      CHIEF_LIFECYCLE_ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
+      CHIEF_LIFECYCLE_POLICY_FILE: /run/chief-policy/grants.json
+    secrets: [database_url, encryption_key]
+    volumes:
+      - type: bind
+        source: ${CHIEF_LIFECYCLE_POLICY_DIRECTORY:?Set the private policy directory}
+        target: /run/chief-policy
+        read_only: true
+    networks: [platform]
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get('http://127.0.0.1:8097/chief/v1/status',{headers:{Host:new URL(process.env.CHIEF_LIFECYCLE_ORIGIN).host},timeout:3000},r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1)).on('timeout',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    stop_grace_period: 20s
+secrets:
+  database_url:
+    file: ${CHIEF_LIFECYCLE_DATABASE_SECRET_FILE:?Set the private restricted-role database URL file}
+  encryption_key:
+    file: ${CHIEF_LIFECYCLE_KEY_SECRET_FILE:?Set the private 32-byte base64url key file}
+networks:
+  platform:
+    external: true
+    name: ${CHIEF_PLATFORM_NETWORK:?Set the existing reviewed Platform network}

@@ -10,7 +10,7 @@ const source = join(root, '.chief-local/platform-source');
 const directory = join(root, 'integrations/platform/patches');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const lf = bytes => bytes.toString('utf8').replace(/\r\n/g, '\n');
-export const frontendPatchNames = ['0001-explicit-media-consent.patch', '0002-member-meeting-admission.patch', '0003-room-interaction.patch', '0004-bounded-raw-recording.patch', '0005-consented-meeting-capture.patch', '0006-card-body-editor-actions.patch', '0007-visible-media-devices.patch', '0008-embedded-media-playback.patch', '0009-chief-branding-workspace-shell.patch', '0010-chief-login-wordmark.patch', '0011-chief-login-icon-title.patch'];
+export const frontendPatchNames = ['0001-explicit-media-consent.patch', '0002-member-meeting-admission.patch', '0003-room-interaction.patch', '0004-bounded-raw-recording.patch', '0005-consented-meeting-capture.patch', '0006-card-body-editor-actions.patch', '0007-visible-media-devices.patch', '0008-embedded-media-playback.patch', '0009-chief-branding-workspace-shell.patch', '0010-chief-login-wordmark.patch', '0011-chief-login-icon-title.patch', '0012-chief-member-pairing.patch'];
 
 export async function verifyFrontendPatchStack() {
   const raw = JSON.parse(await readFile(join(directory, 'raw-recording-provenance.json'), 'utf8'));
@@ -21,13 +21,15 @@ export async function verifyFrontendPatchStack() {
   const branding = JSON.parse(await readFile(join(directory, 'chief-branding-provenance.json'), 'utf8'));
   const logo = JSON.parse(await readFile(join(directory, 'chief-login-logo-provenance.json'), 'utf8'));
   const icon = JSON.parse(await readFile(join(directory, 'chief-login-icon-provenance.json'), 'utf8'));
+  const pairing = JSON.parse(await readFile(join(directory, 'chief-member-pairing-provenance.json'), 'utf8'));
   const revision = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   if (revision !== '03b7aad7dc562f4f9769c51a4df08191a0393997' || raw.sourceRevision !== revision) throw Error('Unexpected pinned source revision.');
   const patches = [], paths = new Set(), patchHashes = {};
   for (const name of frontendPatchNames) {
     const bytes = await readFile(join(directory, name));
-    const expected = name.startsWith('0011-') ? icon.patchSha256 : name.startsWith('0010-') ? logo.patchSha256 : name.startsWith('0009-') ? branding.patchSha256 : name.startsWith('0008-') ? playback.patchSha256 : name.startsWith('0007-') ? devices.patchSha256 : name.startsWith('0006-') ? card.patchSha256 : name.startsWith('0005-') ? capture.patchSha256 : name.startsWith('0004-') ? raw.patchSha256 : raw.previousPatches[name];
+    const expected = name.startsWith('0012-') ? pairing.patchSha256 : name.startsWith('0011-') ? icon.patchSha256 : name.startsWith('0010-') ? logo.patchSha256 : name.startsWith('0009-') ? branding.patchSha256 : name.startsWith('0008-') ? playback.patchSha256 : name.startsWith('0007-') ? devices.patchSha256 : name.startsWith('0006-') ? card.patchSha256 : name.startsWith('0005-') ? capture.patchSha256 : name.startsWith('0004-') ? raw.patchSha256 : raw.previousPatches[name];
     if (!expected || sha(bytes) !== expected) throw Error(`Patch differs from the frozen stack baseline: ${name}`);
+    if(name < '0012-' && pairing.previousPatches[name]!==expected)throw Error(`Pairing patch does not preserve the accepted stack: ${name}`);
     if(name < '0011-' && icon.previousPatches[name]!==expected)throw Error(`Login icon patch does not preserve the accepted stack: ${name}`);
     if(name < '0010-' && logo.previousPatches[name]!==expected)throw Error(`Login logo patch does not preserve the accepted stack: ${name}`);
     if(name < '0009-' && branding.previousPatches[name]!==expected)throw Error(`Branding patch does not preserve the accepted stack: ${name}`);
@@ -122,6 +124,7 @@ export async function verifyFrontendPatchStack() {
   for(const input of branding.inputs.filter(input=>!logo.inputs.some(next=>next.file===input.file)))if(sha(await readFile(join(source,input.file)))!==input.sha256)throw Error(`Branding source differs from provenance: ${input.file}`);
   for(const input of logo.inputs.filter(input=>!icon.inputs.some(next=>next.file===input.file)))if(sha(await readFile(join(source,input.file)))!==input.sha256)throw Error(`Login logo source differs from provenance: ${input.file}`);
   for(const input of icon.inputs)if(sha(await readFile(join(source,input.file)))!==input.sha256)throw Error(`Login icon source differs from provenance: ${input.file}`);
+  for(const input of pairing.inputs)if(sha(await readFile(join(source,input.file)))!==input.sha256)throw Error(`Pairing source differs from provenance: ${input.file}`);
   if(sha(await readFile(join(source,'dev/prod/public/chief/icon-ink.svg')))!==icon.assetSha256)throw Error('Owner-supplied icon differs from its original bytes');
   return { sourceRevision: revision, patchOrder: frontendPatchNames, patchHashes, filesVerified: paths.size, baselineImage: raw.baselineFrontendImage, newlineNormalization: 'LF/CRLF only', reconstructedFromPinnedUpstream: true };
 }

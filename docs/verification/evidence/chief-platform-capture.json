@@ -1,11 +1,11 @@
 {
   "passed": true,
   "mode": "compiled",
-  "verifiedAt": "2026-10-09T22:02:28.471Z",
+  "verifiedAt": "2026-10-10T19:34:26.193Z",
   "syntheticOnly": true,
   "fakeInputsOnly": true,
   "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
-  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
   "capturePatchSha256": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
   "loveImage": "sha256:9507248f82c2402c40fe679f622c7c1533774c9f7e0d99384f0551edef14aaa9",
   "workerInputs": {
@@ -22,5 +22,5 @@
     "Reviewed JSON export requires selection and confirmation; transcript remains excluded by default; Card stays open"
   ],
   "localAsr": "tiny.en CPU int8",
-  "exportedFixtureSha256": "3204c3a22fb6ca146660040d1ef8c7952fd40a1c738ca24ac9c689c7844ee6d7"
+  "exportedFixtureSha256": "dfebc33bf8618d53ab2ddbecb03f8d2667e862b174ef61efac4d59234e14d67b"
 }

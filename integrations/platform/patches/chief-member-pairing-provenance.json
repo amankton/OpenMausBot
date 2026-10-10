@@ -1,0 +1,57 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-10T19:23:45.925Z",
+  "patch": "0012-chief-member-pairing.patch",
+  "patchSha256": "fcc7c83d5e111cf3b86f43c6a369852f4108526b157a0860b618673f77b87a10",
+  "previousPatches": {
+    "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
+    "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+    "0003-room-interaction.patch": "d4e6f267ae5139bfd52ec774334ad7395f6e72975556be974aebc08c7fe45f7d",
+    "0004-bounded-raw-recording.patch": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
+    "0005-consented-meeting-capture.patch": "6dc9a0ec1efe8554e353a7dc136735d3b8b731c29cfa39585beba59bf12b90b7",
+    "0006-card-body-editor-actions.patch": "b3bc75cadf9fdd1c5a7a0eaaa65a205db4c658c24cc2ec236f09bd29efda5fcd",
+    "0007-visible-media-devices.patch": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+    "0008-embedded-media-playback.patch": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+    "0009-chief-branding-workspace-shell.patch": "cc7b4817114f8c5ce15d425582015a265cbf6618dce63e1f0052a0e8c69e86d9",
+    "0010-chief-login-wordmark.patch": "3f3679145d0bc7436c9847faceb21832ccf6e994a9c4fad17d9671bdae45ca1d",
+    "0011-chief-login-icon-title.patch": "4293f53026bfabf7c72b82a7f2c2a62acd33f2f4462b920279623966d5788a92"
+  },
+  "inputs": [
+    {
+      "file": "packages/presentation/src/index.ts",
+      "beforeSha256": "a17aa15c30a9c45e75083f0eb012ea449af8fe02b473e684ff93831a39580700",
+      "sha256": "69a9e71a4777b7f02e5c79d294236ff2e6b58449029efa0107ba6cd3699432e0"
+    },
+    {
+      "file": "plugins/setting-resources/src/components/integrations/Integrations.svelte",
+      "beforeSha256": "4aad614a734a336ed97be4be4c69605c58b900094a20f9d6db0b1329379b8a0e",
+      "sha256": "7f7e67f1c2cef36855f00ca8009e98f8d484165ca02a9957ac6a85c91de5e797"
+    },
+    {
+      "file": "plugins/setting-resources/src/components/Settings.svelte",
+      "beforeSha256": "da095a6f40882a7ad6f41701eb2840500d12ffcff51580aa97d9c44fd33f66e2",
+      "sha256": "ec234e8afffbca1967b35fce5b0bdc1bbd6ea488e484dd613b2a491dfb59ee34"
+    },
+    {
+      "file": "plugins/workbench-resources/src/connect.ts",
+      "beforeSha256": "2f357e07a0076889889c890616758f42f2bccfd1c792f12201eb798e29f9dfef",
+      "sha256": "07b18fffb868df10416d4547650c13a6cf604289c26b0da8fc6135e186628504"
+    },
+    {
+      "file": "plugins/workbench-resources/src/utils.ts",
+      "beforeSha256": "dce525ce6e2583e596171cf67b959d07c6a9e0627e575cc533e1ee1ea2b0ad6c",
+      "sha256": "bb5a77a64a20487d236278e89bdf109843fb41e8d96b70c1fa76179e5a51a428"
+    },
+    {
+      "file": "packages/presentation/src/chief-session.ts",
+      "beforeSha256": null,
+      "sha256": "348f905d9aaaa23f80699c3d953fb2e8a13a3984c4227b3989421d266f6095f0"
+    },
+    {
+      "file": "plugins/setting-resources/src/components/integrations/ChiefPairing.svelte",
+      "beforeSha256": null,
+      "sha256": "52d2eb7060ab59684c9cc2961f55007ade367f21c78485b96c6c44f21e12fc3b"
+    }
+  ],
+  "scope": "CON-01 browser approval and logout/account-switch hooks; service remains disabled until configured; no dispatch"
+}

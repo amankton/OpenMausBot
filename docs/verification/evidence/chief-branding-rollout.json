@@ -1,23 +1,23 @@
 {
-  "previousImage": "sha256:2939c8ddef20e8557e2bf6d9ddc9c66838014e0b3c4c719ff1e7d05a9a5e66b5",
-  "nextImage": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+  "previousImage": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+  "nextImage": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
   "services": 17,
   "changedServices": [
     "front"
   ],
   "applied": true,
   "passed": true,
-  "checkedAt": "2026-10-09T22:03:26.686Z",
-  "backup": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\branding-rollout-1791583403799",
-  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "checkedAt": "2026-10-10T19:36:32.592Z",
+  "backup": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\branding-rollout-1791660988410",
+  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
   "originalMountsPreserved": true,
   "nonFrontendContainersPreserved": true,
   "before": [
     {
-      "id": "971ff674da3e7333728aa31fe683f095651cb300623fec9f98e14c3520c8701e",
+      "id": "613459b46f7602f4da07aefa47c3c04571dcf7b73090a412b3c9ce3e07221933",
       "name": "/chief-platform-front-1",
       "service": "front",
-      "image": "sha256:2939c8ddef20e8557e2bf6d9ddc9c66838014e0b3c4c719ff1e7d05a9a5e66b5",
+      "image": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
       "running": true,
       "health": null,
       "mounts": []
@@ -232,10 +232,10 @@
   ],
   "after": [
     {
-      "id": "613459b46f7602f4da07aefa47c3c04571dcf7b73090a412b3c9ce3e07221933",
+      "id": "e5121b27df4417f1437d03a2a8f5a003c2da7b0d99d748e9ee041939cbc49609",
       "name": "/chief-platform-front-1",
       "service": "front",
-      "image": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+      "image": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
       "running": true,
       "health": null,
       "mounts": []

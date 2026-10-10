@@ -6,6 +6,7 @@ import { createServer } from 'node:net';
 import { mkdir, readFile, writeFile, lstat, realpath } from 'node:fs/promises';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { accountOverlayArgs } from './chief-account-overlay.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const PROJECT = 'chief-platform';
@@ -31,7 +32,7 @@ export function dockerEnvironment(environment = process.env) {
   return Object.fromEntries(Object.entries(environment).filter(([key]) => !/^(COMPOSE_|CHIEF_PLATFORM_|CHIEF_CAPTURE_)/i.test(key)));
 }
 function docker(args, options = {}) { return run('docker', args, { env: dockerEnvironment(), ...options }); }
-function composeArgs(...args) { return ['compose', '--project-name', PROJECT, '--project-directory', dirname(COMPOSE), '--env-file', ENV_FILE, '--file', COMPOSE, ...args]; }
+function composeArgs(...args) { return ['compose', '--project-name', PROJECT, '--project-directory', dirname(COMPOSE), '--env-file', ENV_FILE, '--file', COMPOSE, ...accountOverlayArgs(ROOT), ...args]; }
 function samePath(a, b) { return resolve(a).toLowerCase() === resolve(b).toLowerCase(); }
 
 export function validateBoundaries(config, lock, meetingImages) {

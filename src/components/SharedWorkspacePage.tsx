@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, RefreshCw, Users } from "lucide-react";
 import { api } from "@/state/store";
+import { ChiefPairingPanel } from "./ChiefPairingPanel";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { WORKSPACE_HELLO, WORKSPACE_READY, WORKSPACE_SLOT, workspaceSlot, type WorkspaceSlot } from "@/lib/workspace-shell";
 
@@ -47,6 +48,7 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const [open, setOpen] = useState(false);
+  const [pairingOpen, setPairingOpen] = useState(false);
   const [slot, setSlot] = useState<WorkspaceSlot | null>(null);
   usePopoverDismiss(open, menu, () => { setOpen(false); trigger.current?.focus(); });
   const url = status?.enabled === true && status.available === true ? sharedWorkspaceUrl(status.url, origin) : null;
@@ -86,9 +88,11 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
           onClick={() => setOpen(value => !value)} className="flex h-full min-h-8 w-full items-center gap-2 rounded-md bg-panel px-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent">
           <img src="/brand/chief-avatar-ink.svg" alt="" className="size-6" />Chief<ChevronDown size={13} aria-hidden="true" />
         </button>
-        <nav id={menuId} aria-label="Workspace actions" hidden={!open} className="absolute left-0 top-full mt-1 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-hairline bg-panel p-2 shadow-lg">
+        <nav id={menuId} aria-label="Workspace actions" hidden={!open} className="absolute left-0 top-full mt-1 max-h-[calc(100dvh-4rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-hairline bg-panel p-2 shadow-lg">
           <div className="px-3 py-2"><p className="text-sm font-semibold">Chief Executive Suite</p><p className="text-xs text-ink-secondary">Shared workspace</p></div>
           <a className={menuLinkClass} href="/" onClick={() => setOpen(false)}>Open personal workspace<ArrowUpRight size={14} /></a>
+          <button type="button" className={menuLinkClass} aria-expanded={pairingOpen} onClick={() => setPairingOpen(value => !value)}>Connect personal Chief<ChevronDown size={14} /></button>
+          {pairingOpen && <ChiefPairingPanel />}
           {url && <a className={menuLinkClass} href={url} rel="noreferrer" onClick={() => setOpen(false)}>Open shared workspace directly<ArrowUpRight size={14} /></a>}
           <button className={`${linkClass} w-full justify-start border-0`} type="button" disabled={loading} onClick={onRetry}><RefreshCw size={14} />{loading ? "Checking connection…" : "Retry connection"}</button>
           <p className="mt-2 border-t border-hairline/50 px-3 py-3 text-xs leading-relaxed text-ink-secondary">Your shared workspace has its own sign-in. Camera and microphone stay off until you turn them on. Screen sharing requires your action and browser permission.</p>

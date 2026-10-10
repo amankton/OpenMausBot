@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "completedAt": "2026-10-10T19:31:29.953Z",
+  "scope": "CON-01 legacy-Accounts regression; excludes required production membership epochs, deployment and full M1",
+  "membershipEpochAcceptance": false,
+  "database": "disposable CockroachDB with restricted service role",
+  "livePlatformIdentityChecks": true,
+  "membershipRemoval": "real synthetic Accounts member removed and restored",
+  "entitlements": "explicit doubles",
+  "providerExecution": false,
+  "browserUi": false,
+  "checks": [
+    "Accounts validates two distinct synthetic members and a separate workspace; caller-scoped Contacts resolves their active people",
+    "Concurrent challenge completion consumes once; two-sided confirmation, member/workspace isolation, scope, key, time, generation and nonce checks pass",
+    "Explicit entitlement double denies runtime access while access is removed",
+    "Fresh service/database client restores pairing from SQL; persisted records contain no plaintext credentials or capabilities",
+    "Expired challenges and logged-out session generations cannot authorize pairing or runtime requests",
+    "Real HTTP boundary enforces exact Origin, member/cookie binding, strict request shape and credential-free responses",
+    "HTTP account switching revokes the prior member runtime and session atomically; logout remains available after entitlement loss",
+    "Observed membership loss permanently revokes the trusted session; restoring membership cannot resurrect an old connection",
+    "Personal Chief runtime signs real HTTP pairing, requires workspace confirmation, persists across restart and loses access on workspace revocation",
+    "Real Accounts membership removal denies the signed runtime; exact synthetic membership is restored and the old connection stays revoked"
+  ]
+}

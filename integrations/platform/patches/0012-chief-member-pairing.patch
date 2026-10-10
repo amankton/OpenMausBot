@@ -1,0 +1,325 @@
+diff --git a/packages/presentation/src/index.ts b/packages/presentation/src/index.ts
+index 3057533..ec0c3fe 100644
+--- a/packages/presentation/src/index.ts
++++ b/packages/presentation/src/index.ts
+@@ -80,3 +80,4 @@ export * from './drawingCommandsProcessor'
+ export * from './link-preview'
+ export * from './communication'
+ export * from './workspaceIdentity'
++export * from './chief-session'
+diff --git a/plugins/setting-resources/src/components/integrations/Integrations.svelte b/plugins/setting-resources/src/components/integrations/Integrations.svelte
+index 57b5656..9f51cf9 100644
+--- a/plugins/setting-resources/src/components/integrations/Integrations.svelte
++++ b/plugins/setting-resources/src/components/integrations/Integrations.svelte
+@@ -33,6 +33,7 @@
+   import { onIntegrationEvent } from '@hcengineering/integration-client'
+ 
+   import IntegrationCard from './IntegrationCard.svelte'
++  import ChiefPairing from './ChiefPairing.svelte'
+   import IntegrationErrorNotification from './IntegrationErrorNotification.svelte'
+   import { getAccountClient } from '../../utils'
+   import { Analytics } from '@hcengineering/analytics'
+@@ -262,6 +263,8 @@
+       />
+     </svelte:fragment>
+   </Header>
++  <div class="chief-integrations-body">
++  <ChiefPairing />
+   {#if isLoading}
+     <div class="loading-container">
+       <Loading />
+@@ -282,9 +285,15 @@
+       {/if}
+     </div>
+   {/if}
++  </div>
+ </div>
+ 
+ <style lang="scss">
++  .chief-integrations-body {
++    flex: 1;
++    min-height: 0;
++    overflow: auto;
++  }
+   .cards_grid {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+diff --git a/plugins/setting-resources/src/components/Settings.svelte b/plugins/setting-resources/src/components/Settings.svelte
+index a58f02c..72f927a 100644
+--- a/plugins/setting-resources/src/components/Settings.svelte
++++ b/plugins/setting-resources/src/components/Settings.svelte
+@@ -102,8 +102,13 @@
+     }
+     navigate(loc)
+   }
+-  function signOut (): void {
+-    void logOut()
++  async function signOut (): Promise<void> {
++    try {
++      await logOut()
++    } catch {
++      // logOut displays the retry message; retain this workspace on failure.
++      return
++    }
+     navigate({ path: [loginId] })
+     Analytics.handleEvent(SettingsEvents.SignOut)
+     Analytics.logout()
+diff --git a/plugins/workbench-resources/src/connect.ts b/plugins/workbench-resources/src/connect.ts
+index b8e6055..98b48ab 100644
+--- a/plugins/workbench-resources/src/connect.ts
++++ b/plugins/workbench-resources/src/connect.ts
+@@ -45,6 +45,7 @@ import presentation, {
+   setClient,
+   setCommunicationClient,
+   setPresentationCookie,
++  reconcileChiefSession,
+   uiContext,
+   upgradeDownloadProgress
+ } from '@hcengineering/presentation'
+@@ -136,6 +137,13 @@ export async function connect (title: string): Promise<Client | undefined> {
+ 
+   const token = workspaceLoginInfo.token
+ 
++  try {
++    await reconcileChiefSession(token)
++  } catch {
++    error.set('Chief could not disconnect the previous member connection. Retry when the connection service returns.')
++    return
++  }
++
+   setMetadata(presentation.metadata.Token, workspaceLoginInfo.token)
+   setMetadata(presentation.metadata.WorkspaceUuid, workspaceLoginInfo.workspace)
+   setMetadata(presentation.metadata.WorkspaceName, workspaceLoginInfo.name ?? workspaceLoginInfo.workspaceUrl)
+diff --git a/plugins/workbench-resources/src/utils.ts b/plugins/workbench-resources/src/utils.ts
+index d5c7b23..5e0c480 100644
+--- a/plugins/workbench-resources/src/utils.ts
++++ b/plugins/workbench-resources/src/utils.ts
+@@ -28,12 +28,13 @@ import type {
+ } from '@hcengineering/core'
+ import core, { getCurrentAccount, hasAccountRole } from '@hcengineering/core'
+ import login from '@hcengineering/login'
+-import { getMetadata, getResource, setMetadata } from '@hcengineering/platform'
++import { getMetadata, getResource, setMetadata, setPlatformStatus, unknownStatus } from '@hcengineering/platform'
+ import presentation, {
+   clearWorkspaceFaviconCache,
+   closeClient,
+   getClient,
+-  setPresentationCookie
++  setPresentationCookie,
++  revokeChiefSession
+ } from '@hcengineering/presentation'
+ import {
+   closePanel,
+@@ -270,6 +271,12 @@ export async function reportWorkspaceRead (): Promise<void> {
+ }
+ 
+ export async function logOut (): Promise<void> {
++  try {
++    await revokeChiefSession()
++  } catch {
++    await setPlatformStatus(unknownStatus('Chief could not disconnect your agents. Please retry sign out when the connection service returns.'))
++    throw new Error('Chief connection revocation is pending')
++  }
+   clearWorkspaceFaviconCache()
+   const accountsUrl = getMetadata(login.metadata.AccountsUrl)
+   try {
+diff --git a/packages/presentation/src/chief-session.ts b/packages/presentation/src/chief-session.ts
+new file mode 100644
+--- /dev/null
++++ b/packages/presentation/src/chief-session.ts
+@@ -0,0 +1,49 @@
++// Copyright © 2026 Chief contributors.
++// Licensed under the Eclipse Public License, Version 2.0.
++// https://www.eclipse.org/legal/epl-2.0
++
++// This non-secret marker avoids changing ordinary workspace login behavior on
++// deployments where Chief pairing has never been used. Credentials stay in the
++// lifecycle service's HttpOnly cookie and the workspace's existing token store.
++const marker = 'chief-pairing-established'
++
++export function rememberChiefSession (): void {
++  localStorage.setItem(marker, '1')
++}
++
++export async function withChiefSessionLock<T> (action: () => Promise<T>): Promise<T> {
++  if (navigator.locks == null) throw new Error('Chief connections require a browser that supports secure session coordination.')
++  return await navigator.locks.request('chief-member-session', { signal: AbortSignal.timeout(20000) }, action)
++}
++
++async function revokeUnlocked (): Promise<void> {
++  if (localStorage.getItem(marker) !== '1') return
++  const response = await fetch('/chief/v1/sessions/current', {
++    method: 'DELETE', credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(8000)
++  })
++  if (!response.ok) throw new Error('Chief could not disconnect your agents. Please retry sign out when the connection service returns.')
++  localStorage.removeItem(marker)
++}
++
++export async function revokeChiefSession (): Promise<void> {
++  // A queued invitation may not have written its marker yet. Join the same
++  // queue even when the marker is absent, then inspect it while holding the lock.
++  if (navigator.locks == null && localStorage.getItem(marker) !== '1') return
++  await withChiefSessionLock(revokeUnlocked)
++}
++
++export async function reconcileChiefSession (token: string): Promise<void> {
++  if (navigator.locks == null && localStorage.getItem(marker) !== '1') return
++  await withChiefSessionLock(async () => {
++    if (localStorage.getItem(marker) !== '1') return
++    const response = await fetch('/chief/v1/sessions/current', {
++      headers: { Authorization: 'Bearer ' + token }, credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(8000)
++    })
++    if (response.ok) return
++    if (response.status === 401 || response.status === 403) {
++      await revokeUnlocked()
++      return
++    }
++    throw new Error('Chief could not verify the previous member connection. Please retry when the connection service returns.')
++  })
++}
+diff --git a/plugins/setting-resources/src/components/integrations/ChiefPairing.svelte b/plugins/setting-resources/src/components/integrations/ChiefPairing.svelte
+new file mode 100644
+--- /dev/null
++++ b/plugins/setting-resources/src/components/integrations/ChiefPairing.svelte
+@@ -0,0 +1,141 @@
++<!--
++Copyright © 2026 Chief contributors.
++Licensed under the Eclipse Public License, Version 2.0.
++https://www.eclipse.org/legal/epl-2.0
++-->
++<script lang="ts">
++  import { onMount } from 'svelte'
++  import { getMetadata } from '@hcengineering/platform'
++  import presentation, { rememberChiefSession, withChiefSessionLock } from '@hcengineering/presentation'
++
++  interface Connection {
++    id: string
++    keyFingerprint: string
++    bots: string[]
++    scopes: string[]
++    state: 'pending' | 'active' | 'revoked'
++    expiresAt: string
++  }
++  let enabled = false
++  let loading = true
++  let busy = false
++  let invitation = ''
++  let error = ''
++  let message = ''
++  let connections: Connection[] = []
++  let confirmed: Record<string, boolean> = {}
++
++  async function request (path: string, method = 'GET', body?: object): Promise<Response> {
++    const token = getMetadata(presentation.metadata.Token)
++    if (token == null) throw new Error('Sign in to the workspace to manage your Chief connection.')
++    return await fetch('/chief/v1' + path, {
++      method, credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(8000),
++      headers: { Authorization: 'Bearer ' + token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
++      ...(body === undefined ? {} : { body: JSON.stringify(body) })
++    })
++  }
++  async function requireSuccess (response: Response): Promise<void> {
++    if (!response.ok) throw new Error(response.status === 401 || response.status === 403
++      ? 'This session or connection is no longer authorized. Refresh and create a new invitation.'
++      : 'The connection service could not finish this request. Please retry.')
++  }
++  async function refresh (): Promise<void> {
++    const response = await request('/connections')
++    if (response.status === 401 || response.status === 403) { connections = []; return }
++    await requireSuccess(response)
++    connections = (await response.json()).connections
++  }
++  async function perform (action: () => Promise<void>): Promise<void> {
++    if (busy) return
++    busy = true; error = ''; message = ''
++    try { await withChiefSessionLock(action) } catch (cause) {
++      error = cause instanceof Error ? cause.message : 'The connection could not be updated.'
++    } finally { busy = false }
++  }
++  async function invite (): Promise<void> {
++    invitation = ''
++    rememberChiefSession()
++    const current = await request('/sessions/current')
++    if (current.status === 401 || current.status === 403) {
++      // Clear an ended cookie before opening a new session; stale cookies cannot
++      // replace a session that another tab already revoked.
++      await requireSuccess(await request('/sessions/current', 'DELETE'))
++      await requireSuccess(await request('/sessions', 'POST', {}))
++    } else { await requireSuccess(current) }
++    const response = await request('/connections/challenges', 'POST', {})
++    await requireSuccess(response)
++    invitation = JSON.stringify(await response.json())
++    message = 'Invitation ready. It expires in five minutes and can be used once.'
++    await refresh()
++  }
++  async function approve (connection: Connection): Promise<void> {
++    if (!confirmed[connection.id]) return
++    await requireSuccess(await request('/connections/' + connection.id + '/confirm', 'POST', { keyFingerprint: connection.keyFingerprint }))
++    invitation = ''; confirmed = {}; await refresh()
++    message = 'Your Chief is connected. Starting an assignment is a separate step.'
++  }
++  async function revoke (connection: Connection): Promise<void> {
++    await requireSuccess(await request('/connections/' + connection.id, 'DELETE'))
++    await refresh(); message = 'Connection revoked. This Chief can no longer use it.'
++  }
++  onMount(() => {
++    void perform(async () => {
++      const response = await fetch('/chief/v1/status', { credentials: 'same-origin', redirect: 'error', signal: AbortSignal.timeout(8000) })
++      enabled = response.ok && response.headers.get('content-type')?.includes('application/json') === true && (await response.json()).enabled === true
++      if (enabled) await refresh()
++    }).finally(() => { loading = false })
++  })
++</script>
++
++<style>
++  .chief-pairing { margin: 1.5rem; padding: 1.25rem; border: 1px solid var(--theme-divider-color, #555); border-radius: .75rem; flex-shrink: 0; }
++  h2 { font-size: 1rem; margin-bottom: .5rem; }
++  p { line-height: 1.5; margin: .5rem 0; }
++  button { padding: .5rem .75rem; border: 1px solid currentColor; border-radius: .4rem; font: inherit; color: inherit; background: transparent; cursor: pointer; }
++  button:disabled { opacity: .5; cursor: default; }
++  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid #80bfff; outline-offset: 3px; }
++  .actions { display: flex; gap: .75rem; flex-wrap: wrap; margin: .75rem 0; }
++  textarea { display: block; width: 100%; min-height: 6rem; margin-top: .5rem; padding: .75rem; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: .4rem; font: inherit; }
++  article { border-top: 1px solid var(--theme-divider-color, #555); padding-top: 1rem; margin-top: 1rem; }
++  code { display: block; overflow-wrap: anywhere; user-select: all; }
++  label { display: block; margin: .75rem 0; }
++  .error { color: #ffb4ad; }
++</style>
++
++<section class="chief-pairing" aria-label="Personal Chief connection">
++  <h2>Connect your Chief</h2>
++  <p>Connect your personal agents to this workspace. Only you can approve and manage your connection.</p>
++  {#if loading}
++    <p role="status">Checking connection service…</p>
++  {:else if !enabled}
++    <p>Member pairing is not enabled on this workspace yet.</p>
++  {:else}
++    <p>Create an invitation, then paste it into Chief → Connect personal Chief. Select your agents there and return here to compare the verification code.</p>
++    <div class="actions">
++      <button disabled={busy} on:click={() => perform(invite)}>Create invitation</button>
++      <button disabled={busy} on:click={() => perform(refresh)}>Refresh connections</button>
++    </div>
++    {#if invitation}
++      <label>One-time workspace invitation<textarea aria-label="One-time workspace invitation" readonly value={invitation} spellcheck="false" /></label>
++      <p>Copy the complete invitation. Never paste your workspace password or sign-in token.</p>
++    {/if}
++    {#each connections as connection (connection.id)}
++      <article>
++        <p><strong>{new Date(connection.expiresAt).getTime() <= Date.now() ? 'Expired' : connection.state === 'pending' ? 'Awaiting your approval' : connection.state === 'active' ? 'Connected' : 'Revoked'}</strong></p>
++        <p>Agents: {connection.bots.join(', ')}</p>
++        <p>Allowed scopes: {connection.scopes.join(', ')}</p>
++        <p>Verification code <code>{connection.keyFingerprint}</code></p>
++        <p>Expires {new Date(connection.expiresAt).toLocaleString()}</p>
++        {#if connection.state === 'pending'}
++          <label><input type="checkbox" bind:checked={confirmed[connection.id]} disabled={busy} /> This code matches the code in my personal Chief, and these are the agents I selected.</label>
++          <button disabled={busy || !confirmed[connection.id]} on:click={() => perform(async () => await approve(connection))}>Approve connection</button>
++        {/if}
++        {#if connection.state !== 'revoked'}
++          <button disabled={busy} on:click={() => perform(async () => await revoke(connection))}>Revoke connection</button>
++        {/if}
++      </article>
++    {/each}
++  {/if}
++  {#if error}<p class="error" role="alert">{error}</p>{/if}
++  {#if message}<p role="status">{message}</p>{/if}
++</section>

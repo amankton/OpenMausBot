@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-10T18:13:53.882Z",
+  "scope": "CON-01 actual compiled components with fixture shell and synthetic login controls; not full native-workbench or production acceptance",
+  "browser": "Codex in-app browser via CUA",
+  "workspaceMembers": 2,
+  "pendingDenied": true,
+  "approvalRequiresComparison": true,
+  "matchingFingerprintVerified": true,
+  "approvedRuntimeVerified": true,
+  "refreshPreservesConnection": true,
+  "accountSwitchRevokesPrevious": true,
+  "otherMembersConnectionsHidden": true,
+  "explicitRevocationDeniesRuntime": true,
+  "logoutDeniesRuntime": true,
+  "personalRuntimeRestart": "Separate real HTTP integration runner",
+  "ownerWorkspaceMutated": false,
+  "deploymentModified": false,
+  "providerExecution": false,
+  "sourceHashes": {
+    "src/components/ChiefPairingPanel.tsx": "4499d58afe1848950245166d31b9c8eab5ae28f74188dbcd765b879e7e84bec8",
+    "server/chief-pairing.ts": "11ebe9c4a2a46fa91bb79f88c77d614d22cbe755164d29415763e4cb3a4812be",
+    "server/routes/chief-pairing.ts": "9f436d8bec405c457e551fe98664c81834c7c52d8f69a1435933934ba68d3a8b",
+    ".chief-local/platform-source/plugins/setting-resources/src/components/integrations/ChiefPairing.svelte": "2510b2de9d21c77fa04309bb01f2844aedc6837f5825fd6e401f7832c10c6cd7",
+    ".chief-local/platform-source/packages/presentation/src/chief-session.ts": "b9bea86ec8e1aae64a90b0aa63646633bb9b413a617b829afc7eb11da0c5fe25"
+  },
+  "remaining": [
+    "Complete compiled native-workbench navigation and multi-tab transition tests",
+    "Production lifecycle service, proxy, secrets, migrations and CON-02 authority",
+    "Membership removal events between requests",
+    "Real specialist execution/recovery in RUN-01 through RUN-03"
+  ]
+}

@@ -615,6 +615,7 @@ import { ROUTES, dispatchRoutes } from "./routes/table.ts";
 import { createCrewframePhoneRoutes } from "./routes/crewframe-phone.ts";
 import { createOfficeRoutes } from "./routes/office.ts";
 import { createSharedWorkspaceRoutes } from "./routes/shared-workspace.ts";
+import { createChiefPairingRoutes } from "./routes/chief-pairing.ts";
 import { createHostedSlackRoutes } from "./routes/hosted-slack.ts";
 import { createBotPresetRoutes } from "./routes/bot-presets.ts";
 import { createBotMemoryRoutes } from "./routes/bot-memory.ts";
@@ -15383,6 +15384,8 @@ const cloudMoveRoutes = createCloudMoveRoutes({
 ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1"));
 const chiefOfficeRoutes = createOfficeRoutes(DATA_DIR, { enabled: process.env.CHIEF_OFFICE_ENABLED === "1" && !HOSTED_WORKSPACE && !CLOUD_HOME });
 const chiefSharedWorkspaceRoutes = createSharedWorkspaceRoutes({ localOnly: !HOSTED_WORKSPACE && !CLOUD_HOME });
+ROUTES.push(createChiefPairingRoutes({ directory: DATA_DIR, origin: process.env.CHIEF_LIFECYCLE_ORIGIN,
+  localOnly: !HOSTED_WORKSPACE && !CLOUD_HOME, bots: () => store.bots.map(bot => ({ id: bot.id, name: bot.name })) }));
 ROUTES.push(createHostedSlackRoutes({ bot: (id) => store.bot(id), hostedReady: () => Boolean(workspaceAccess) && entitled("admin") }));
 // Install statuses come from the organization library's own state, never
 // its file, so New bot cannot disagree with it. No organization: none.

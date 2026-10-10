@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-10T19:44:25.791Z",
+  "deployed": true,
+  "syntheticOnly": true,
+  "authorityStubs": false,
+  "membershipEpochRequired": true,
+  "accountImage": "sha256:ab29a21385208a501394eb0a91efebb467c593c39909751ec0c68d1f1abac692",
+  "lifecycleImage": "sha256:892862ae149d4cfa1013f3ec9ba2b4bc0be4b00cd5fc58486829baae2de0b7b2",
+  "frontImage": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
+  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
+  "checks": [
+    "Actual deployed Accounts epoch, active Employee lookup, nginx, lifecycle SQL and compiled UI complete two-sided synthetic pairing without authority stubs",
+    "Deployed pairing persists across full workbench reload and signed runtime authorization",
+    "Independent second member browser context does not expose the first member connection",
+    "Actual same-browser account switch revokes the old signed runtime and clears stale-tab connection state",
+    "Settings sign-out revokes the second member runtime and remains signed out after reload",
+    "Cross-site sandboxed workspace iframe stores the Secure partitioned Chief cookie, retains pairing on outer-page reload, and revokes the signed runtime on sign-out"
+  ],
+  "limitations": [
+    "Local loopback pilot; no cloud/TLS acceptance",
+    "Outage/retry UI verified separately on the same compiled build",
+    "No real specialist dispatch"
+  ]
+}

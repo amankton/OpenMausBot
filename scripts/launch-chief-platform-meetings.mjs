@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 import { ROOT, PROJECT, URL, SOURCE, prepare, resourceResult, validateBoundaries, dockerEnvironment } from './configure-chief-platform.mjs';
 import { meetingLiveKitConfig } from './configure-chief-platform-meetings.mjs';
 import { validateCaptureConfiguration } from './prepare-chief-meeting-capture.mjs';
+import { accountOverlayArgs } from './chief-account-overlay.mjs';
 
 const dir=join(ROOT,'integrations/platform'), local=join(ROOT,'.chief-local/platform');
 const compose=join(dir,'compose.json'), overlayPath=join(dir,'meetings.compose.json');
@@ -17,7 +18,7 @@ function run(command,args,extra={}) {
   catch {throw Error(`${command} failed; output suppressed to protect private configuration.`);}
 }
 const docker=(args,extra={})=>run('docker',args,{env:dockerEnvironment(),...extra});
-const composeArgs=(...args)=>['compose','--project-name',PROJECT,'--project-directory',dir,'--env-file',join(local,'platform.env'),'--env-file',join(local,'meetings.env'),'--env-file',join(ROOT,'.chief-local/meeting-capture/capture.env'),'--env-file',join(local,'meeting-images.env'),'--file',compose,'--file',overlayPath,...args];
+const composeArgs=(...args)=>['compose','--project-name',PROJECT,'--project-directory',dir,'--env-file',join(local,'platform.env'),'--env-file',join(local,'meetings.env'),'--env-file',join(ROOT,'.chief-local/meeting-capture/capture.env'),'--env-file',join(local,'meeting-images.env'),'--file',compose,'--file',overlayPath,...accountOverlayArgs(ROOT),...args];
 const samePath=(a,b)=>resolve(a).toLowerCase()===resolve(b).toLowerCase();
 
 export function validateMeetingModelReceipt(receipt, images, patchSha256) {

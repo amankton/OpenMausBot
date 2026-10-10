@@ -2,12 +2,12 @@
 
 Date: October 9, 2026
 Status: Structured implementation backlog. No feature completion implied.
-Stage 0 continuation: baseline/build-map gate completed October 9; see [completion evidence and remaining acceptance gaps](CHIEF_STAGE0_COMPLETION_2026-10-09.md) and [canonical records/member execution/storage contracts](../architecture/chief-stage0-contracts.md). M1 and later remain unimplemented as a unified lifecycle.
+Stage 0 continuation: baseline/build-map gate completed October 9; see [completion evidence and remaining acceptance gaps](CHIEF_STAGE0_COMPLETION_2026-10-09.md) and [canonical records/member execution/storage contracts](../architecture/chief-stage0-contracts.md). M1 CON-01 is deployed and verified on the local workspace as of October 10. Cloud/TLS deployment and real specialist dispatch remain pending. See [M1 progress](CHIEF_M1_PROGRESS.md).
 
 October 9 delivery update: consumer branding, full-frame workspace controls,
 same-tab workspace navigation, the exact white icon with its title, and embedded
 login persistence are deployed. These foundation improvements do not complete
-M1. Secure member pairing and real recoverable specialist dispatch remain next.
+M1. Local secure member pairing is complete; entitlement/product integration and real recoverable specialist dispatch remain next.
 See [login/session verification](../verification/chief-session-persistence.md)
 and [current branding verification](../verification/chief-login-icon-title.md).
 Source: C:/Users/amank/Desktop/Chief_Executive_Suite_Codex_Handoff.md and owner review in this conversation.
@@ -29,6 +29,42 @@ In unified mode, agent feedback, recommendations and authorized edits participat
 - The three program levels determine enabled capabilities through server-side entitlements. The Agency belongs to the $5K program. Do not invent the other two levels' feature allocations; leave the commercial matrix pending owner confirmation. Development fixtures may exercise all levels explicitly.
 - Agency use is opportunistic: use specialists when they help, but answer directly and continue permitted work when routing is unnecessary or unavailable. Explicitly Agency-only tasks may wait with an actionable explanation.
 - Installation does not bundle the owner's personal agents, credentials or shared memory into customer packages. Customer memory and email identities remain isolated.
+
+### Full agent roster and selective workspace participation
+
+Owner clarification, October 10: "I intend to add all of my Agency Agents and my
+decision agents into Chief. That's not to say they'll be active in the workspace."
+The game development division is the concrete example: when assigned real work,
+its agents must be able to interact with workspace projects, issues, cards and
+tasks. The current Huly game examples are context, not authorization to modify
+those records or a replacement for the existing demonstration scenario.
+
+Implementation direction for CON-02, UI-01, RUN-02 and PRJ-01:
+
+- Keep the personal Chief roster independent from workspace participation and
+  execution. Adding an agent must not automatically grant workspace access or
+  start work. The current pilot's fixed allowlist and pairing selection are not
+  the final roster management experience.
+- Add a manageable list of participating agents, with project/resource scope and
+  allowed actions. Preserve the runtime pairing when the roster grows; explicitly
+  approve changes to workspace grants without requiring a complete re-pairing.
+  Recheck membership, entitlements and grants on each operation.
+- Use authorized adapters for the existing canonical projects, issues, cards and
+  tasks: read context, comment, create/update permitted records, attach results and
+  change permitted workflow states. Confirm which cards are views of underlying
+  records before implementation; do not create a second independent task store.
+- Attribute each operation to the initiating member, executing agent and run.
+  Decision agents may review and recommend; catalog membership alone must not
+  confer final approval authority. Apply explicit review rules and version checks.
+- Acceptance must distinguish available, permitted and running agents: adding an
+  unselected agent preserves the connection without granting access; granting a
+  game specialist access to one synthetic project permits only approved actions
+  there; another project is denied; revocation blocks subsequent operations;
+  returned updates appear on the same records used by people. Follow M1 recovery
+  requirements so retries do not duplicate comments, tasks or other effects.
+
+This is a recorded requirement and proposed implementation direction, not a
+claim that workspace record operations or editable agent grants are deployed.
 
 ## Responsibilities and proposed ownership
 
@@ -118,6 +154,7 @@ Depends on M4 for the pilot. Additional module adapters may follow M1 independen
 3. **CYC-01 Next cycle:** results support proposed improvements that become a new confirmed decision/brief version.
 4. **MOD-01 Module adapters:** progressively cover Contacts, Cards/Documents, Tracker, Chat, Calendar/Planner and files through member-scoped APIs. Each adapter needs read/write permission and retry tests.
 5. **REL-01 Release readiness:** migration/backup recovery, resource measurements, installer upgrade checks, entitlements, customer isolation and distribution notices. Track workspace and standalone releases separately.
+6. **SCH-01 Schedule, Planner and routine awareness (owner request, October 9, 2026):** make the workspace schedule and Planner and the routines in Chief Executive aware of each other. Track this with the Calendar/Planner module adapter, after M1 member pairing and authorization are available. The requested outcome is mutual awareness; automatic rescheduling, bidirectional edits and routine execution remain design decisions, not implied authorization. Define linked records, visibility, time zones, recurrence and change propagation during design. Proposed acceptance: an authorized member can see relevant scheduled commitments and routine timing across both surfaces; changes are reflected without duplicate work, and private routines remain within that member's permitted scope. Status: recorded for design; not implemented.
 
 Gate: reproducible full demo with evidence; all handoff acceptance criteria mapped to tests. Public launch, commercial readiness and scale remain separate decisions backed by evidence.
 
@@ -148,6 +185,58 @@ Deliver incrementally:
 Before merging each increment, record changed behavior, tests, rollback/recovery approach and known gaps. Preserve inherited notices and unrelated work.
 
 ## Decisions and blockers
+
+### Mobile and Google Cloud — October 10 owner request
+
+Track MOB-01 (Chief-branded MausBot companion), MOB-02 (mobile workspace connector)
+and GCP-01 through GCP-03 (hosting design, isolated staging, controlled migration).
+The owner plans to host Crewframe on Google Cloud and requested a Chief hosting
+plan alongside it. See [Chief mobile and Google Cloud plan](CHIEF_MOBILE_GCP_PLAN.md)
+for source inspection, proposed service placement, mobile scope, cost assumptions,
+trade-offs and acceptance. No provisioning or migration has occurred. M1 remains
+the active implementation milestone.
+
+### Connected apps in workspace Integrations — October 10 owner request
+
+**INT-01 Unified connections:** bring Chief's Composio connected apps into the
+existing workspace Settings > Integrations surface. Depends on CON-01's verified
+member-to-personal-runtime binding; do not expose the desktop connector API to
+every workspace member or equate its runtime-level Composio user with a Platform
+member. Reuse existing connected-account, authorization and tool-grant adapters.
+
+Present one app entry with the member's account identities and separately accurate
+capabilities/status for **Chief agent access** and **Workspace sync**. The existing
+native Calendar/Gmail/GitHub/Telegram integration clients own their sync behavior;
+a Composio connection does not automatically satisfy their configuration or OAuth
+scopes. Group matching apps without merging different accounts or authorizations.
+Allow connect/reconnect/disconnect for the selected account and capability through
+its owning adapter, preserving existing per-agent tool grants and outbound approval
+controls. A disconnect must make its affected capability clear and must not silently
+disconnect the other adapter or another account. Provider secrets remain server-side.
+
+Owner-selected interaction (October 10): each connected service account has
+checkboxes for the surfaces allowed to use it: **Chief agents** and **Workspace**.
+Permit either or both. These are per-member, per-account access choices, not
+organization-wide sharing. Preserve existing per-agent grants within Chief access.
+Checking a surface requests its required adapter setup/authorization; show a pending
+or reconnect state until the backend confirms access. An OAuth cancellation or
+failure must not leave a false successful checkmark. Unchecking revokes that
+surface's access without removing the other surface's access or disconnecting the
+provider account globally. Keep global account disconnection a separate action.
+Unsupported surfaces are disabled with an explanation. Initially reflect verified
+existing access; do not preselect new permissions. Server-side access checks enforce
+each selection, including after reload and account switching. Add acceptance for
+all four checkbox combinations, failed authorization, independent revocation and
+cross-member isolation. This records the UI decision; no grants are changed now.
+
+Initial acceptance: two synthetic members see only their own paired accounts;
+native-sync and agent-access status are independently truthful; revoked pairing
+blocks Composio access; an offline personal runtime shows unavailable/last-checked
+state rather than presenting stale status as connected. OAuth callback/account
+binding, reconnect and selective disconnect require isolated adapter tests before
+rollout. No existing account migration or OAuth grant change is authorized merely
+by grouping the UI. Status: integration points inspected; implementation pending
+the browser/runtime portion of M1. This is not yet deployed.
 
 Resolve through audit where possible: existing durable storage/queue, canonical entity schemas, authentication adapters, actual Jev/runtime interfaces and media readiness.
 

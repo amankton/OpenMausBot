@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "capturedAt": "2026-10-10T18:49:23.522Z",
+  "checks": [
+    "Complete native Accounts migrations apply twice; single/batch joins receive distinct epochs; unread and unchanged-role updates preserve them",
+    "Lifecycle v1 upgrades to v2 and repeats safely; pre-epoch sessions are permanently revoked",
+    "Native Accounts removal/re-add entirely between authorization calls and a lifecycle restart permanently rejects the old signed runtime",
+    "Role downgrade/restore between checks invalidates the browser session and runtime; a fresh pairing is required",
+    "Authority outage/missing epoch fails closed without destroying a valid session; other members remain unchanged"
+  ],
+  "sourceHashes": {
+    "server/account/src/collections/postgres/postgres.ts": "4011fe26cff3affcee11fc67ef626367bce0142396bff5d6644260045a0d58a9",
+    "server/account/src/collections/postgres/migrations.ts": "f274ccbaf3ff4ee39176ebfdbbe20b1a23acac6d210fad1a4f6902563b34f557"
+  },
+  "migration": "chief_account_membership_epoch_v1",
+  "scope": "Actual native Accounts SQL/migrations plus strict lifecycle service in disposable CockroachDB; RPC authentication and active Employee are explicit fixtures, not full Accounts pod or live deployment acceptance"
+}

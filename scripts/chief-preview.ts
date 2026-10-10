@@ -18,6 +18,9 @@ if (media && !/^ws:\/\/127\.0\.0\.1:\d{1,5}$/.test(media.url)) throw new Error("
 const manifestPath = join(runtime, "preview.json");
 let fixture: Pick<VerificationServer, "info" | "child">;
 const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : null;
+const pairingOrigin = process.argv.includes("--with-chief-pairing") ? "http://localhost:18087" : previous?.pairingOrigin;
+if (pairingOrigin && pairingOrigin !== "http://localhost:18087") throw new Error("Local Chief pairing must use its existing loopback workspace");
+if (pairingOrigin && !previous) throw new Error("Enable pairing only after the local Chief preview has been created");
 // Explicitly reuse Hermes' installed dependency/login home without copying it.
 const hermesHomeIndex = process.argv.indexOf("--hermes-home");
 const hermesHome = hermesHomeIndex >= 0 ? process.argv[hermesHomeIndex + 1] : previous?.hermesHome;
@@ -37,6 +40,7 @@ if (previous && existsSync(join(previous.dataDir, "config.json"))) {
   const childEnv = verificationServerEnvironment(process.env, dataDir, port);
   childEnv.CHIEF_OFFICE_ENABLED = "1";
   childEnv.CHIEF_PLATFORM_MANIFEST = join(runtime, "platform", "manifest.json");
+  if (pairingOrigin) childEnv.CHIEF_LIFECYCLE_ORIGIN = pairingOrigin;
   if (hermesHome) childEnv.HERMES_HOME = hermesHome;
   if (media) Object.assign(childEnv, { CHIEF_LIVEKIT_URL: media.url, CHIEF_LIVEKIT_API_KEY: media.key, CHIEF_LIVEKIT_API_SECRET: media.secret });
   const logPath = join(runtime, `backend-${Date.now()}.log`);
@@ -62,7 +66,7 @@ const ui = await createServer({ root, server: { host: "127.0.0.1", port: 5299, s
 } });
 try { await ui.listen(); } catch (error) { await waitForExit(fixture.child, { signal: "SIGTERM" }); throw error; }
 const info = { ...fixture.info, previewUrl: "http://127.0.0.1:5299", officeUrl: "http://127.0.0.1:5299/office", launcherPid: process.pid, agentMode: "simulated starter; additional providers may be configured independently", preserveData: true, media: media ? "local LiveKit" : "not configured" };
-writeFileSync(manifestPath, JSON.stringify({ ...info, ...(hermesHome ? { hermesHome } : {}) }, null, 2));
+writeFileSync(manifestPath, JSON.stringify({ ...info, ...(pairingOrigin ? { pairingOrigin } : {}), ...(hermesHome ? { hermesHome } : {}) }, null, 2));
 console.log(JSON.stringify(info));
 let closing = false;
 async function close() { if (closing) return; closing = true; await ui.close(); await waitForExit(fixture.child, { signal: "SIGTERM" }); process.exit(0); }

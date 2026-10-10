@@ -1,0 +1,24 @@
+{
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "createdAt": "2026-10-10T18:54:48.995Z",
+  "patch": "chief-accounts-membership-epochs.patch",
+  "patchSha256": "2fa77619d12d9f468ecf4e234bf4de9bf38a7dc8da8f202edef15f02fc00bff8",
+  "inputs": [
+    {
+      "file": "server/account/src/collections/postgres/migrations.ts",
+      "beforeSha256": "89c35b0d9a477daaecb762ce4a501b9722ae25edda4fce88b76da9e7e3b6a248",
+      "sha256": "f274ccbaf3ff4ee39176ebfdbbe20b1a23acac6d210fad1a4f6902563b34f557"
+    },
+    {
+      "file": "server/account/src/collections/postgres/postgres.ts",
+      "beforeSha256": "7512a6e7ecf63e7305666e38f9d22a766f7c2684e4225b9223c51e76375e273e",
+      "sha256": "4011fe26cff3affcee11fc67ef626367bce0142396bff5d6644260045a0d58a9"
+    },
+    {
+      "file": "server/account/src/__tests__/postgres.test.ts",
+      "beforeSha256": "ca7b8082295c16d7313548fb5f9f355e4cefe68b84bd05305cb5c51b3c6d78f5",
+      "sha256": "1901f277f1ee5b4874c252b8081b523be30fede807fba6f7e8f5144e63ee5fab"
+    }
+  ],
+  "scope": "Additive Accounts SQL membership epochs, atomic role-change epoch replacement, public current-member response. Requires separate Accounts image and migration; no live deployment."
+}

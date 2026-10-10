@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-10-10T18:26:15.898Z",
+  "passed": true,
+  "candidateImage": "sha256:f6dedf270ed67464aacd56f96212e69120c64352e2c5e64b85e1c2f02c6c857d",
+  "proxyImage": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
+  "checks": [
+    "Dedicated migration role applies twice; runtime role cannot create tables or alter migration ledger",
+    "Actual non-root candidate container through nginx verifies real synthetic membership, pending/approval/runtime access, isolated member and partitioned cookie",
+    "Actual service container, personal runtime and disk-backed database restarts preserve authorized pairing",
+    "Server-owned file policy changes revoke access immediately; malformed policy fails closed and recovers without restart",
+    "Service outage fails closed; proxy returns unavailable and restart preserves the previous session for retry",
+    "Offline transactional key rotation and reverse rotation restore usable encrypted sessions without credential output",
+    "Concurrent stale-cookie session replacements yield one success and one conflict; prior runtime stays revoked",
+    "Disable/rollback operation revokes all persisted sessions; restart cannot restore revoked credentials"
+  ],
+  "scope": "Disposable container deployment using synthetic acceptance members; no full native browser UI, live rollout, production TLS or membership-event acceptance claim"
+}

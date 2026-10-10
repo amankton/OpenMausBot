@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-10-09T22:01:39.724Z",
+  "checkedAt": "2026-10-10T19:33:20.265Z",
   "passed": true,
   "mode": "compiled",
   "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
   "rawPatchSha256": "a85d4b2993c2e5906b8a94f2cd2ee42cfe7a0d341b9dae5bb49aef1b6968501d",
-  "buildReceiptSha256": "824fd03f45acfa35a89895f1eb8f9bcb47f5942f9b9f2fce17812809baebaef3",
+  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
   "syntheticOnly": true,
   "fakeInputsOnly": true,
   "deploymentModified": false,
@@ -36,12 +36,12 @@
     }
   ],
   "attachment": {
-    "name": "Chief synthetic mv1ifd6z.webm",
-    "bytes": 93455,
-    "sha256": "596679e20a05f4857e2939fc2aec55c7b0e7edbf259d04339bfca405b39db224",
+    "name": "Chief synthetic mv2skhmb.webm",
+    "bytes": 95103,
+    "sha256": "a3b12eef5f9a7d2ec5ad38400417cba31ec93be29619234eefb5e70486174ac1",
     "width": 640,
     "height": 360,
-    "duration": 2.916
+    "duration": 2.95
   },
   "auth": [
     {
