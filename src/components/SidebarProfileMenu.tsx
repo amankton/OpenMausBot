@@ -260,12 +260,14 @@ export function phoneMenuItems({
   connected,
   onConnect,
   onGetApp,
+  appAvailable = upstreamServicesAvailable,
 }: {
   destinations: PhoneDestination[];
   /** a phone is connected to this computer right now */
   connected: boolean;
   onConnect: (destination: PhoneDestination) => void;
   onGetApp: () => void;
+  appAvailable?: boolean;
 }): SidebarMenuItem[] {
   return [
     ...destinations.map((destination) => ({
@@ -280,12 +282,12 @@ export function phoneMenuItems({
         ) : undefined,
       onSelect: () => onConnect(destination),
     } satisfies SidebarMenuItem)),
-    {
+    ...(appAvailable ? [{
       key: "phone-app",
       label: t("sidebar.menu.getPhoneApp"),
       icon: <Download size={18} />,
       onSelect: onGetApp,
-    },
+    }] : []),
   ];
 }
 
@@ -384,7 +386,7 @@ export function SidebarProfileMenu() {
       />
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <PhoneAppDialog
-        open={phoneAppOpen}
+        open={upstreamServicesAvailable && phoneAppOpen}
         onClose={() => setPhoneAppOpen(false)}
         connect={destinations.map((destination) => ({
           key: destination.id,

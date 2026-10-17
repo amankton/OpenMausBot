@@ -195,6 +195,16 @@ describe("the phone entries", () => {
   const shown = (...args: Parameters<typeof items>) => items(...args).list.map((item) => [item.label, item.subtitle ?? null, ...(item.note ? [item.note] : [])]);
   const APP = ["Get the phone app", null];
 
+  it("keeps phone pairing without offering upstream downloads in a standalone release", () => {
+    const onConnect = vi.fn(), onGetApp = vi.fn();
+    const destinations = phoneDestinations(connectPhoneEntry("computer", null), null);
+    const list = phoneMenuItems({ destinations, connected: false, onConnect, onGetApp, appAvailable: false });
+    expect(list.map(item => item.key)).toEqual(["connect-phone"]);
+    list[0]!.onSelect();
+    expect(onConnect).toHaveBeenCalledWith(destinations[0]);
+    expect(onGetApp).not.toHaveBeenCalled();
+  });
+
   it("on this computer: Connect your phone, to this computer, then Get the phone app", () => {
     expect(shown("computer", null)).toEqual([["Connect your phone", "to this computer"], APP]);
   });
