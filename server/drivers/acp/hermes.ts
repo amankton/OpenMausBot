@@ -424,6 +424,10 @@ const support: AcpSupport = {
   },
   defaultCli: "hermes",
   nativeSource: "hermes.acp",
+  permissionTimeoutKindFromStderr: (line) => {
+    const match = /\b(Edit approval request|Permission request) timed out after \d+(?:\.\d+)?s$/.exec(line);
+    return match ? match[1] === "Edit approval request" ? "edit" : "execute" : null;
+  },
   loginNote: "Hermes CLI is not installed",
   install: {
     command: {
@@ -435,6 +439,10 @@ const support: AcpSupport = {
     signInCommand: "hermes setup",
   },
   spawnArgs: () => ["acp"],
+  // Hermes keeps already-connected MCP servers by name on live session/load.
+  // A new turn's capabilities must replace those clients, not reuse expired
+  // credentials. Cold-load the saved conversation when MCP inputs change.
+  restartOnMcpChange: true,
   transformEnv: (env) => {
     // A leftover OPENAI_API_KEY makes Hermes auto-resolve to OpenRouter and
     // send no Authorization header. ACP also reloads ~/.hermes/.env, so the

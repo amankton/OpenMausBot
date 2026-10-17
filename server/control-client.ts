@@ -13,6 +13,8 @@
 // The state is cached briefly so a computer_batch of two dozen actions
 // doesn't turn into two dozen loopback round trips.
 
+import { COMPUTER_ACCESS_TIMEOUT_MS } from "../shared/computer-control-timing.ts";
+
 export interface ControlState {
   /** The person is driving; actions must be refused, not queued. */
   held: boolean;
@@ -36,7 +38,13 @@ export interface ControlClient {
 }
 
 const DISENGAGED: ControlState = { held: false, helpOpen: false };
-const UNAVAILABLE: ControlState = { held: true, helpOpen: false };
+export const CONTROL_UNAVAILABLE_PLAIN =
+  "This computer connection could not verify current access. This call was NOT performed. " +
+  "Pause computer work and reconnect the computer tools before retrying.";
+
+function unavailable(detail: string): ControlState {
+  return { held: true, helpOpen: false, blockedReason: `${detail} ${CONTROL_UNAVAILABLE_PLAIN}` };
+}
 
 export function createControlClient(options?: {
   url?: string;
@@ -56,17 +64,29 @@ export function createControlClient(options?: {
 
   async function read(): Promise<ControlState> {
     try {
-      const res = await fetchImpl(url, { headers, signal: AbortSignal.timeout(2_000) });
-      if (!res.ok) return UNAVAILABLE;
-      const body: any = await res.json().catch(() => null);
-      if (typeof body?.held !== "boolean" || typeof body?.helpOpen !== "boolean") return UNAVAILABLE;
+      const res = await fetchImpl(url, { headers, signal: AbortSignal.timeout(COMPUTER_ACCESS_TIMEOUT_MS) });
+      if (res.status === 401 || res.status === 403) {
+        return unavailable(`The computer access service refused authorization (HTTP ${res.status}).`);
+      }
+      if (!res.ok) return unavailable(`The computer access service returned HTTP ${res.status}.`);
+      let body: any;
+      try { body = await res.json(); }
+      catch (error) {
+        if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) throw error;
+        return unavailable("The computer access service returned an invalid state response.");
+      }
+      if (typeof body?.held !== "boolean" || typeof body?.helpOpen !== "boolean") {
+        return unavailable("The computer access service returned an invalid state response.");
+      }
       return {
         held: body.held,
         helpOpen: body.helpOpen,
         ...(typeof body.blockedReason === "string" && body.blockedReason.trim() ? { blockedReason: body.blockedReason } : {}),
       };
-    } catch {
-      return UNAVAILABLE;
+    } catch (error) {
+      return unavailable(error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")
+        ? "The computer access check timed out."
+        : "This computer connection could not reach its access service.");
     }
   }
 

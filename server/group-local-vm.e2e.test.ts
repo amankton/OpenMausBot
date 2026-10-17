@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { writeFileAtomic } from "./atomic.ts";
 import { cloudHomePrompt } from "./system-prompt.ts";
+import { createControlClient } from "./control-client.ts";
 import { freePortBlock } from "./testing/ports.ts";
 import { removeTempDir, waitForExit } from "./testing/cleanup.ts";
 
@@ -172,6 +173,90 @@ const send = (id: string) => api("POST", `/api/groups/${id}/messages`, { text: "
 const stop = (id: string) => api("POST", `/api/groups/${id}/interrupt`, {});
 
 describe("Local VM stop and resume", () => {
+  it("distinguishes slow desktop preparation from another thread holding the VM", async () => {
+    vmState(); rmSync(dumpFile, { force: true }); rmSync(finishFile, { force: true });
+    await api("PATCH", "/api/config", { localVm: { mode: "shared", idleTimeoutMinutes: 120 } });
+    await api("GET", "/api/local-computer");
+    const { bot } = await api("POST", "/api/bots", { name: "Preparing access fixture" });
+    try {
+      await api("POST", `/api/bots/${bot.id}/messages`, { text: "Inspect the desktop once." });
+      const mounted = computer(await dump());
+      vmState({ blocked: true });
+      const client = createControlClient({ url: mounted.env.OMB_CONTROL_URL, token: mounted.env.OMB_CONTROL_TOKEN });
+      const state = await client.state(true);
+      expect(state.held).toBe(true);
+      expect(state.blockedReason).toMatch(/still being prepared/);
+      expect(state.blockedReason).not.toMatch(/another thread|credentials/i);
+      vmState();
+      await until(() => client.state(true), next => !next.held);
+    } finally {
+      vmState(); writeFileSync(finishFile, "finish");
+      await api("POST", `/api/bots/${bot.id}/interrupt`, {}); await idle(bot.id);
+      await api("DELETE", `/api/bots/${bot.id}`);
+    }
+  }, 30_000);
+
+  it("waits for a slow first access claim through the real control route", async () => {
+    vmState(); rmSync(dumpFile, { force: true }); rmSync(finishFile, { force: true });
+    await api("PATCH", "/api/config", { localVm: { mode: "shared", idleTimeoutMinutes: 120 } });
+    // Observe the desktop before the Auto turn so it takes the lazy claim path.
+    await api("GET", "/api/local-computer");
+    const { bot } = await api("POST", "/api/bots", { name: "Slow access fixture" });
+    try {
+      await api("POST", `/api/bots/${bot.id}/messages`, { text: "Inspect the desktop once." });
+      const mounted = computer(await dump());
+      expect(mounted).toBeDefined();
+      vmState({ blocked: true });
+      const release = setTimeout(() => vmState(), 2_300);
+      try {
+        const client = createControlClient({ url: mounted.env.OMB_CONTROL_URL, token: mounted.env.OMB_CONTROL_TOKEN });
+        const at = Date.now();
+        expect(await client.state(true)).toMatchObject({ held: false, helpOpen: false });
+        expect(Date.now() - at).toBeGreaterThanOrEqual(2_200);
+      } finally { clearTimeout(release); vmState(); }
+    } finally {
+      writeFileSync(finishFile, "finish");
+      await api("POST", `/api/bots/${bot.id}/interrupt`, {}); await idle(bot.id);
+      await api("DELETE", `/api/bots/${bot.id}`);
+    }
+  }, 30_000);
+
+  it("reconnects the selected VM with fresh capabilities and continues the original message once", async () => {
+    vmState(); rmSync(dumpFile, { force: true }); rmSync(finishFile, { force: true });
+    const reconnectCli = join(fixtureHome, "reconnect-cli.mjs");
+    writeFileSync(reconnectCli, `#!/usr/bin/env node\nimport { rmSync } from 'node:fs';\nrmSync(${JSON.stringify(finishFile)}, { force: true });\nawait import(${JSON.stringify(pathToFileURL(join(ROOT, "server/testing/fake-claude-cli.ts")).href)});\n`, { mode: 0o700 });
+    await api("PATCH", "/api/instances/claude", { cli: reconnectCli });
+    const { bot } = await api("POST", "/api/bots", { name: "Reconnect fixture", computer: "vm" });
+    try {
+      await api("POST", `/api/bots/${bot.id}/messages`, { text: "Inspect the existing result and finish the report." });
+      const before: any = await dump();
+      const token = before.mcpConfig.mcpServers.agents.env.OMB_COMMS_TOKEN;
+      const select = async (reconnect: unknown) => fetch(base + "/api/internal/computer/select", {
+        method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ surface: "vm", reconnect }),
+      });
+      expect((await select("true")).status).toBe(400);
+      expect(await (await select(false)).json()).toMatchObject({ status: "ready" });
+      expect(await (await select(true)).json()).toMatchObject({ status: "pending", surface: "vm" });
+      rmSync(dumpFile, { force: true }); writeFileSync(finishFile, "finish");
+      const next: any = await dump();
+      expect(computer(next).env.OMB_CONTROL_TOKEN).not.toBe(computer(before).env.OMB_CONTROL_TOKEN);
+      expect((await gate(computer(before))).status).toBe(401);
+      expect((await gate(computer(next))).status).toBe(200);
+      expect(JSON.stringify(next.prompt)).toContain("perform only unfinished actions");
+      expect(JSON.stringify(next.prompt)).toContain("Inspect the existing result and finish the report.");
+      writeFileSync(finishFile, "finish");
+      await idle(bot.id);
+      const saved = (await api("GET", "/api/bots")).bots.find((b: any) => b.id === bot.id);
+      expect(saved.messages.filter((m: any) => m.role === "user" && m.kind === "text")).toHaveLength(1);
+    } finally {
+      writeFileSync(finishFile, "finish");
+      await api("POST", `/api/bots/${bot.id}/interrupt`, {}); await idle(bot.id);
+      await api("DELETE", `/api/bots/${bot.id}`);
+      await api("PATCH", "/api/instances/claude", { cli: join(ROOT, "server/testing/fake-claude-cli.ts") });
+    }
+  }, 30_000);
+
   it("stops an idle shared VM without deleting it, remembers why across restart, and starts it again", async () => {
     vmState({ containers: ["shared"], idleMs: 300 });
     await api("PATCH", "/api/config", { localVm: { mode: "shared", idleTimeoutMinutes: 5 } });

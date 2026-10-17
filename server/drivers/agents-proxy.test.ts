@@ -694,6 +694,20 @@ describe("agents-proxy MCP surface", () => {
     expect(computerRequests).toEqual([]);
   });
 
+  it("select_computer forwards an explicit reconnect without claiming it completed", async () => {
+    computerResponse = { status: "pending", surface: "vm" };
+    const response = await callTool("select_computer", { surface: "vm", reconnect: true });
+    expect(response.result.isError).toBeFalsy();
+    expect(JSON.parse(response.result.content[0].text)).toEqual(computerResponse);
+    expect(computerRequests).toEqual([{ method: "POST", url: "/api/internal/computer/select", body: { surface: "vm", reconnect: true } }]);
+  });
+
+  it.each([{ reconnect: true }, { surface: "vm", reconnect: "true" }])("rejects an invalid reconnect request", async (args) => {
+    const response = await callTool("select_computer", args);
+    expect(response.result.isError).toBe(true);
+    expect(computerRequests).toEqual([]);
+  });
+
   it.each([
     { status: 409, args: { surface: "cloud" }, error: "No existing cloud computer. Create one in the Computer panel first." },
     { status: 503, args: {}, error: "Computer discovery is temporarily unavailable." },

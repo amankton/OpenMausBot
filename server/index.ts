@@ -520,6 +520,7 @@ import { MAX_TEAM_BACKUP_BYTES } from "../shared/team-backup.ts";
 import { shouldMountLocalComputer } from "./local-routing.ts";
 import { autoLocalVmAttachable, type ContainerComputerStatus } from "./container-computer.ts";
 import { startAutoVmClaim, type AutoVmClaimTable } from "./auto-vm-claims.ts";
+import { COMPUTER_CLAIM_GRACE_MS } from "../shared/computer-control-timing.ts";
 import { computerFreeAfterText, computerParkedText, computerStoppedWaitingText, computerWaitingText, type ComputerHolder } from "./computer-wait.ts";
 import { modelContextWindow } from "./model-context-window.ts";
 import { cloudPlaceDriverError, parseSurface, PlaceUnavailableError, placeUnavailable, resolveSurface, surfaceLabel, surfaceOfComputerKind, surfacePrompt, type PlaceSource, type Surface } from "./surface.ts";
@@ -6392,10 +6393,6 @@ const localVmActiveThreads = new Map<string, string>();
 // tools/call gate can fire it. Dispatch claims eagerly today, so entries
 // exist only as a no-op handoff to the gate.
 const autoVmClaims: AutoVmClaimTable = new Map();
-/** How long the computer-control gate lets a lazy claim land before it
- * answers held. A free, ready VM claims in the time of one container
- * inspect; only a claim queued behind another holder outlives this. */
-const LAZY_VM_CLAIM_GRACE_MS = 5_000;
 /** Local VM targets with a durable workspace or seen ready/recreatable — at
  * boot, in the inventory, or in a turn. Auto probes the container runtime for a VM
  * only when one of these exists, so an ordinary Auto turn on a machine with
@@ -6475,7 +6472,7 @@ async function computerCallGate(internalCapability: InternalCapability) {
     startAutoVmClaim(autoVmClaims, internalCapability.threadId, internalCapability.generation);
     await Promise.race([
       lazyClaim.begin ?? Promise.resolve(),
-      new Promise<void>((resolve) => setTimeout(resolve, LAZY_VM_CLAIM_GRACE_MS)),
+      new Promise<void>((resolve) => setTimeout(resolve, COMPUTER_CLAIM_GRACE_MS)),
     ]);
   }
   if (!snapshot.held && lazyClaim?.failed === true) {
@@ -6495,11 +6492,15 @@ async function computerCallGate(internalCapability: InternalCapability) {
     };
   }
   if (!snapshot.held && lazyClaim?.lazy && lazyClaim.begin && !lazyClaim.claimed) {
-    // The claim fired and is still waiting on the exclusive bind:
-    // another turn genuinely holds this desktop right now.
+    // Binding can already have succeeded while desktop readiness is still
+    // pending. Only a claim without this generation's resource is queued
+    // behind another turn; do not label slow preparation as contention.
+    const bound = turnComputerResources.get(internalCapability.threadId);
     return {
       held: true, helpOpen: false,
-      blockedReason: "Another thread is using this computer. This call was not performed. Pause computer work until that thread finishes, then take a fresh screenshot before acting.",
+      blockedReason: bound?.owner.generation === internalCapability.generation
+        ? "This computer is still being prepared. This call was not performed. Wait for setup to finish, then take a fresh screenshot before acting."
+        : "Another thread is using this computer. This call was not performed. Pause computer work until that thread finishes, then take a fresh screenshot before acting.",
     };
   }
   const computer = turnComputerResources.get(internalCapability.threadId);
@@ -6922,7 +6923,7 @@ function continueComputerSelection(threadId: string, generation: string | undefi
     // never chose it in the composer or thread settings. It is the
     // machine's record, so a later Works on change may sweep it.
     store.patchTask(bot.id, threadId, { surface, surfaceSource: "auto" });
-    const text = `The computer selection is now ${surfaceLabel(surface)}. Continue the user's original request using the tools mounted for this turn; verify the result before claiming success.\n\n${selection.text}`;
+    const text = `The computer selection is now ${surfaceLabel(surface)}. Continue the user's original request using the tools mounted for this turn; verify the result before claiming success. Preserve completed tool results and perform only unfinished actions; do not repeat completed actions.\n\n${selection.text}`;
     void startTurn(bot.id, text, { threadId, userMessage: selection.source, computerSelectionContinuation: true }).catch(error => {
       if (store.taskByThread(bot.id, threadId)) store.appendMessage(threadId, { role: "bot", kind: "activity",
         tool: { name: `Could not continue on ${surfaceLabel(surface)}: ${error instanceof Error ? error.message : String(error)}`, ok: false } });
@@ -7540,6 +7541,7 @@ bus.subscribe((event: RuntimeEvent) => {
               card: {
                 ...existing.card,
                 answered: event.behavior,
+                expired: event.source === "timeout" || existing.card.expired || undefined,
                 dismissed: isPersistentQuestionCard(existing.card) ? false : event.source !== "user",
               },
             });
@@ -16108,7 +16110,11 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         const bot = store.projectBotForTask(internalSender.id, internalCapability.threadId);
         const canSelect = Boolean(source && source.generation === internalCapability.generation && bot && bot.computer !== "off");
         if (!bot) return json(res, 403, { error: "Computer selection belongs to a direct bot conversation." });
-        const requested = method === "POST" ? (await readInternalBody()).surface : undefined;
+        const selectionBody = method === "POST" ? await readInternalBody() : undefined;
+        const requested = selectionBody?.surface;
+        if (selectionBody?.reconnect !== undefined && typeof selectionBody.reconnect !== "boolean") {
+          return json(res, 400, { error: "reconnect must be a boolean" });
+        }
         if (method === "POST" && !canSelect) return json(res, 403, { error: "Computer selection is only available once per direct user request, with computer access enabled." });
         if (method === "POST" && requested !== "auto" && !parseSurface(requested)) {
           return json(res, 400, { error: "surface must be auto, cloud, vm, local, or browser" });
@@ -16127,7 +16133,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         if (source!.selected) {
           if (source!.selected !== option.surface) return json(res, 409, { error: "A computer switch is already pending. End this turn to continue there." });
         } else {
-          if (option.surface === current && option.ready) return json(res, 200, { status: "ready", surface: current, message: "This computer is already selected. Use its mounted tools." });
+          if (option.surface === current && option.ready && selectionBody?.reconnect !== true) return json(res, 200, { status: "ready", surface: current, message: "This computer runtime is ready and already selected. Tool access is checked before each call. If that check fails, select this surface with reconnect: true to refresh its tools." });
           source!.selected = option.surface;
           source!.previousSurface = store.taskByThread(bot.id, bot.threadId)?.surface;
         }

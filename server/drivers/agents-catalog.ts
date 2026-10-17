@@ -345,6 +345,7 @@ const toolDefinitions = (externalRuntime: boolean) => [
     inputSchema: { type: "object", additionalProperties: false, properties: {
       surface: { type: "string", enum: ["auto", "cloud", "vm", "local", "browser"],
         description: "auto = suitable configured computer, cloud = the bot's cloud computer or self-hosted VPS, vm = isolated Local VM, local = user's own desktop, browser = built-in browser. Omit to list." },
+      reconnect: { type: "boolean", description: "With an explicit surface, refresh a failed tool connection even when that computer is already selected. End this turn on pending; continue only unfinished work after the fresh connection mounts." },
     } },
   },
   {

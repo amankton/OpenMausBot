@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createControlClient } from "./control-client.ts";
+import { createControlClient, CONTROL_UNAVAILABLE_PLAIN } from "./control-client.ts";
 
 const options = { url: "http://control.test/state", token: "fixture-token" };
-const unavailable = { held: true, helpOpen: false };
+const unavailable = { held: true, helpOpen: false, blockedReason: expect.stringContaining(CONTROL_UNAVAILABLE_PLAIN) };
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -40,6 +40,27 @@ describe("computer control client", () => {
   it("fails closed when the request rejects", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new Error("offline"));
     await expect(createControlClient({ ...options, fetchImpl }).state()).resolves.toEqual(unavailable);
+  });
+
+  it.each([
+    [401, /authorization.*401/], [403, /authorization.*403/], [500, /returned HTTP 500/],
+  ])("identifies HTTP %i without inferring credential expiry", async (status, reason) => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response("private upstream body", { status }));
+    const state = await createControlClient({ ...options, fetchImpl }).state();
+    expect(state.held).toBe(true);
+    expect(state.blockedReason).toMatch(reason);
+    expect(state.blockedReason).not.toMatch(/private upstream|expired|person has taken/);
+  });
+
+  it.each([
+    [new DOMException("private endpoint", "TimeoutError"), /timed out/],
+    [new Error("private endpoint"), /could not reach/],
+  ])("distinguishes timeout from a network failure", async (error, reason) => {
+    const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(error);
+    const state = await createControlClient({ ...options, fetchImpl }).state();
+    expect(state).toMatchObject({ held: true, helpOpen: false });
+    expect(state.blockedReason).toMatch(reason);
+    expect(state.blockedReason).not.toContain("private endpoint");
   });
 
   it("ignores non-string blocked reasons without changing a valid state", async () => {

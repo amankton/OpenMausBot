@@ -1133,7 +1133,7 @@ function handle(msg: any) {
         })().catch((error) => out({ jsonrpc: "2.0", id: msg.id, error: { code: -32000, message: String(error) } }));
         return;
       }
-      if (mode === "permission") {
+      if (mode === "permission" || mode === "permission-timeout") {
         // ask the client to approve a tool, then — like a real agent once its
         // card is answered — close the turn with a visible reply instead of
         // ending bare (a bare end_turn is the lost-turn failure, not a success)
@@ -1159,6 +1159,12 @@ function handle(msg: any) {
             ],
           },
         });
+        if (mode === "permission-timeout") {
+          setTimeout(() => {
+            process.stderr.write("WARNING acp_adapter.permissions: Edit approval request timed out after ");
+            setTimeout(() => process.stderr.write("60.0s\n"), 10);
+          }, 100);
+        }
         return;
       }
       if (mode === "lend-question" && agentsMcp) {

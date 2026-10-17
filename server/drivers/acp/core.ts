@@ -131,12 +131,12 @@ export interface AcpConfig {
 
 /** A pending request.opened answer: the callback stored in the running
  *  turn's asks map (shared shape with the runtime Turn record). */
-type AcpAskFinish = (
+type AcpAskFinish = ((
   behavior: string,
   source?: "user" | "timeout" | "system",
   message?: string,
   always?: boolean,
-) => RequestOutcome;
+) => RequestOutcome) & { permissionKind: string };
 
 /** The running turn a pooled session is servicing — the per-turn half of
  *  the bookkeeping (Claude's Session.turn, split the same way). Server
@@ -351,6 +351,9 @@ export interface AcpSupport {
   clientFileSystem?: boolean;
   /** Do not retain stderr from providers that may place OAuth material there. */
   redactStderr?: boolean;
+  /** Provider-owned timeout diagnostics carry no user decision. Match only
+   * known messages, and only settle a single matching pending permission. */
+  permissionTimeoutKindFromStderr?(line: string): string | null;
   /** The agent's own debug log for a native session, read while a prompt is
    * quiet: any new line proves the process alive, and `parse` picks out what
    * is worth telling the person (a retry, a compression). Return null when
@@ -1308,7 +1311,7 @@ export function createAcpDriver(support: AcpSupport): ProviderDriver<AcpConfig> 
               type: "request.resolved",
               requestId,
               behavior: optionId && isQuestion ? "answer" : optionId && behavior === "allow" ? "allow" : "deny",
-              source: optionId ? source : "system",
+              source: optionId || source === "timeout" ? source : "system",
               approvalScope: current.controlsHost ? "local-computer" : undefined,
             });
             return !optionId ? "rejected" : isQuestion ? "answered" : behavior === "allow" ? "allowed-once" : "rejected";
@@ -1318,7 +1321,7 @@ export function createAcpDriver(support: AcpSupport): ProviderDriver<AcpConfig> 
             finish("deny", "timeout");
           }, 15 * 60_000);
           timer.unref?.();
-          current.asks.set(requestId, finish);
+          current.asks.set(requestId, Object.assign(finish, { permissionKind: isQuestion ? "question" : kind }));
           emit({
             ...base(threadId, current.turnId),
             type: "request.opened",
@@ -1497,9 +1500,32 @@ export function createAcpDriver(support: AcpSupport): ProviderDriver<AcpConfig> 
           }
         });
 
+        let stderrLines = "";
+        child.stderr.setEncoding("utf8");
         child.stderr.on("data", (c) => {
           if (!support.redactStderr) session.stderr += c;
           if (session.stderr.length > 8192) session.stderr = session.stderr.slice(-8192);
+          if (!support.permissionTimeoutKindFromStderr) return;
+          stderrLines += c;
+          let nl: number;
+          while ((nl = stderrLines.indexOf("\n")) !== -1) {
+            const line = stderrLines.slice(0, nl).trimEnd();
+            stderrLines = stderrLines.slice(nl + 1);
+            const kind = support.permissionTimeoutKindFromStderr(line);
+            const current = session.current;
+            if (!kind || !current || current.state.settled) continue;
+            const candidates = [...current.asks.values()].filter((finish) => finish.permissionKind === kind);
+            // A provider line without a request id cannot distinguish
+            // concurrent asks. Never attribute it to an arbitrary request.
+            if (candidates.length !== 1) continue;
+            emit({
+              ...base(threadId, current.turnId),
+              type: "runtime.notice",
+              message: "This approval expired without an answer. The action was not approved; no user denial was recorded.",
+            });
+            candidates[0]!("cancel", "timeout");
+          }
+          if (stderrLines.length > 8192) stderrLines = stderrLines.slice(-8192);
         });
         child.on("error", (e) => {
           session.dead = true;

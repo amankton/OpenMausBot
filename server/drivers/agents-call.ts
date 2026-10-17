@@ -700,11 +700,14 @@ export async function callTool(name: string, args: Json, context: ToolCallContex
     return { text: `Task ${taskId} ended without a reply — ${String(r.status ?? "unknown")}${r.result ? `: ${String(r.result)}` : ""}.`, isError: true };
   }
   if (name === "select_computer") {
+    if (args.reconnect !== undefined && (typeof args.reconnect !== "boolean" || args.surface === undefined)) {
+      return { text: "reconnect must be a boolean with an explicit surface.", isError: true };
+    }
     if (args.surface !== undefined && (typeof args.surface !== "string" || !["auto", "cloud", "vm", "local", "browser"].includes(args.surface))) {
       return { text: "Choose auto, cloud, vm, local or browser; omit surface to inspect connected choices.", isError: true };
     }
     const result = await api("/api/internal/computer/select", args.surface === undefined ? undefined : {
-      method: "POST", body: JSON.stringify({ surface: args.surface }),
+      method: "POST", body: JSON.stringify({ surface: args.surface, ...(args.reconnect === undefined ? {} : { reconnect: args.reconnect }) }),
     });
     return { text: JSON.stringify(result) };
   }

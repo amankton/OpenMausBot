@@ -25,6 +25,7 @@ import { KimiAgentDriver } from "./kimi.ts";
 import { DroidAgentDriver } from "./droid.ts";
 import { CursorAgentDriver } from "./cursor.ts";
 import { QwenAgentDriver } from "./qwen.ts";
+import { HermesAgentDriver } from "./hermes.ts";
 import { removeTempDir } from "../../testing/cleanup.ts";
 import * as procs from "../../procs.ts";
 import * as quietStatus from "./quiet-status.ts";
@@ -400,7 +401,7 @@ describe("ACP turns (fake CLI)", () => {
     expect(await send("second", "Memory: likes quiet hours.")).toBe("second");
     // A changed volatile half rides the next prompt as a labelled note.
     expect(await send("third", "Memory: moved to Toronto."))
-      .toBe("Context from OpenMausBot updated since this conversation started; it replaces any earlier copy:\n\nMemory: moved to Toronto.\n\nthird");
+      .toBe("Context from Chief Executive Suite updated since this conversation started; it replaces any earlier copy:\n\nMemory: moved to Toronto.\n\nthird");
     // A cleared volatile half is announced once, not silently dropped.
     expect(await send("fourth", "")).toContain("have been cleared");
     expect(await send("fifth", "")).toBe("fifth");
@@ -975,6 +976,28 @@ describe("ACP turns (fake CLI)", () => {
     } finally {
       delete process.env.FAKE_ACP_MCP_TRANSPORTS;
     }
+  });
+
+  it("expires an unanswered Hermes edit approval on its native timeout signal", async () => {
+    process.env.FAKE_ACP_PERMISSION_TOOL_CALL = JSON.stringify({ toolCallId: "edit-approval-1", kind: "edit", title: "Write a local report" });
+    await create(HermesAgentDriver, "permission-timeout");
+    await instance.adapter.sendTurn({ threadId: "t-native-timeout", text: "go", cwd: scratch });
+    const opened = await recorder.until((e) => e.type === "request.opened");
+    const resolved = await recorder.until((e) => e.type === "request.resolved", 3000);
+    expect(resolved).toMatchObject({ requestId: opened.requestId, behavior: "deny", source: "timeout" });
+    expect(recorder.events.some((e) => e.type === "runtime.notice" && /expired without an answer/.test(e.message ?? ""))).toBe(true);
+    expect(await instance.adapter.respondToRequest("t-native-timeout", opened.requestId!, { behavior: "allow" })).toBe("unavailable");
+    expect(await recorder.until((e) => e.type === "turn.completed")).toMatchObject({ ok: true });
+  });
+
+  it("keeps explicit Hermes rejection attributed to the user", async () => {
+    process.env.FAKE_ACP_PERMISSION_TOOL_CALL = JSON.stringify({ toolCallId: "edit-approval-1", kind: "edit" });
+    await create(HermesAgentDriver, "permission");
+    await instance.adapter.sendTurn({ threadId: "t-native-deny", text: "go", cwd: scratch });
+    const opened = await recorder.until((e) => e.type === "request.opened");
+    expect(await instance.adapter.respondToRequest("t-native-deny", opened.requestId!, { behavior: "deny" })).toBe("rejected");
+    expect(await recorder.until((e) => e.type === "request.resolved")).toMatchObject({ source: "user", behavior: "deny" });
+    expect(await recorder.until((e) => e.type === "turn.completed")).toMatchObject({ ok: true });
   });
 
   it("surfaces a permission ask as request.opened and completes once allowed", async () => {
@@ -2068,30 +2091,33 @@ describe("ACP turns (fake CLI)", () => {
     });
 
     it.each([
-      { driver: GrokAgentDriver, expectedLaunches: 1 },
-      { driver: QwenAgentDriver, expectedLaunches: 2 },
-    ])("rotating credentials refreshes $driver.driverKind with $expectedLaunches process(es)", async ({ driver, expectedLaunches }) => {
+      { driver: GrokAgentDriver, expectedLaunches: 1, computer: false },
+      { driver: QwenAgentDriver, expectedLaunches: 2, computer: false },
+      { driver: HermesAgentDriver, expectedLaunches: 2, computer: false },
+      { driver: HermesAgentDriver, expectedLaunches: 2, computer: true },
+    ])("rotating credentials refreshes $driver.driverKind with $expectedLaunches process(es), computer=$computer", async ({ driver, expectedLaunches, computer }) => {
       countFile = join(scratch, "launches");
       const appendFile = join(scratch, "rpc-all.jsonl");
       process.env.FAKE_ACP_LAUNCH_COUNT_FILE = countFile;
       process.env.FAKE_ACP_RPC_APPEND_FILE = appendFile;
       instance = await driver.create({
         instanceId: "acp-test", displayName: "ACP Test", enabled: true,
-        environment: { HOME: scratch, USERPROFILE: scratch },
+        environment: { HOME: scratch, USERPROFILE: scratch, HERMES_HOME: scratch },
         config: { cli: FAKE_CLI, fullAuto: false },
       });
       recorder = recordEvents(instance.adapter);
-      // Qwen caches MCP clients on live load; other agents apply the new
+      // Qwen and Hermes cache MCP clients on live load; other agents apply the new
       // credentials without a process restart. Both preserve the cursor.
-      const integration = (token: string) => ({
+      const integration = (token: string): { command: string; args: string[]; env: Record<string, string> } => ({
         command: process.execPath,
         args: [FAKE_CLI],
-        env: { OMB_COMMS_TOKEN: token },
+        env: computer ? { OMB_CONTROL_URL: "http://127.0.0.1:12345/control", OMB_CONTROL_TOKEN: token } : { OMB_COMMS_TOKEN: token },
       });
+      const integrations = (token: string) => computer ? { localComputer: integration(token) } : { agents: integration(token) };
       const first = await instance.adapter.sendTurn({
         threadId: "t-pool-token",
         text: "one",
-        integrations: { agents: integration("token-one") },
+        integrations: integrations("token-one"),
       });
       const firstDone = await recorder.until((e) => e.type === "turn.completed" && e.turnId === first.turnId);
       expect(firstDone).toMatchObject({ ok: true });
@@ -2100,7 +2126,7 @@ describe("ACP turns (fake CLI)", () => {
         threadId: "t-pool-token",
         text: "two",
         resumeCursor: "fake-acp-session",
-        integrations: { agents: integration("token-two") },
+        integrations: integrations("token-two"),
       });
       const secondDone = await recorder.until((e) => e.type === "turn.completed" && e.turnId === second.turnId);
       expect(secondDone).toMatchObject({ ok: true });
@@ -2108,7 +2134,7 @@ describe("ACP turns (fake CLI)", () => {
       const third = await instance.adapter.sendTurn({
         threadId: "t-pool-token", text: "unchanged MCP inputs",
         resumeCursor: "fake-acp-session",
-        integrations: { agents: integration("token-two") },
+        integrations: integrations("token-two"),
       });
       expect(await recorder.until((e) => e.type === "turn.completed" && e.turnId === third.turnId)).toMatchObject({ ok: true });
       expect(launches()).toBe(expectedLaunches);
