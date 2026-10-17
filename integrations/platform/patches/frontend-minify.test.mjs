@@ -26,7 +26,7 @@ test('independently minified asynchronous chunks keep helpers private and earlie
 
 test('regression fixture exposes the original unscoped helper leak', async () => {
   const context = vm.createContext({ registry: {} });
-  const { format, ...unscoped } = frontendMinifyOptions;
+  const { format: _format, ...unscoped } = frontendMinifyOptions;
   vm.runInContext((await esbuild.transform(sources[0], unscoped)).code, context);
   assert.ok(Object.keys(context).some(key => key !== 'registry'));
 });

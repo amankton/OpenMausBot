@@ -14,7 +14,7 @@ const fixture = await launchVerificationServer();
 let ui: MountedPreview | undefined;
 let browser: Browser | undefined;
 const evidence: Record<string, any> = { fixture: fixture.info, startedAt: new Date().toISOString(), model: "deterministic fixture provider; real approved file write" };
-evidence.sourceHashes = Object.fromEntries(["server/index.ts", "server/control-client.ts", "shared/computer-control-timing.ts", "scripts/testing/connection-journey-cli.ts"].map(file => [file, createHash("sha256").update(readFileSync(join(root, file))).digest("hex")]));
+evidence.sourceHashes = Object.fromEntries(["server/index.ts", "server/control-client.ts", "shared/computer-control-timing.ts", "scripts/testing/connection-journey-cli.ts", "src/styles.css", "vite.config.ts"].map(file => [file, createHash("sha256").update(readFileSync(join(root, file))).digest("hex")]));
 try {
   const api = fixtureApi(fixture.info.url);
   await api("PATCH", "/api/instances/claude", { cli: join(root, "scripts/testing/connection-journey-cli.ts") });
@@ -63,6 +63,22 @@ try {
   assert.equal(readFileSync(downloaded, "utf8"), readFileSync(file, "utf8"));
   evidence.artifact = { name: download.suggestedFilename(), bytes: readFileSync(downloaded).length, sha256: createHash("sha256").update(readFileSync(downloaded)).digest("hex"), retainedAt: downloaded };
   evidence.transcript = await runControlOmb(["messages", "--bot", bot.id, "--limit", "20", "--url", fixture.info.url]);
+  const artifact = join(evidenceDir, `generated-capture-${Date.now()}.html`);
+  writeFileSync(artifact, `<div class="z-[912345] ${Array.from({ length: 5000 }, (_, index) => `h-[${index + 10000}px]`).join(" ")}"></div>`, { flag: "wx" });
+  const previewOrigin = new URL(ui.previewUrl).origin;
+  const healthMs: number[] = [];
+  for (let index = 0; index < 6; index++) {
+    const started = Date.now();
+    const response = await fetch(`${previewOrigin}/api/health`, { signal: AbortSignal.timeout(5000) });
+    assert.equal(response.status, 200);
+    await response.json();
+    healthMs.push(Date.now() - started);
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  const stylesheet = await fetch(`${previewOrigin}/src/styles.css?direct`, { signal: AbortSignal.timeout(5000) });
+  assert.equal(stylesheet.status, 200);
+  assert(!(await stylesheet.text()).includes("z-index: 912345"), "generated captures must not enter the stylesheet");
+  evidence.previewArtifactStress = { generatedClasses: 5001, healthMs, evidenceClassesExcluded: true };
   await capture("journey-completed-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open report", exact: true }).waitFor();
@@ -90,6 +106,7 @@ try {
   evidence.explicitRejection = { settled: true, fileWritten: false, cardAnswer: "deny" };
   evidence.pageErrors = errors;
   assert.equal(errors.length, 0);
+  assert.equal(evidence.visualCaptureErrors?.length ?? 0, 0, "approval, desktop and mobile screenshots must complete");
   evidence.passed = true;
 } catch (error) {
   evidence.passed = false;

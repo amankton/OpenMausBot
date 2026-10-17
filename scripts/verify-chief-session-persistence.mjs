@@ -91,7 +91,7 @@ const login = async target => {
   await target.getByText('Chief Acceptance', { exact: true }).click();
   await target.waitForURL(url => url.pathname.startsWith('/workbench/chiefacceptance/'));
 };
-const cookieInfo = async () => (await context.cookies()).filter(c => c.name === 'account-metadata-Token').map(({ value, ...metadata }) => metadata);
+const cookieInfo = async () => (await context.cookies()).filter(c => c.name === 'account-metadata-Token').map(({ value: _value, ...metadata }) => metadata);
 try {
   if (mode === 'candidate') {
     const [nginx] = JSON.parse(docker(['inspect', 'chief-platform-nginx-1']));

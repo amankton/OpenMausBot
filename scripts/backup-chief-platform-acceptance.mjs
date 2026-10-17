@@ -47,14 +47,21 @@ const envPath = resolve(local, 'migration-tool.env');
 writeFileSync(envPath, Object.entries(env).map(([key, value]) => `${key}=${value}`).join('\n') + '\n', { mode: 0o600 });
 const args = ['run', '--name', container, '--label', 'io.chief.verification=acceptance-backup', '--network', 'chief-platform_backend', '--memory', '512m', '--cpus', '0.75', '--env-file', envPath, '--mount', `type=bind,source=${folder},target=/backup`, images.tool, 'node', 'bundle.js', 'backup', '/backup', uuid, '--fullVerify'];
 let output = '';
+let backupFailure;
 try { const result = spawnSync('docker', args, { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }); output = String(result.stdout ?? '') + '\n' + String(result.stderr ?? ''); if (result.status !== 0) throw Error('Backup tool failed; inspect the private backup log.'); }
-finally {
+catch (error) { backupFailure = error; }
+let cleanupFailure;
+try {
   writeFileSync(resolve(folder, 'tool.log'), output, { mode: 0o600 });
   const state = JSON.parse(docker(['inspect', container]))[0];
   if (state.Config.Labels['io.chief.verification'] !== 'acceptance-backup' || state.Image !== images.tool) throw Error('Backup container ownership changed.');
   if (state.State.Running) throw Error('Backup container is still running; no forced stop performed.');
   docker(['rm', container]);
 }
+catch (error) { cleanupFailure = error; }
+if (backupFailure && cleanupFailure) throw new AggregateError([backupFailure, cleanupFailure], 'Backup failed and cleanup also requires attention.');
+if (backupFailure) throw backupFailure;
+if (cleanupFailure) throw cleanupFailure;
 if (/Failed to backup workspace|backup error|Error:|please provide/i.test(output)) throw Error('Backup output reports a failure; inspect private log.');
 const manifest = regular(resolve(folder, 'backup.json.gz'));
 const info = JSON.parse(gunzipSync(manifest));

@@ -8,7 +8,7 @@
     {
       "path": "services/love/src/main.ts",
       "beforeSha256": "0c007a4169babc491a432c501270b0fb65ca1684ace4b500953bcbdff6097d6c",
-      "sha256": "f4d1612f4b95f88c6c7d89b2805db4bdcdf414f00e336308bc187a14b582cf76"
+      "sha256": "7dc6c067cfa84b524c9c5ece4e5d2c3b1d288939562b5f87498e7af612af299e"
     },
     {
       "path": "services/love/src/config.ts",
@@ -28,7 +28,7 @@
   ],
   "patch": {
     "path": "0005-capture-backend.fragment.patch",
-    "sha256": "cf3f2b884d03ca991a748d7a975420bd7cf28fafcf0ac39b98ab50f031ec8bb9"
+    "sha256": "2ae7f8271d0e03b5648680bbcb2b8a874ca3ed818efa28678ecf538570cb5cdf"
   },
   "frozen": [
     {

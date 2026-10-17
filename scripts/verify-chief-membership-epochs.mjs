@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createWriteStream } from 'node:fs';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes, randomUUID, generateKeyPairSync, sign, createHmac } from 'node:crypto';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

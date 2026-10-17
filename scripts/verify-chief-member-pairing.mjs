@@ -204,8 +204,9 @@ try {
 } catch (error) {
   console.error('Pairing verification failed:', error.name, error.code ?? '', error instanceof AccessError ? error.message : 'See private fixture failure report');
   let message = String(error.stack ?? error); for (const token of tokens) message = message.replaceAll(token, '[redacted]');
-  await writeFile(join(local, 'failure.log'), message, { mode: 0o600 }); process.exitCode = 1;
-} finally {
+  await writeFile(join(local, 'failure.log'), message, { mode: 0o600 }).catch(() => {}); process.exitCode = 1;
+}
+try {
   if (server) await new Promise(r => server.close(r));
   await sql?.end(); await admin?.end();
   if (created) {
@@ -213,4 +214,9 @@ try {
     if (owned.Config.Labels['io.chief.verification'] !== label || owned.Mounts.length) throw Error('Unexpected fixture ownership/mounts; cleanup refused');
     docker(['rm', '--force', name]);
   }
+} catch (error) {
+  let message = String(error.stack ?? error); for (const token of tokens) message = message.replaceAll(token, '[redacted]');
+  await writeFile(join(local, 'cleanup-failure.log'), message, { mode: 0o600 }).catch(() => {});
+  console.error('Pairing fixture cleanup failed; inspect the private cleanup report.');
+  process.exitCode = 1;
 }

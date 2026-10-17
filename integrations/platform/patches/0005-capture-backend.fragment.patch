@@ -446,7 +446,7 @@ index a060d05..dbcc146 100644
 +++ b/services/love/src/config.ts
 @@ -14,6 +14,8 @@
  //
- 
+
  interface Config {
 +  CaptureDirectory: string
 +  CaptureWorkerSecret: string
@@ -455,7 +455,7 @@ index a060d05..dbcc146 100644
    Port: number
 @@ -47,6 +49,8 @@ interface Config {
  }
- 
+
  const envMap: { [key in keyof Config]: string } = {
 +  CaptureDirectory: 'CHIEF_CAPTURE_DIRECTORY',
 +  CaptureWorkerSecret: 'CHIEF_CAPTURE_WORKER_SECRET',
@@ -463,7 +463,7 @@ index a060d05..dbcc146 100644
    AccountsURL: 'ACCOUNTS_URL',
    Port: 'PORT',
 @@ -79,6 +83,8 @@ const parseNumber = (str: string | undefined): number | undefined => (str !== un
- 
+
  const config: Config = (() => {
    const params: Partial<Config> = {
 +    CaptureDirectory: process.env[envMap.CaptureDirectory] ?? '',
@@ -472,7 +472,7 @@ index a060d05..dbcc146 100644
      AccountsURL: process.env[envMap.AccountsURL],
      Port: parseNumber(process.env[envMap.Port]) ?? 8096,
 diff --git a/services/love/src/main.ts b/services/love/src/main.ts
-index 8d862b7..430c429 100644
+index 8d862b7..c76c897 100644
 --- a/services/love/src/main.ts
 +++ b/services/love/src/main.ts
 @@ -53,6 +53,7 @@ import { RecordingProcessor } from './recordings'
@@ -489,25 +489,43 @@ index 8d862b7..430c429 100644
    app.use(express.raw({ type: 'application/webhook+json' }))
 -  app.use(express.json())
 +  app.use((req, res, next) => { if (req.path.startsWith('/capture')) next(); else express.json()(req, res, next) })
- 
+
    // Day-one member meetings: external guests and capture require their own consent/admission increment.
    app.use((req, res, next) => {
 @@ -166,6 +167,7 @@ export const main = async (): Promise<void> => {
    })
- 
+
    const roomClient = new RoomServiceClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
 +  const capture = await installCapture(app, roomClient, ctx)
    const egressClient = new EgressClient(config.LiveKitHost, config.ApiKey, config.ApiSecret)
- 
+
    const eventProducer = queue.getProducer<QueueMeetingMessage>(ctx, QueueTopic.LoveQueue)
+@@ -200,7 +202,7 @@ export const main = async (): Promise<void> => {
+     for (const r of receivers) {
+       try {
+         return await r.receive(req.body, req.get('Authorization'))
+-      } catch (e) {
++      } catch {
+         // Ignore
+       }
+     }
 @@ -279,6 +281,7 @@ export const main = async (): Promise<void> => {
          return
        }
- 
+
 +      await capture.attendance(roomStr, event.event, event.participant?.identity, event.participant?.sid)
        await eventProducer.send(ctx, roomName.workspace, [queueEvents.webhook(roomName.meetingId, event)])
      } catch (e) {
        ctx.error('Failed to process webhook event', { error: e })
+@@ -476,7 +479,7 @@ export const main = async (): Promise<void> => {
+   })
+   pollingService.start()
+
+-  const workspaceConsumer = queue.createConsumer(ctx, QueueTopic.Workspace, 'love-client', async (ctx, msg, queue) => {
++  const workspaceConsumer = queue.createConsumer(ctx, QueueTopic.Workspace, 'love-client', async (ctx, msg, _queue) => {
+     pollingService.addWorkspaceToCheck(msg.workspace)
+   })
+
 @@ -501,7 +504,7 @@ export const main = async (): Promise<void> => {
      void queue.shutdown()
      pollingService.stop()
@@ -515,5 +533,5 @@ index 8d862b7..430c429 100644
 -    server.close(() => process.exit())
 +    server.close(() => { void capture.close().finally(() => process.exit()) })
    }
- 
+
    process.on('SIGINT', shutdown)

@@ -29,7 +29,7 @@ try {
   let page;
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
-    page = app.windows().find(win => /^http:\/\/127\.0\.0\.1:/.test(win.url()));
+    page = app.windows().find(win => win.url().startsWith("http://127.0.0.1:"));
     if (page) break;
     await delay(250);
   }
@@ -72,7 +72,7 @@ try {
   app = await electron.launch({ executablePath, env, timeout: 90_000 });
   const restartDeadline = Date.now() + 60_000;
   while (Date.now() < restartDeadline) {
-    page = app.windows().find(win => /^http:\/\/127\.0\.0\.1:/.test(win.url()));
+    page = app.windows().find(win => win.url().startsWith("http://127.0.0.1:"));
     if (page) break;
     await delay(250);
   }

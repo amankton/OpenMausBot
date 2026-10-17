@@ -202,7 +202,7 @@ export const main = async (): Promise<void> => {
     for (const r of receivers) {
       try {
         return await r.receive(req.body, req.get('Authorization'))
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -479,7 +479,7 @@ export const main = async (): Promise<void> => {
   })
   pollingService.start()
 
-  const workspaceConsumer = queue.createConsumer(ctx, QueueTopic.Workspace, 'love-client', async (ctx, msg, queue) => {
+  const workspaceConsumer = queue.createConsumer(ctx, QueueTopic.Workspace, 'love-client', async (ctx, msg, _queue) => {
     pollingService.addWorkspaceToCheck(msg.workspace)
   })
 
