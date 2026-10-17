@@ -11,6 +11,8 @@
     ".pi/**",
     ".roo/**",
     ".windsurf/**",
+    ".release-validation/**",
+    "work/**",
     "dist/**",
     "dist-electron/**",
     "dist-native/**",
