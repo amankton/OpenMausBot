@@ -83,6 +83,10 @@ await build({
   format: "esm",
   outbase: server,
   outdir: join(root, "dist-server"),
+  // Bundled CommonJS dependencies such as ws still require Node built-ins.
+  // Give esbuild's require shim a native ESM-safe implementation; no runtime
+  // node_modules directory is needed for those built-ins.
+  banner: { js: 'import { createRequire as __chiefCreateRequire } from "node:module"; const require = __chiefCreateRequire(import.meta.url);' },
   // Written after tsc, replacing its output for these entry points.
   allowOverwrite: true,
   logLevel: "info",
