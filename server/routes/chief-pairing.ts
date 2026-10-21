@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ChiefPairingRuntime, PairingError } from "../chief-pairing.ts";
 import { PASS, type RouteHandler } from "./table.ts";
+import { isProxied, isSameOrigin } from "../request-auth.ts";
 
 export function createChiefPairingRoutes(options: { directory: string; origin?: string; localOnly: boolean; bots: () => Array<{ id: string; name: string }> }): RouteHandler {
   let runtime: ChiefPairingRuntime | undefined;
@@ -8,8 +9,8 @@ export function createChiefPairingRoutes(options: { directory: string; origin?: 
     if (path !== "/api/chief-pairing" && !path.startsWith("/api/chief-pairing/")) return PASS;
     res.setHeader("Cache-Control", "no-store");
     if (!options.localOnly || auth.kind !== "loopback" || auth.trust === "service" || !auth.scopes.includes("admin") ||
-        req.headers["sec-fetch-site"] === "cross-site" || (req.headers.origin && req.headers.origin !== url.origin) ||
-        (method !== "GET" && req.headers.origin !== url.origin)) {
+        isProxied(req) || req.headers["sec-fetch-site"] === "cross-site" || !isSameOrigin(req) ||
+        (method !== "GET" && !req.headers.origin)) {
       return json(res, 403, { error: "Use the personal Chief owner window to manage pairing." });
     }
     if (url.search) return json(res, 400, { error: "Pairing parameters must not appear in URLs." });

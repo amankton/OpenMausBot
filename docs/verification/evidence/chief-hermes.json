@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-07T19:28:59.038Z",
+  "fixtureUrl": "http://127.0.0.1:20455",
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1791401320690-48888.log",
+  "launcherHash": "339630353fd96d7ea4daf0367cfceea45a1985a45e5d9a249266daf2c5484fff",
+  "nativeRuntimeProtocol": true,
+  "version": "Hermes Agent v0.21.5+8863.g6fa88c1 (2026.9.24) · upstream 6fa88c19",
+  "syntheticManagedAccountsProbe": true,
+  "windowsArgvPreserved": true,
+  "isolatedServerHome": true,
+  "installedVersionUsesExistingHermesHome": true,
+  "paidCalls": 0
+}

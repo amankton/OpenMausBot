@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "verifiedAt": "2026-10-12T02:41:38.815Z",
+  "localSetupHostOriginCsrfAndRateLimit": true,
+  "pairedLanCredentialWorksThroughPrivatePipe": true,
+  "unauthenticatedRemoteDenied": true,
+  "ownerControlsDenied": true,
+  "endpointRefreshAndWithdrawal": true,
+  "companionExitFailsClosed": true,
+  "actualCellularTested": false,
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\chief-remote-phone-1791772898481.log"
+}

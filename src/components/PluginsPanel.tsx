@@ -312,7 +312,7 @@ export function botsUsingService(bots: Bot[], instances: InstanceInfo[], slug: s
     connectorServiceAccess(bot.connectorTools, slug).level !== "none");
 }
 
-export function PluginsPanel() {
+export function PluginsPanel({ refreshOnOpen = false }: { refreshOnOpen?: boolean } = {}) {
   const { state, dispatch } = useStore();
   const remoteClient = window.ogb?.remoteClient?.active === true;
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -448,7 +448,7 @@ export function PluginsPanel() {
 
   useEffect(() => {
     let alive = true;
-    void loadConnectionInventory();
+    void loadConnectionInventory(refreshOnOpen);
     api("/api/connectors/catalog")
       .then((r) => {
         if (!alive) return;
@@ -466,7 +466,7 @@ export function PluginsPanel() {
     return () => {
       alive = false;
     };
-  }, [loadConnectionInventory]);
+  }, [loadConnectionInventory, refreshOnOpen]);
 
   useEffect(() => {
     const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;

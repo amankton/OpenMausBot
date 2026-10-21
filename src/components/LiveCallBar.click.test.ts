@@ -48,6 +48,7 @@ const render = () => flushSync(() => root.render(createElement(StoreProvider, nu
 const button = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 
 beforeEach(() => {
+  track.enabled = true;
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -60,6 +61,23 @@ afterEach(() => {
 });
 
 describe("LiveCallBar's notice button", () => {
+  it("keeps a labeled mute button visible and disables the captured audio track", async () => {
+    configureLiveMedia({ getUserMedia: microphone, createPeer: peer, iceTimeoutMs: 50,
+      request: (async () => ({ call, transport: { type: "webrtc", sdp: "answer" } })) as never });
+    await startLiveCall({ botId: bot.id, threadId: bot.threadId });
+    render();
+    const mute = button("Mute")!;
+    expect(mute.textContent).toBe("Mute");
+    expect(mute.querySelector("span")!.className).not.toContain("hidden");
+    expect(host.textContent).toContain("Microphone on");
+    flushSync(() => mute.click());
+    expect(track.enabled).toBe(false);
+    expect(button("Unmute")!.getAttribute("aria-pressed")).toBe("true");
+    expect(host.textContent).toContain("Microphone muted");
+    flushSync(() => button("Unmute")!.click());
+    expect(track.enabled).toBe(true);
+    expect(button("Mute")!.getAttribute("aria-pressed")).toBe("false");
+  });
   it("Open in browser opens this page in the web browser", async () => {
     const openInBrowser = vi.fn();
     const request = vi.fn();

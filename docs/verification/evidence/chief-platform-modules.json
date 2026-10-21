@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-07T20:37:06.231Z",
+  "scope": "Actual retained modules; synthetic Chief Acceptance organization only",
+  "checks": [
+    "Human channel message and thread reply persist separately from private agent conversations",
+    "Created Tracker issue TSK-1 and rich description persist in a fresh browser context",
+    "Document teamspace, document title and edited rich body persist in a fresh browser context",
+    "A new human DM produces an Inbox notification for the separately signed-in recipient",
+    "Two independently signed-in members exchange a direct message and reply live; the reply persists after reload"
+  ],
+  "pending": [
+    "Tracker assignment/status and permission workflows",
+    "Team planner scheduling",
+    "Meeting, capture and agent follow-up workflows"
+  ]
+}

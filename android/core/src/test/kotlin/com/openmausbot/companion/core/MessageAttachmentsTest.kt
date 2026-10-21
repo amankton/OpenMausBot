@@ -95,7 +95,8 @@ class MessageAttachmentsTest {
         )
         assertEquals(PendingMessageAttachment.Kind.IMAGE, AttachmentPolicy.kindForMime(" IMAGE/JPEG "))
         assertEquals(PendingMessageAttachment.Kind.FILE, AttachmentPolicy.kindForMime("application/pdf"))
-        assertNull(AttachmentPolicy.kindForMime("application/zip"))
+        assertEquals(PendingMessageAttachment.Kind.FILE, AttachmentPolicy.kindForMime("application/zip"))
+        assertEquals(PendingMessageAttachment.Kind.FILE, AttachmentPolicy.kindForMime("application/octet-stream"))
     }
 
     @Test
@@ -108,7 +109,7 @@ class MessageAttachmentsTest {
         assertEquals(
             "archive.zip isn't a supported file. Try PDF, text, Word, Excel, or PowerPoint.",
             assertFailsWith<AttachmentPolicyException> {
-                AttachmentPolicy.validate(listOf(PendingMessageAttachment(data = byteArrayOf(1), name = "archive.zip", mime = "application/zip", kind = PendingMessageAttachment.Kind.FILE)))
+                AttachmentPolicy.validate(listOf(PendingMessageAttachment(data = byteArrayOf(1), name = "archive.zip", mime = "invalid", kind = PendingMessageAttachment.Kind.FILE)))
             }.message,
         )
         assertEquals(

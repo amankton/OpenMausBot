@@ -48,6 +48,7 @@ function aborted(): Error { return new Error("MCP operation cancelled"); }
 export function chatMcpEnvironment(serverEnv: Record<string, string>, source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...source, PATH: augmentedPath() };
   stripControlPlaneEnv(env);
+  delete env.HERMES_API_KEY;
   return { ...env, ...serverEnv };
 }
 

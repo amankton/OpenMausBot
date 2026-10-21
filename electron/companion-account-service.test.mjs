@@ -864,12 +864,12 @@ function manualTimers() {
 }
 
 describe("Companion account background recovery", () => {
-  it("names provider capacity honestly and retries with backoff that honours Retry-After", async () => {
+  it.each(["endpoint_capacity", "cf_rate_limited", "endpoint_rate_limited"])("recovers from %s with saved sign-in and backoff that honours Retry-After", async (code) => {
     const timers = manualTimers();
     const ensureEndpoint = vi
       .fn()
-      .mockRejectedValueOnce(new ControlPlaneError("endpoint_capacity", 503, "", 600_000))
-      .mockRejectedValueOnce(new ControlPlaneError("endpoint_capacity", 503))
+      .mockRejectedValueOnce(new ControlPlaneError(code, 503, "", 600_000))
+      .mockRejectedValueOnce(new ControlPlaneError(code, 503))
       .mockResolvedValueOnce({ endpoint: { url: ENDPOINT }, connectorToken: CONNECTOR_TOKEN });
     const client = readyClient({ ensureEndpoint });
     const { service, store } = serviceFixture({
@@ -884,7 +884,9 @@ describe("Companion account background recovery", () => {
 
     await expect(service.verifyCode("ada@example.com", "12345678")).resolves.toMatchObject({
       status: "error",
-      message: "Secure HTTPS links are temporarily full. Pair on this Wi-Fi or with Tailscale for now; we'll retry automatically.",
+      message: code === "endpoint_capacity"
+        ? "Secure HTTPS links are temporarily full. Pair on this Wi-Fi or with Tailscale for now; we'll retry automatically."
+        : "The HTTPS provider is temporarily rate-limiting connection setup. Your sign-in is saved. We'll retry automatically; local pairing still works.",
     });
     // The server's ten-minute hint outranks the first one-second backoff.
     expect(timers.delays()).toEqual([600_000]);

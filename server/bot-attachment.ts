@@ -18,8 +18,7 @@ import type { Message } from "./store.ts";
 export type BotAttachment = NonNullable<Message["attachments"]>[number];
 
 export const ATTACH_SUPPORTED_TYPES =
-  "images (png, jpg, gif, webp), video (mp4, webm, mov), audio (mp3, m4a, aac, wav, ogg, opus, flac), " +
-  "pdf, Word/Excel/PowerPoint and OpenDocument files, and csv, tsv, txt, md, json, rtf";
+  "all file types, including images, documents, source code, archives, audio, video, and binary data";
 
 function statusError(status: number, message: string): Error & { status: number } {
   return Object.assign(new Error(message), { status });

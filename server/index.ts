@@ -342,6 +342,8 @@ import * as tts from "./tts/index.ts";
 import { createDecider, deciderIncludedHere, deciderReady, deciderSavePatch, describeDecider } from "./decider/index.ts";
 import { decideRoomResponder, type RoomRoutingInput } from "./decider/room-routing.ts";
 import { createLiveSession, liveAttachUrl, LiveSessionError, type LiveBot, type LiveHistoryMessage } from "./live-call.ts";
+import { GeminiLiveSocket } from "./gemini-live.ts";
+import { GeminiAudioBridge } from "./gemini-audio-bridge.ts";
 import { LiveCallController, LiveCallSignedOutError, type LiveSocket } from "./live-call-controller.ts";
 import { narrateTool, toUtterances } from "./tts/speech-text.ts";
 import { turnStartLogLine } from "./turn-log.ts";
@@ -533,6 +535,7 @@ import {
   isTurnEventQuarantined,
 } from "./turn-dispatch-guard.ts";
 import { createGracefulShutdown } from "./graceful-shutdown.ts";
+import { TurnTiming } from "./turn-timing.ts";
 import { acquireDataDirLeaseForProcess } from "./data-dir-lease.ts";
 import { createWorkspaceAccess, describeEdition, editionStatus, hostedWorkspaceConfiguration, hostedWorkspaceConfigured, editionForMembers, LICENSE_WARN_DAYS, licenseWarning, sharedWorkspaceFullAccessConfigured, loadEnterpriseLayer, workspaceMembership, type EditionStatus, type WorkspaceAccess } from "./enterprise.ts";
 import { environmentDescriptor, loadEnvironmentId, serverVersion } from "./environment.ts";
@@ -2252,6 +2255,10 @@ function beginInternalCapabilityGeneration(threadId: string, generation = random
 // again.
 /** threadId → "botId kind" → the bearer and the grants it was minted for. */
 const sessionCredentials = new Map<string, Map<string, { grants: string; token: string }>>();
+const turnTiming = new TurnTiming(
+  record => console.info("[turn-timing]", JSON.stringify(record)),
+  undefined, undefined, process.env.OMB_TURN_TIMING !== "0",
+);
 
 /** What a bearer stands for: everything its record grants (a turn's counters
  * all start at zero), plus the thread's approval level; not the turn. */
@@ -2306,6 +2313,7 @@ function endForeignTurns(threadId: string, generation?: string): void {
 }
 
 function revokeInternalCapabilityGeneration(threadId: string, generation: string): void {
+  turnTiming.finish(threadId, generation, "released");
   endForeignTurns(threadId, generation);
   if (guestDrivenTurns.get(threadId) === generation) guestDrivenTurns.delete(threadId);
   for (const [token, capability] of internalCapabilities) {
@@ -5952,6 +5960,7 @@ watchdog.start();
 
 bus.subscribe((event: RuntimeEvent) => {
   if (shouldIgnoreProviderEvent(event)) return;
+  turnTiming.event(event);
   if (event.type === "request.opened") watchdog.setWaitingOnHuman(event.threadId, true);
   else if (event.type === "request.resolved") watchdog.setWaitingOnHuman(event.threadId, false);
   else if (event.type === "turn.wait_started") watchdog.setWaitingOnComputer(event.threadId, true);
@@ -7902,6 +7911,8 @@ const delegationWatch = new Map<string, {
   /** Bind a late peer result to the run that requested it, not later user
    * work that happens to reuse that run's execution conversation. */
   routineRunId?: string;
+  /** Exact originating request; never attribute a late reply to newer work. */
+  requestMessageId?: string;
   /** when the delegated turn was dispatched — elapsed time for status checks */
   startedAtMs?: number;
   /** Cross-bot send: leave the terminal state in the recipient thread. */
@@ -7965,7 +7976,7 @@ function settleWaitingOnPersonChips(threadId: string, requestId?: string) {
 // fold the result in and answer the user instead of sitting idle. Mirrors
 // the cardContinuation resume pattern used for connector/credential cards.
 const delegationWakeBudget = new DelegationWakeBudget();
-const pendingDelegationWakes = new Map<string, { botId: string; targetName: string; failureReason?: string; routineRunId?: string; budgetAcquired?: boolean }>();
+const pendingDelegationWakes = new Map<string, { botId: string; targetName: string; failureReason?: string; routineRunId?: string; budgetAcquired?: boolean; requestMessageId?: string }>();
 
 function activeRoutineRunForThread(threadId: string): RoutineRun | null {
   const run = routines?.runForThread(threadId);
@@ -7976,7 +7987,7 @@ function routineDelegationCanResume(threadId: string, routineRunId?: string): bo
   return !routineRunId || activeRoutineRunForThread(threadId)?.id === routineRunId;
 }
 
-function dispatchDelegationWake(botId: string, threadId: string, targetName: string, failureReason?: string, routineRunId?: string, budgetAcquired = false): void {
+function dispatchDelegationWake(botId: string, threadId: string, targetName: string, failureReason?: string, routineRunId?: string, budgetAcquired = false, requestMessageId?: string): void {
   if (!store.taskByThread(botId, threadId)) return;
   if (!routineDelegationCanResume(threadId, routineRunId)) return;
   if (!budgetAcquired && !delegationWakeBudget.tryAcquire(threadId)) {
@@ -7988,6 +7999,7 @@ function dispatchDelegationWake(botId: string, threadId: string, targetName: str
     : buildDelegationRevivalPrompt(targetName);
   void startTurn(botId, prompt, {
     threadId,
+    requestMessageId,
     cardContinuation: true,
     unattended: isUnattended(botId, threadId),
   })
@@ -7998,7 +8010,7 @@ function dispatchDelegationWake(botId: string, threadId: string, targetName: str
       // Raced with a user turn claiming the bot — retry once it settles.
       // This is the same logical wake, so keep its original budget charge.
       if (isTurnAdmissionBlocked(error)) {
-        pendingDelegationWakes.set(threadId, { botId, targetName, failureReason, routineRunId, budgetAcquired: true });
+        pendingDelegationWakes.set(threadId, { botId, targetName, failureReason, routineRunId, budgetAcquired: true, requestMessageId });
         return;
       }
       store.appendMessage(threadId, {
@@ -8010,7 +8022,7 @@ function dispatchDelegationWake(botId: string, threadId: string, targetName: str
     });
 }
 
-function wakeDelegationSource(source: BotRecord, threadId: string, targetName: string, failureReason?: string, routineRunId?: string): void {
+function wakeDelegationSource(source: BotRecord, threadId: string, targetName: string, failureReason?: string, routineRunId?: string, requestMessageId?: string): void {
   if (!store.taskByThread(source.id, threadId)) return;
   if (!routineDelegationCanResume(threadId, routineRunId)) return;
   // Busy? Hold the wake until the source settles, then drain it — the
@@ -8018,10 +8030,10 @@ function wakeDelegationSource(source: BotRecord, threadId: string, targetName: s
   // source processes it the moment it is free rather than only on a later
   // user nudge.
   if (threadBusy(source.id, threadId) || botAtThreadCapacity(source.id) || activeGroupTurnForBot(source.id)) {
-    pendingDelegationWakes.set(threadId, { botId: source.id, targetName, failureReason, routineRunId });
+    pendingDelegationWakes.set(threadId, { botId: source.id, targetName, failureReason, routineRunId, requestMessageId });
     return;
   }
-  dispatchDelegationWake(source.id, threadId, targetName, failureReason, routineRunId);
+  dispatchDelegationWake(source.id, threadId, targetName, failureReason, routineRunId, false, requestMessageId);
 }
 
 // ── incidents: a broken run reaches the Chief of Staff ──────────────────
@@ -8122,7 +8134,7 @@ function drainDelegationWakes(): void {
     // could otherwise requeue after the last idle-release drain has run.
     if (threadBusy(entry.botId, threadId) || botAtThreadCapacity(entry.botId) || activeGroupTurnForBot(entry.botId)) continue;
     pendingDelegationWakes.delete(threadId);
-    dispatchDelegationWake(entry.botId, threadId, entry.targetName, entry.failureReason, entry.routineRunId, entry.budgetAcquired);
+    dispatchDelegationWake(entry.botId, threadId, entry.targetName, entry.failureReason, entry.routineRunId, entry.budgetAcquired, entry.requestMessageId);
   }
 }
 
@@ -8394,9 +8406,9 @@ function finalizeDelegationWatch(
       // for the receipt instead; waking would answer it a second time.
       if (watched.completionOwner !== "external") {
         if (ok) {
-          wakeDelegationSource(source, watched.sourceThreadId, targetName, undefined, watched.routineRunId);
+          wakeDelegationSource(source, watched.sourceThreadId, targetName, undefined, watched.routineRunId, watched.requestMessageId);
         } else {
-          wakeDelegationSource(source, watched.sourceThreadId, targetName, failureName || "the delegated turn did not finish", watched.routineRunId);
+          wakeDelegationSource(source, watched.sourceThreadId, targetName, failureName || "the delegated turn did not finish", watched.routineRunId, watched.requestMessageId);
         }
       }
     }
@@ -8477,6 +8489,7 @@ const runDelegatedTurn: Parameters<typeof drainDelegations>[3] = (toBotId, rawTe
         sourceThreadId,
         sourceBotId,
         routineRunId: activeRoutineRunForThread(sourceThreadId)?.id,
+        requestMessageId: directRequestOwners.get(sourceThreadId)?.messageId,
         startedAtMs: Date.now(),
         ...(oneWay ? { oneWay: true } : {}),
         ...(completionOwner ? { completionOwner } : {}),
@@ -9446,6 +9459,7 @@ async function startTurn(
   // in the background — boat provisioning can take ~90s and must never
   // hang the HTTP request
   const dispatchClaimId = randomUUID();
+  turnTiming.begin(threadId, dispatchClaimId);
   // Guest-driven for as long as it runs, wherever it runs (cloudGuestDriven).
   if (guestConfined) guestDrivenTurns.set(threadId, dispatchClaimId);
   const resourceOwner: TurnOwner = { threadId, generation: dispatchClaimId };
@@ -10260,7 +10274,9 @@ async function startTurn(
       if (checkpointCwd) {
         // Pinned by this dispatch: a sibling thread's snapshot in the same
         // folder must not reclaim this turn's "before" state while it runs.
-        const before = await checkpoints.snapshot(bot.id, checkpointCwd, `turn ${threadId.slice(0, 8)}`, undefined, { pin: dispatchClaimId });
+        const endCheckpointTiming = turnTiming.measure(threadId, dispatchClaimId, "checkpoint");
+        const before = await checkpoints.snapshot(bot.id, checkpointCwd, `turn ${threadId.slice(0, 8)}`, undefined, { pin: dispatchClaimId })
+          .finally(endCheckpointTiming);
         if (!directTurnClaimIsCurrent(bot.id, dispatchClaimId, threadId)) {
           if (before) void checkpoints.release(bot.id, checkpointCwd, dispatchClaimId);
           throw new DirectTurnSetupCancelled("turn stopped during checkpoint");
@@ -10401,12 +10417,16 @@ async function startTurn(
       // Automatic recall rides in front of THIS turn's message, never in the
       // system prompt: the volatile half is re-sent whole whenever any part of
       // it changes, and recall changes nearly every turn.
-      const recalled = autoRecallPrompt(bot, threadId, resolvedImages.text, {
-        // a routine run starts fresh by design, and a webhook is untrusted:
-        // neither pulls earlier conversations in
-        conversations: commsDepth === 0 && !coordinationNode && !opts?.automationSource && !opts?.unattended,
-        userName: cfg.profile?.name?.trim() || "User",
-      });
+      const endRecallTiming = turnTiming.measure(threadId, dispatchClaimId, "recall");
+      let recalled: string;
+      try {
+        recalled = autoRecallPrompt(bot, threadId, resolvedImages.text, {
+          // a routine run starts fresh by design, and a webhook is untrusted:
+          // neither pulls earlier conversations in
+          conversations: commsDepth === 0 && !coordinationNode && !opts?.automationSource && !opts?.unattended,
+          userName: cfg.profile?.name?.trim() || "User",
+        });
+      } finally { endRecallTiming(); }
       runningTurnEngines.set(threadId, instance);
       // The prompt carries the soul as saved now. If it changed during setup,
       // decide again from what is actually sent — except on a continuation
@@ -10426,6 +10446,7 @@ async function startTurn(
       if (strictResume && !(opts?.cardContinuation && continuingRoutine) && dispatchedConfig !== plannedConfig) dispatchContext = decideContext(dispatchedConfig);
       // Before sendTurn: an adapter may emit the whole turn before it resolves.
       handoffs.dispatching(threadId, dispatchClaimId, dispatchContext.handoff);
+      turnTiming.dispatch(threadId, dispatchClaimId);
       const dispatch = await guardTurnDispatch(instance.adapter.sendTurn({
         threadId,
         botId: bot.id,
@@ -10515,6 +10536,7 @@ async function startTurn(
         drainDelegationWakes();
       }
     } catch (cause) {
+      turnTiming.finish(threadId, dispatchClaimId, "setup_failed");
       let e = cause;
       // Only the driver can prove that a task was never submitted and its
       // old process is gone. A timeout/error string alone is not that proof.
@@ -15443,8 +15465,9 @@ function liveBotFor(botId: string): LiveBot {
   return { name: bot.name, title: bot.title, description: bot.description };
 }
 /** The chat's text so far, so the voice can follow "and the other one?". */
-function liveHistoryFor(threadId: string): LiveHistoryMessage[] {
+function liveHistoryFor(threadId: string, botId: string): LiveHistoryMessage[] {
   return store.activePath(threadId)
+    .filter((message) => (!message.from || message.from.botId === botId) && !message.peerAsk && !message.peerPost && !message.aside)
     .filter((message) => message.kind === "text" && typeof message.text === "string" && (message.role === "user" || message.role === "bot"))
     .map((message) => ({ role: message.role === "user" ? "user" as const : "assistant" as const, text: message.text ?? "" }));
 }
@@ -15453,7 +15476,13 @@ function liveHistoryFor(threadId: string): LiveHistoryMessage[] {
 function liveSignedIn(auth: RequestAuth): boolean {
   return auth.kind !== "session" || sessions.isLive(auth.session.id);
 }
-const liveCalls = new LiveCallController({
+const geminiAudio: GeminiAudioBridge = new GeminiAudioBridge(callId => liveCalls.current()?.callId === callId);
+const liveCalls: LiveCallController = new LiveCallController({
+  gemini: { open: ({ key, callId, botId }) => {
+    const socket = new GeminiLiveSocket({ key, bot: liveBotFor(botId), cloudHome: Boolean(CLOUD_HOME), onClosed: () => geminiAudio.remove(callId) });
+    geminiAudio.register(callId, socket);
+    return socket;
+  } },
   store,
   send: async ({ auth, botId, threadId, text }) => {
     // the controller ends the call on this error
@@ -15488,8 +15517,8 @@ const liveCalls = new LiveCallController({
     return task.activity === "waiting-on-you" ? "waiting" : "working";
   },
   broadcast: (frame) => broadcast(frame, { adminOnly: true }),
-  settings: () => ({ key: cfg.live?.key ?? "", ...liveSettingsFor(cfg) }),
-  createSession: ({ key, sdp, botId, threadId, voice }) => createLiveSession({ key, sdp, voice, bot: liveBotFor(botId), history: liveHistoryFor(threadId), cloudHome: Boolean(CLOUD_HOME) }),
+  settings: () => ({ key: cfg.live?.key?.trim() || cfg.openai?.key?.trim() || "", geminiKey: cfg.live?.geminiKey ?? "", ...liveSettingsFor(cfg) }),
+  createSession: ({ key, sdp, botId, threadId, voice, voicePrompt }) => createLiveSession({ key, sdp, voice, voicePrompt, bot: liveBotFor(botId), history: liveHistoryFor(threadId, botId), cloudHome: Boolean(CLOUD_HOME) }),
   // Node's WebSocket (undici) accepts headers in its second argument.
   openSocket: (url, key) => new WebSocket(url, { headers: { authorization: `Bearer ${key}` } } as unknown as string[]) as unknown as LiveSocket,
   attachUrl: (sessionId) => liveAttachUrl(sessionId),
@@ -15500,8 +15529,10 @@ const liveCalls = new LiveCallController({
 // check would only notice within 15 s). A paired phone's unpairing arrives
 // from the companion instead (POST /api/live/device-revoked).
 sessions.onSessionRevoked((sessionId) => liveCalls.sessionRevoked(sessionId));
+ROUTES.push(geminiAudio.route);
 ROUTES.push(createLiveRoutes({
   calls: liveCalls,
+  geminiTransport: (callId, origin, auth) => geminiAudio.ticket(callId, origin, auth),
   resolveTarget: (botId, threadId) => {
     const bot = store.bot(botId);
     if (!bot) return null;
@@ -17207,6 +17238,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
             sourceThreadId: fromThreadId,
             sourceBotId: currentFrom.id,
             routineRunId: activeRoutineRunForThread(fromThreadId)?.id,
+            requestMessageId: directRequestOwners.get(fromThreadId)?.messageId,
             ...externalCompletion(internalCapability),
           });
           store.appendMessage(fromThreadId, {
@@ -24233,6 +24265,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
           if (persisted.imageGen?.key !== undefined) persisted.imageGen.key = "";
           if (persisted.imageGen?.customApiKey !== undefined) persisted.imageGen.customApiKey = "";
           if (persisted.live?.key !== undefined) persisted.live.key = "";
+          if (persisted.live?.geminiKey !== undefined) persisted.live.geminiKey = "";
           saveConfig(persisted);
           configWriteCommitted = true;
           syncCredentialEnv(patch);
@@ -24842,6 +24875,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
 
 const server = createServer(handleRequest);
 desktopViewer.attach(server, handleRequest);
+geminiAudio.attach(server, handleRequest);
 
 calendarCalls.start();
 
@@ -25016,6 +25050,7 @@ if (TUNNEL_SOCKET) {
   if (process.platform !== "win32") rmSync(TUNNEL_SOCKET, { force: true });
   tunnelListener = createServer(handleRequest);
   desktopViewer.attach(tunnelListener, handleRequest);
+  geminiAudio.attach(tunnelListener, handleRequest);
   tunnelListener.listen(TUNNEL_SOCKET, () => {
     console.log(`openmausbot tunnel listener on ${TUNNEL_SOCKET}`);
   });
@@ -25050,6 +25085,7 @@ const gracefulShutdown = createGracefulShutdown({
       await browserRuntime.closeAll();
     },
     () => liveCalls.shutdown(),
+    () => geminiAudio.close(),
     () => flushAllProfileHistory(),
     () => flushAllMemoryJournals(),
     () => flushUsageLedger(DATA_DIR),

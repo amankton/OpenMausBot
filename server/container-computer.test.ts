@@ -289,9 +289,22 @@ describe("containerComputerStatus", () => {
 
     expect(status).toEqual({
       runtime: "podman",
-      available: ["podman", "docker"],
+      available: ["podman"],
       daemonUp: true,
     });
+  });
+
+  it.each([true, false])("never falls back to Docker on Windows when Podman installed=%s", async (present) => {
+    const fake = runner({
+      "where.exe podman": present ? "podman.exe" : new Error("missing"),
+      "where.exe docker": "docker.exe",
+      "podman info --format json": new Error("machine stopped"),
+      "docker info --format {{.ServerVersion}}": "29.0.0",
+    });
+    const status = await containerRuntimeStatus(fake.run, "win32");
+    expect(status.runtime).toBe(present ? "podman" : null);
+    expect(status.daemonUp).toBe(false);
+    expect(fake.calls.some(call => call.includes("docker"))).toBe(false);
   });
 
   it.each(["exact", "legacy", "missing-effective", "missing-bounding", "extra-effective", "extra-bounding"])(
@@ -473,7 +486,7 @@ describe("containerComputerStatus", () => {
 
     expect(status.managed).toBe(false);
     expect(status.ready).toBe(false);
-    expect(status.problem).toContain("not created by OpenMausBot");
+    expect(status.problem).toContain("not created by Chief Executive Suite");
   });
 
   it("prefers a running runtime over an earlier installed but stopped one", async () => {
@@ -564,7 +577,7 @@ describe("containerComputerStatus", () => {
 
   it("rejects a privileged or host-namespaced Local VM even with correct limits", async () => {
     // pins the stricter shared hardening check: resource limits alone are
-    // not hardening — privilege and namespace escapes disqualify the VM too
+    // not hardening â€” privilege and namespace escapes disqualify the VM too
     const base = JSON.parse(readyInspect())[0].HostConfig;
     for (const override of [
       { Privileged: true },
@@ -772,12 +785,31 @@ describe("containerComputerStatus", () => {
 
 describe("Cua integration", () => {
   it("mounts the official Cua MCP server for Local VM turns", () => {
-    const connection = containerComputerMcp("podman");
+    const connection = containerComputerMcp("podman", undefined, SHARED_LOCAL_VM_TARGET, {});
     expect(connection.command).toBe(process.execPath);
     expect(connection.args.at(-3)).toBe("podman");
     expect(connection.args.at(-2)).toBe(CONTAINER);
     expect(connection.args.at(-1)).toBe(CUA_SOCKET);
     expect(connection.env).toEqual({ ELECTRON_RUN_AS_NODE: "1" });
+  });
+
+  it("carries only explicit Podman connection settings across a sanitized MCP environment", () => {
+    const environment = {
+      OMB_EXTRA_PATH: "/opt/podman/bin", CONTAINER_HOST: "ssh://user@127.0.0.1:1234/run/user/1000/podman/podman.sock",
+      CONTAINER_SSHKEY: "/fixture/machine-key", CONTAINER_CONNECTION: "fixture-machine",
+      OPENAI_API_KEY: "must-not-cross", HERMES_HOME: "/private/provider", HOME: "/private/home",
+    };
+    const connection = containerComputerMcp("podman", { url: "http://127.0.0.1:4567", token: "fixture-control" }, SHARED_LOCAL_VM_TARGET, environment);
+    expect(connection.env).toEqual({
+      ELECTRON_RUN_AS_NODE: "1", OMB_EXTRA_PATH: environment.OMB_EXTRA_PATH,
+      CONTAINER_HOST: environment.CONTAINER_HOST, CONTAINER_SSHKEY: environment.CONTAINER_SSHKEY,
+      CONTAINER_CONNECTION: environment.CONTAINER_CONNECTION,
+      OMB_CONTROL_URL: "http://127.0.0.1:4567", OMB_CONTROL_TOKEN: "fixture-control",
+    });
+    expect(connection.args.join(" ")).not.toContain("fixture-control");
+    expect(connection.args.join(" ")).not.toContain("machine-key");
+    expect(containerComputerMcp("docker", undefined, SHARED_LOCAL_VM_TARGET, environment).env)
+      .toEqual({ ELECTRON_RUN_AS_NODE: "1", OMB_EXTRA_PATH: environment.OMB_EXTRA_PATH });
   });
 
   it("builds an exact, checksum-verified Cua Driver 0.20.0 image", () => {
@@ -820,7 +852,7 @@ describe("Cua integration", () => {
     expect(dockerfile).toContain('"/lib/$lib_triplet/libcrypto.so.3"');
     expect(dockerfile).toContain("[ ! -s \"$ssl_lib\" ]");
     expect(dockerfile).toContain("is zero bytes, so curl cannot start");
-    // the gate runs in the same RUN as the fetch, ahead of it — a defective
+    // the gate runs in the same RUN as the fetch, ahead of it â€” a defective
     // layer must be named before curl has any chance to fail confusingly
     const gate = dockerfile.indexOf('[ ! -s "$ssl_lib" ]');
     const fetch = dockerfile.indexOf("curl -fsSL");
@@ -896,7 +928,7 @@ describe("containerComputerAction", () => {
     });
 
     await expect(containerComputerAction("remove", fake.run, "linux")).rejects.toThrow(
-      /not created by OpenMausBot.*remove it manually/i,
+      /not created by Chief Executive Suite.*remove it manually/i,
     );
     expect(fake.calls).not.toContain(`docker rm -f ${CONTAINER}`);
   });

@@ -12,9 +12,9 @@ import { parse as parseYaml } from "yaml";
 
 import type { ModelCatalog } from "../../contracts.ts";
 import { harnessHome } from "../../env-path.ts";
-import { resolveCli } from "../../procs.ts";
+import { execCli, resolveCli } from "../../procs.ts";
 import { decodeInjectId, hostApiKey, INJECT_SEP, localHost, mergeLocalInject } from "../local-inject.ts";
-import { createAcpDriver, type AcpSupport } from "./core.ts";
+import { createAcpDriver, versionFromProbe, type AcpSupport } from "./core.ts";
 
 const EMPTY: ModelCatalog = { default: "", options: [] };
 
@@ -407,6 +407,22 @@ async function applySetting(
   }
 }
 
+/** Run the installed launcher; metadata alone cannot establish availability.
+ * Older Hermes versions may explicitly reject the read-only probe option. */
+export async function probeHermesVersion(cli: string, env: Record<string, string | undefined>): Promise<string | null> {
+  const probe = (args: string[]) => new Promise<{ version: string | null; unsupported: boolean }>((resolve) => {
+    execCli(cli, args, { timeout: 30_000, env }, (err, stdout, stderr) => {
+      const output = `${stdout ?? ""}\n${stderr ?? ""}`;
+      resolve({
+        version: err ? null : versionFromProbe(stdout, stderr),
+        unsupported: !!err && /(?:unrecognized arguments?|unknown (?:option|argument))[^\r\n]*--no-update-check/i.test(output),
+      });
+    });
+  });
+  const result = await probe(["--version", "--no-update-check"]);
+  return result.unsupported ? (await probe(["--version"])).version : result.version;
+}
+
 const support: AcpSupport = {
   driverKind: "hermesAgent",
   displayName: "Hermes",
@@ -423,6 +439,12 @@ const support: AcpSupport = {
     return model;
   },
   defaultCli: "hermes",
+  snapshot: async (env, config, instanceId) => {
+    const version = await probeHermesVersion(config.cli, env);
+    return version
+      ? { state: "available", version, authenticated: await support.isAuthenticated(env, config, instanceId) }
+      : { state: "unavailable", reason: `\`${config.cli}\` CLI not found` };
+  },
   nativeSource: "hermes.acp",
   permissionTimeoutKindFromStderr: (line) => {
     const match = /\b(Edit approval request|Permission request) timed out after \d+(?:\.\d+)?s$/.exec(line);

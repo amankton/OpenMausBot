@@ -1,0 +1,11 @@
+{
+  "verifiedAt": "2026-10-19T19:58:33.885Z",
+  "fixtureUrl": "http://127.0.0.1:21360",
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1792439878042-34340.log",
+  "chatVisibleWhileInstancesPending": true,
+  "partialVisibleWhileBusy": true,
+  "partialAbsentFromPersistence": true,
+  "partialClearedOnCompletion": true,
+  "finalReplyCount": 1,
+  "pageErrors": []
+}

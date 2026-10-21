@@ -54,7 +54,7 @@ describe("liveCallBarView", () => {
     expect(liveCallBarView({ bot, media: { ...idle, phase: "failed", botId: "b1", threadId: "t1", notice: "The app didn't let this page use the microphone.", action: "open-in-browser" }, server: null, now: 0 })).toEqual({ kind: "notice", text: "The app didn't let this page use the microphone.", action: "open-in-browser" });
     expect(liveCallBarView({ bot, media: { ...idle, phase: "failed", botId: "b1", threadId: "t1", notice: "Another Live call is running.", action: null }, server: null, now: 0 })).toEqual({ kind: "notice", text: "Another Live call is running.", action: null });
     // a call that ended by itself needs nothing done
-    expect(liveCallBarView({ bot, media: { ...idle, phase: "ended", botId: "b1", threadId: "t1", notice: "Call ended.", action: "retry" }, server: null, now: 0 })).toEqual({ kind: "notice", text: "Call ended.", action: null });
+    expect(liveCallBarView({ bot, media: { ...idle, phase: "ended", botId: "b1", threadId: "t1", notice: "Call ended.", action: "retry" }, server: null, now: 0 })).toEqual({ kind: "notice", text: "Call ended.", action: "retry" });
   });
 });
 

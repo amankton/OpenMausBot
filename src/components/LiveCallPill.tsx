@@ -42,7 +42,7 @@ export function LiveCallPill({ onOpen, currentBotId, iconOnly = false }: {
   if (!bot || !threadId) return null;
   const title = t("call.live.pill", { name: bot.name });
   const ending = media.phase === "ending";
-  const round = "flex shrink-0 items-center justify-center rounded-full p-1.5";
+  const round = "flex min-h-10 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   const isMac = isMacPlatform();
   const muteLabel = media.muted ? t("call.live.unmute") : t("call.live.mute");
   const muteChord = liveCallChord("mute", isMac);
@@ -55,9 +55,10 @@ export function LiveCallPill({ onOpen, currentBotId, iconOnly = false }: {
       aria-keyshortcuts={muteChord.aria}
       title={`${muteLabel} (${muteChord.text})`}
       onClick={() => setLiveMuted(!media.muted)}
-      className={cn(round, media.muted ? "bg-raised text-ink" : "text-ink-secondary hover:text-ink")}
+      className={cn(round, media.muted ? "bg-warning/10 text-warning" : "bg-raised text-ink hover:bg-raised-hover", iconOnly && "flex-col")}
     >
       {media.muted ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
+      <span>{muteLabel}</span>
     </button>
   );
   const hangUp = (
@@ -92,22 +93,24 @@ export function LiveCallPill({ onOpen, currentBotId, iconOnly = false }: {
     );
   }
   return (
-    <div className="mx-2 mb-2 flex items-center gap-1 rounded-xl border border-success/40 bg-panel px-2 py-1.5 text-[12.5px] text-ink">
+    <div className="mx-2 mb-2 flex flex-wrap items-center gap-1 rounded-xl border border-success/40 bg-panel px-2 py-1.5 text-[12.5px] text-ink">
       <button type="button" onClick={() => onOpen(bot.id, threadId)} title={t("call.live.back")} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         <span className="size-2 shrink-0 animate-pulse rounded-full bg-success" aria-hidden />
         <span className="truncate">{title}</span>
       </button>
       {mute}
       {hangUp}
+      <span role="status" className={cn("w-full text-xs", media.muted ? "text-warning" : "text-ink-secondary")}>{media.muted ? t("call.live.microphoneMuted") : t("call.live.microphoneOn")}</span>
     </div>
   );
 }
 
 /** The same, for windows too narrow to show the sidebar: a chip in the chat header. */
 export function LiveCallChip({ currentBotId, onOpen }: { currentBotId: string; onOpen: (botId: string, threadId: string) => void }) {
-  const { bot, threadId } = useCallElsewhere(currentBotId);
+  const { media, bot, threadId } = useCallElsewhere(currentBotId);
   if (!bot || !threadId) return null;
   return (
+    <div className="flex max-w-full flex-wrap items-center gap-1 md:hidden">
     <button
       type="button"
       onClick={() => onOpen(bot.id, threadId)}
@@ -117,5 +120,13 @@ export function LiveCallChip({ currentBotId, onOpen }: { currentBotId: string; o
       <span className="size-2 animate-pulse rounded-full bg-success" aria-hidden />
       {t("call.live.back")}
     </button>
+    <button type="button" aria-label={media.muted ? t("call.live.unmute") : t("call.live.mute")} aria-pressed={media.muted}
+      className={cn("min-h-10 rounded-full border border-hairline px-3 text-xs focus-visible:outline-2 focus-visible:outline-accent", media.muted ? "bg-warning/10 text-warning" : "bg-raised text-ink")}
+      onClick={() => setLiveMuted(!media.muted)}>{media.muted ? t("call.live.unmute") : t("call.live.mute")}</button>
+    <button type="button" aria-label={t("call.live.hangUp")} disabled={media.phase === "ending"}
+      className="min-h-10 rounded-full bg-danger px-3 text-xs text-white focus-visible:outline-2 focus-visible:outline-accent"
+      onClick={() => void hangUpLiveCall()}>{t("call.live.hangUp")}</button>
+    <span role="status" className="w-full text-xs">{media.muted ? t("call.live.microphoneMuted") : t("call.live.microphoneOn")}</span>
+    </div>
   );
 }

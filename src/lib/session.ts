@@ -22,13 +22,35 @@ export type SessionState =
 /** Ask the server who we are. A 401/403 means "go pair"; a network failure
  * is reported separately so the pair page can say the server is down. */
 export async function readSessionState(fetchImpl: typeof fetch = fetch): Promise<SessionState> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
   let res: Response;
+  let body: unknown;
   try {
-    res = await fetchImpl("/api/auth/session", { credentials: "same-origin" });
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error("The server did not respond within 12 seconds. Try connecting again."));
+        controller.abort();
+      }, 12_000);
+    });
+    [res, body] = await Promise.race([
+      (async (): Promise<[Response, unknown]> => {
+        const response = await fetchImpl("/api/auth/session", { credentials: "same-origin", signal: controller.signal });
+        try {
+          return [response, await response.json()];
+        } catch (error) {
+          // A denied HTTP status is authoritative even without a JSON explanation.
+          if (!controller.signal.aborted && (response.status === 401 || response.status === 403) && error instanceof SyntaxError) return [response, {}];
+          throw error;
+        }
+      })(),
+      deadline,
+    ]);
   } catch (error) {
     return { kind: "unreachable", error: error instanceof Error ? error.message : String(error) };
+  } finally {
+    clearTimeout(timer);
   }
-  const body: unknown = await res.json().catch(() => ({}));
   const record = Object(body) as Record<string, unknown>; // SAFETY: read with typeof checks below; never trusted as a shape
   if (res.status === 401 || res.status === 403) {
     return { kind: "unauthenticated", error: typeof record.error === "string" ? record.error : `${res.status}` };

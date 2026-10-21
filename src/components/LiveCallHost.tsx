@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { isMacPlatform } from "@/lib/keyboard-shortcuts";
-import { handleLiveCallKey, onLiveStreamConnected, onServerCall } from "@/lib/live-call-media";
+import { handleLiveCallKey, leaveLiveCall, onLiveStreamConnected, onServerCall } from "@/lib/live-call-media";
 import { useStore } from "@/state/store";
 
 /** Feeds the harness's call state and the event stream's health to the
@@ -16,7 +16,8 @@ export function LiveCallHost() {
       if (handleLiveCallKey(event, isMac)) event.preventDefault();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("pagehide", leaveLiveCall);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("pagehide", leaveLiveCall); };
   }, []);
   return null;
 }

@@ -1,0 +1,9 @@
+name: chief-http-tools
+version: "0.1.0"
+description: "Turn-scoped Chief MCP and VM tools over an authenticated local HTTP broker."
+author: Chief Executive Suite
+kind: standalone
+provides_tools:
+  - chief_tools
+provides_hooks:
+  - pre_tool_call

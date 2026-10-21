@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-10-08T07:08:19.3950825Z",
+  "passed": true,
+  "serviceCount": 17,
+  "changedContainers": [
+    "front"
+  ],
+  "mountsPreserved": true,
+  "otherImagesPreserved": true,
+  "frontImage": "sha256:ba0a3ac0c9908c2cef8d1068da62ec466539fa03f206e0e90a088e1437dce828",
+  "buildReceiptSha256": "319de3f5d66e1d2d6545b06aa1dd62c9345a47b5eb50349e6a63eee3ac85dd19",
+  "playbackPatchSha256": "53f6af60d5ab2dfad6506b8c368c7f5c04ea2627f81b107502dca7f030bbcddd",
+  "compiledReceiptSha256": "415ad52fea990947e4f765094679b8155402d00127a14e54745a901ec41ddaf7",
+  "deployedReceiptSha256": "50a423c2035e1ccff1b6d6f589e0061e401f1299e36f62a18ebfc12f9c097a0e",
+  "ownerRecordingChanged": false,
+  "ownerPlaybackVerified": true,
+  "remainingLimitation": "Account sign-in persistence after full refresh is separate; playback verified with synthetic signed-in iframe.",
+  "ownerPlayback": {
+    "verifiedAt": "2026-10-08T07:09:51.0652739Z",
+    "method": "CUA existing owner tab after user signed in; clicked native Play and inspected read-only video state",
+    "duration": 7.734,
+    "currentTime": 0.22642,
+    "paused": false,
+    "readyState": 4,
+    "width": 640,
+    "height": 360,
+    "error": null
+  }
+}

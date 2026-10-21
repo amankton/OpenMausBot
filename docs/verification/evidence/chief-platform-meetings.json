@@ -1,0 +1,41 @@
+{
+  "verifiedAt": "2026-10-07T22:37:08.356Z",
+  "scope": "Retained two-member meeting, synthetic organization only",
+  "fakeDevicesOnly": true,
+  "images": {
+    "front": "sha256:c79fa3251ded2d6e6a3ff6e949e9c2d3138dd939b47ad393401a29b3b111cec7",
+    "love": "sha256:047ba56f5548e7a2b2a1f5b485c90cceca89a1c2a831718f78c61bafebb50e66",
+    "transactor": "sha256:8d115eaa4250e3efff4399998171256274ff2bbd0a754a86e21151ff0a37ac64",
+    "workspace": "sha256:1b6c679990a88306500467b08411b83f4acbd5959b25d5abe4e0e03a5b1e59ff"
+  },
+  "rtc": {
+    "configurationSha256": "d647ce2d95884b62639de850e511a1d7269670b4fb7c0b2139fbf4d42eefb007",
+    "addressScope": "loopback",
+    "forceTcp": false,
+    "loopbackCandidates": false,
+    "diagnostic": "active-unaccepted"
+  },
+  "checks": [
+    "Actual self-drag from personal Office into a named meeting room connects without device capture and preserves the Card",
+    "Keyboard-accessible room invitation leaves recipient unjoined; rejecting does not activate media",
+    "Dragging the other visible member sends an invitation without moving them; acceptance synchronizes two joined occupants in compact and full Office",
+    "Recipient acceptance joins the same retained meeting while both members start with devices off",
+    "Explicit camera/microphone and generated screen-share controls deliver decoded media over actual LiveKit WebRTC to the other member",
+    "Self-drag also joins from full Office; shared room placement clears after leaving in both views"
+  ],
+  "received": {
+    "av": {
+      "audio": 980,
+      "video": 2006,
+      "frames": 5
+    },
+    "screen": {
+      "audio": 7543,
+      "video": 6421,
+      "frames": 13
+    }
+  },
+  "pending": [
+    "Meeting capture and agent follow-up"
+  ]
+}

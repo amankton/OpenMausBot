@@ -339,15 +339,15 @@ export async function imageAttachmentFromFile(
   };
 }
 
-/** Copy a supported document or audio file into the private attachment store. The prompt
+/** Copy any file into the private attachment store. The prompt
  * then carries the same durable path for the local agent and paired phones,
  * instead of exposing an arbitrary Finder path to the companion route. */
 export async function fileAttachmentFromFile(file: File): Promise<FileAttachment | null> {
   const declared = file.type.split(";", 1)[0]!.trim().toLowerCase();
   const extension = file.name.split(".").at(-1)?.toLowerCase() ?? "";
   const mime = documentMime(file) ??
-    (ACCEPTED_AUDIO_MIMES.has(declared) ? declared : AUDIO_MIMES_BY_EXTENSION[extension]);
-  if (!mime) return null;
+    (ACCEPTED_AUDIO_MIMES.has(declared) ? declared : AUDIO_MIMES_BY_EXTENSION[extension]) ??
+    (declared || "application/octet-stream");
   if (file.size > FILE_MAX_BYTES) {
     throw Object.assign(new Error(`${file.name} exceeds 25 MB`), { status: 413 });
   }
@@ -839,7 +839,7 @@ export async function intakeFiles<T extends DroppedFile & { type: string }>(
   const rejectedNames = results.flatMap((result) => result.rejectedNames);
   const uploadErrors = results.flatMap((result) => result.uploadError ? [result.uploadError] : []);
   const pathless = rejectedNames.length
-    ? `Unable to attach ${rejectedNames.join(", ")}. Choose a supported image, document, or audio file.`
+    ? `Unable to read ${rejectedNames.join(", ")}. Try choosing the file again.`
     : null;
   const failed = uploadErrors.length ? uploadErrors.join("; ") : null;
   return {

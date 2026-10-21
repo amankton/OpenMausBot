@@ -43,6 +43,8 @@ recipe from sending messages to the user's running app by accident.
 Use only mapped, tested commands:
 
 - [Chat turns](chat-turns.md)
+- [Hermes HTTP/SSE migration and real-provider smoke](hermes-http.md)
+- [General file attachments](general-attachments.md)
 - [Conversation context compaction](context-compaction.md)
 - [Work summaries and engine hooks](digests.md)
 - [OpenAI-compatible structured tools](openai-tools.md)
@@ -268,6 +270,10 @@ The [persistence responsiveness benchmark](persistence-performance.md) measures
 synthetic message/log bursts and history scans, with isolated chat, visibility
 and packaged-worker checks. It is not a production capacity qualification.
 
+The [direct-turn timing fixture](turn-timing.md) verifies anonymous setup,
+checkpoint, recall and provider-runtime timing records through two isolated
+fake-engine chats. It does not measure real provider inference or UI rendering.
+
 The [backup responsiveness benchmark](backup-responsiveness.md) compares in-process
 and worker exports using synthetic data, with isolated backup workflow checks.
 
@@ -293,3 +299,5 @@ state. A green unit test alone does not prove a user workflow.
 Interrupt the `launch` process with Ctrl-C. It stops the exact child it owns and
 removes only its temporary data directory. The server log remains at the
 printed path. Never kill processes by name and never delete a broad temp root.
+
+- [Hermes HTTP Local VM and tool bridge](hermes-http-vm.md)

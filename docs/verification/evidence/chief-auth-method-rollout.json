@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "at": "2026-10-10T20:51:06.176Z",
+  "image": "sha256:26f0254887f40be703c5380b3846be5b2813cfb5cbde321b0d0a0842eff00f57",
+  "previousImage": "sha256:892862ae149d4cfa1013f3ec9ba2b4bc0be4b00cd5fc58486829baae2de0b7b2",
+  "containers": 20,
+  "checks": [
+    "Only lifecycle container replaced",
+    "All storage mounts unchanged",
+    "Keys, database credentials and eligibility policy unchanged",
+    "Proxy gracefully reloaded and lifecycle health verified"
+  ],
+  "backup": ".chief-local/m1-pairing/deployment/auth-method-1791665463550"
+}

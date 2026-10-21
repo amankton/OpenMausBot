@@ -192,20 +192,16 @@ enum ShareItemLoader {
                   !type.conforms(to: .image),
                   !type.conforms(to: .url),
                   !type.conforms(to: .plainText),
-                  let mime = type.preferredMIMEType?.lowercased(),
-                  AttachmentPolicy.documentMIMETypes.contains(mime)
+                  let mime = type.preferredMIMEType?.lowercased()
             else { continue }
             return DocumentRepresentation(identifier: identifier, mime: mime, type: type)
         }
 
         // Some document providers advertise only generic `public.data` even
-        // though their suggested filename identifies a supported format. Do
+        // though their suggested filename identifies a file. Do
         // not let that generic representation mask a later file-URL or text
-        // fallback, but use it when the filename gives us an allowlisted MIME.
+        // fallback, but accept a named file even without a recognized format.
         guard let suggestedName = provider.suggestedName,
-              let inferred = UTType(filenameExtension: (suggestedName as NSString).pathExtension),
-              let mime = inferred.preferredMIMEType?.lowercased(),
-              AttachmentPolicy.documentMIMETypes.contains(mime),
               let identifier = provider.registeredTypeIdentifiers.first(where: { identifier in
                   guard let type = UTType(identifier) else { return false }
                   return type.conforms(to: .data)
@@ -214,6 +210,8 @@ enum ShareItemLoader {
                       && !type.conforms(to: .plainText)
               })
         else { return nil }
+        let inferred = UTType(filenameExtension: (suggestedName as NSString).pathExtension) ?? .data
+        let mime = inferred.preferredMIMEType?.lowercased() ?? "application/octet-stream"
         return DocumentRepresentation(identifier: identifier, mime: mime, type: inferred)
     }
 
@@ -330,7 +328,7 @@ enum ShareItemLoader {
                     let inferred = UTType(filenameExtension: source.pathExtension)
                     let mime = inferred?.preferredMIMEType?.lowercased() ?? "application/octet-stream"
                     let name = safeName(suggestedName ?? source.lastPathComponent, type: inferred)
-                    guard AttachmentPolicy.documentMIMETypes.contains(mime) else {
+                    guard AttachmentPolicy.kind(forMIME: mime) == .file else {
                         throw ShareItemLoadingError.unsupportedDocument(name)
                     }
                     let copied = try copyRegularFile(

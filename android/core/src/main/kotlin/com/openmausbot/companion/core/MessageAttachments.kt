@@ -72,7 +72,7 @@ object AttachmentPolicy {
     fun kindForMime(value: String): PendingMessageAttachment.Kind? {
         val mime = normalizedMime(value)
         if (mime in IMAGE_MIME_TYPES) return PendingMessageAttachment.Kind.IMAGE
-        if (mime in DOCUMENT_MIME_TYPES) return PendingMessageAttachment.Kind.FILE
+        if (validMime(mime)) return PendingMessageAttachment.Kind.FILE
         return null
     }
 
@@ -94,7 +94,7 @@ object AttachmentPolicy {
                     }
                 }
                 PendingMessageAttachment.Kind.FILE -> {
-                    if (mime !in DOCUMENT_MIME_TYPES) throw AttachmentPolicyException(unsupportedType(name))
+                    if (!validMime(mime)) throw AttachmentPolicyException(unsupportedType(name))
                     if (attachment.data.size > MAXIMUM_FILE_BYTES) {
                         throw AttachmentPolicyException(itemTooLarge(name, 25))
                     }

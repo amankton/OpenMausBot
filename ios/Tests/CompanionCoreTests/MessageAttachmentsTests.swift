@@ -82,7 +82,8 @@ final class MessageAttachmentsTests: XCTestCase {
         XCTAssertNoThrow(try AttachmentPolicy.validate(attachments))
         XCTAssertEqual(AttachmentPolicy.kind(forMIME: " IMAGE/JPEG "), .image)
         XCTAssertEqual(AttachmentPolicy.kind(forMIME: "application/pdf"), .file)
-        XCTAssertNil(AttachmentPolicy.kind(forMIME: "application/zip"))
+        XCTAssertEqual(AttachmentPolicy.kind(forMIME: "application/zip"), .file)
+        XCTAssertEqual(AttachmentPolicy.kind(forMIME: "application/octet-stream"), .file)
     }
 
     func testAttachmentPolicyRejectsCountTypeNameAndSize() {
@@ -93,7 +94,7 @@ final class MessageAttachmentsTests: XCTestCase {
             XCTAssertEqual($0 as? AttachmentPolicyError, .tooManyItems)
         }
         XCTAssertThrowsError(try AttachmentPolicy.validate([
-            PendingMessageAttachment(data: Data([1]), name: "archive.zip", mime: "application/zip", kind: .file),
+            PendingMessageAttachment(data: Data([1]), name: "archive.zip", mime: "invalid", kind: .file),
         ])) {
             XCTAssertEqual($0 as? AttachmentPolicyError, .unsupportedType("archive.zip"))
         }

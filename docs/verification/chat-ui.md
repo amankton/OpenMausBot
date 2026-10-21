@@ -177,16 +177,30 @@ OMB_UI_E2E=1 pnpm exec vitest run scripts/testing/thinking-timer-ui.e2e.test.ts
 
 ## In-flight reply text
 
-The desktop shows a reply once it is finished; while a turn runs, the chat
-shows the bot's busy state. The renderer keeps no streamed text:
-`runtimeFrameAction` in `src/state/store.tsx` passes only the model-variant
-frames on, and `src/state/store.test.ts` checks that a reply or reasoning
-delta leaves the store state unchanged. `src/components/ChatView.follow.test.ts`
-checks that the finished reply still moves a following transcript to its end.
+While a turn runs, personal and group chats show a bounded plain-text preview
+of assistant answer deltas. `PartialReply` subscribes separately from the
+global store: the first text displays immediately and later updates coalesce
+over 80 ms. Reasoning, tool arguments and synthetic text never enter this
+preview. The authoritative message replaces the preview; completion, retry,
+disconnect, cancellation and thread changes clear it. It is not persisted.
+
+Chat hydration no longer waits for optional provider/configuration panels.
+Each optional lane has a 12-second deadline and stale-response guards. A
+pending provider discovery request cannot block the chat snapshot or buffered
+live events. Session trust and the chat snapshot boundary remain enforced.
 
 ```sh
-pnpm exec vitest run src/state/store.test.ts src/components/ChatView.follow.test.ts
+pnpm exec vitest run src/state/store.test.ts src/state/store.hydration.test.ts src/lib/partial-reply.test.ts src/components/PartialReply.test.ts src/components/ChatView.follow.test.ts
+node --experimental-strip-types scripts/verify-chief-performance.ts
 ```
+
+The browser verifier launches a disposable fake-engine server, holds provider
+discovery while checking chat is visible, and then holds a fake turn after an
+answer delta. It verifies visible partial text while busy, absence of that text
+from persistence, preview removal on completion, one final reply, and no browser
+page errors. Its receipt and screenshot are `evidence/chief-performance.json`
+and `evidence/chief-performance-streaming.png`. This is controlled regression
+evidence, not a measurement of live model latency.
 
 ## Bot setup and MCP access recipe
 

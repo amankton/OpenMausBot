@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-10T21:05:19.014Z",
+  "syntheticOnly": true,
+  "authorityStub": true,
+  "actualPersonalServer": true,
+  "actualViteProxy": true,
+  "checks": [
+    "selected agent request creates signed pending connection",
+    "roster and saved connection reload",
+    "foreign origin and forwarding spoof rejected before claim",
+    "local forget works through proxy"
+  ],
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1791666314595-66816.log"
+}

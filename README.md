@@ -23,6 +23,8 @@ For the persistent independent development server, set `$env:CHIEF_OFFICE_ENABLE
 
 ## Branding and licensing
 
+For repeatable remote-phone setup and upgrades that preserve Chief customizations, use the [installation and update SOPs](docs/operations/README.md), including the Codex/Claude handoff and per-install acceptance record.
+
 The owner-supplied Chief logo variants are under `public/brand`. See [the branding and isolation audit](docs/CHIEF_BRANDING_AUDIT.md) for applied surfaces, independent runtime identity, tests and intentional upstream references. Application auto-update is disabled until a signed Chief release feed exists. No production deployment or invitation delivery is configured by this source copy.
 
 OpenMausBot is by Milind Soni. [LICENSE](LICENSE), [NOTICE](NOTICE), [LICENSING.md](LICENSING.md) and third-party notices are retained. `enterprise/` has a separate license and is not made unrestricted by Chief branding. No entitlement checks were bypassed. The preserved [upstream README](docs/UPSTREAM_README.md) describes the original product and its external services; it is historical reference, not Chief launch instructions.

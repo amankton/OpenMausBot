@@ -45,6 +45,26 @@ describe("api refusals", () => {
   });
 });
 
+describe("startup conversation selection", () => {
+  const forge = { id: "forge", name: "Forge", messages: [] } as unknown as Bot;
+  const solo = { id: "solo", name: "Solo", messages: [] } as unknown as Bot;
+  const hydrate = (selectedId: string, bots = [forge, solo], groups: Group[] = []) =>
+    reducer({ ...initialState, selectedId }, { type: "hydrate", bots, groups, computerControl: {} });
+  it("restores the saved conversation instead of the first agent", () => {
+    expect(hydrate("solo").selectedId).toBe("solo");
+    expect(hydrate("forge").selectedId).toBe("forge");
+    expect(hydrate("room", [forge, solo], [{ id: "room", messages: [] } as unknown as Group]).selectedId).toBe("room");
+  });
+  it("defaults to Solo for a first visit or deleted selection", () => {
+    expect(hydrate("").selectedId).toBe("solo");
+    expect(hydrate("deleted").selectedId).toBe("solo");
+  });
+  it("handles unavailable Solo and empty workspaces", () => {
+    expect(hydrate("", [forge, { ...solo, hidden: true }]).selectedId).toBe("forge");
+    expect(hydrate("", []).selectedId).toBe("");
+  });
+});
+
 describe("partial profile save responses", () => {
   it.each([true, false])("preserves independently saved fields with about-me response first: %s", aboutFirst => {
     const config = { ...initialState.config, profile: { name: "Old", email: "old@example.invalid", aboutMe: "Old biography" } } as NonNullable<AppState["config"]>;
@@ -680,6 +700,20 @@ class SnapshotEventSource implements LiveEventSourceLike {
 }
 
 describe("replacement snapshot boundary", () => {
+  it("releases chat while an optional endpoint remains pending", async () => {
+    const failure = vi.fn();
+    let reject!: (reason: Error) => void;
+    const pending = new Promise<void>((_, no) => { reject = no; });
+    expect(await loadSnapshotBoundary(async () => {}, [{ key: "webhooks", load: () => pending }], failure)).toBe(true);
+    expect(failure).not.toHaveBeenCalled();
+    reject(new Error("late optional failure"));
+    await vi.waitFor(() => expect(failure).toHaveBeenCalledWith(expect.objectContaining({ key: "webhooks" }), expect.any(Error)));
+  });
+
+  it("does not acknowledge a failed chat snapshot", async () => {
+    expect(await loadSnapshotBoundary(async () => { throw new Error("chat unavailable"); }, [], vi.fn())).toBe(false);
+  });
+
   it("flushes bot frames without reconnecting when a peripheral snapshot fails", async () => {
     const sources: SnapshotEventSource[] = [];
     const applied: unknown[] = [];

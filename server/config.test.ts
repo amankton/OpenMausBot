@@ -1077,7 +1077,7 @@ describe("saving OpenCode provider keys", () => {
     expect(mergeOpenCodeProviderKeys({}, { ANTHROPIC_API_KEY: "sk-ant" })).toEqual({ ok: true, keys: { ANTHROPIC_API_KEY: "sk-ant" } });
   });
 
-  it("refuses names OpenCode does not read or that OpenMaus keeps, with the fix", () => {
+  it("refuses names OpenCode does not read or that Chief keeps, with the fix", () => {
     const refused = (name: string) => {
       const result = mergeOpenCodeProviderKeys(saved, { [name]: "a-key" });
       expect(result.ok, name).toBe(false);
@@ -1089,8 +1089,8 @@ describe("saving OpenCode provider keys", () => {
     expect(refused("OPENCODE_API_KEY")).toContain("OpenCode API key box");
     // Names this server keeps for itself or another engine would never reach OpenCode.
     for (const name of ["OPENCODE_SERVER_KEY", "OMB_CLOUD_BOAT_TOKEN", "OMB_LICENSE_KEY", "BOX_TOKEN", "COMPOSIO_API_KEY",
-      "OPENAI_COMPAT_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY", "CURSOR_API_KEY", "FACTORY_API_KEY"]) {
-      expect(refused(name)).toBe(`OpenMaus keeps ${name} for itself, so OpenCode can't be given it here. Put this key in opencode.json instead.`);
+      "OPENAI_COMPAT_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY", "CURSOR_API_KEY", "FACTORY_API_KEY", "HERMES_API_KEY"]) {
+      expect(refused(name)).toBe(`Chief keeps ${name} for itself, so OpenCode can't be given it here. Put this key in opencode.json instead.`);
     }
   });
 
@@ -1818,19 +1818,19 @@ describe("customMcpServers with url entries", () => {
 });
 
 describe("live settings", () => {
-  it("defaults to a 5 minute idle hang-up and reading typed replies", () => {
-    expect(LIVE_IDLE_MINUTES_DEFAULT).toBe(5);
-    expect(liveSettingsFor({} as AppConfig)).toEqual({ configured: false, voice: "", readTypedReplies: true, idleMinutes: 5 });
+  it("defaults to a 30 second idle hang-up and reading typed replies", () => {
+    expect(LIVE_IDLE_MINUTES_DEFAULT).toBe(0.5);
+    expect(liveSettingsFor({} as AppConfig)).toEqual({ configured: false, voice: "", readTypedReplies: true, idleMinutes: 0.5, providers: { openai: { configured: false, model: "gpt-live-1" }, gemini: { configured: false, model: "gemini-3.8-live" } } });
   });
   it("reports saved values and never the key", () => {
     const settings = liveSettingsFor({ live: { key: "sk-test", voice: "sol", readTypedReplies: false, idleMinutes: 12 } } as AppConfig);
-    expect(settings).toEqual({ configured: true, voice: "sol", readTypedReplies: false, idleMinutes: 12 });
+    expect(settings).toEqual({ configured: true, voice: "sol", readTypedReplies: false, idleMinutes: 12, providers: { openai: { configured: true, model: "gpt-live-1" }, gemini: { configured: false, model: "gemini-3.8-live" } } });
     expect(JSON.stringify(settings)).not.toContain("sk-test");
   });
-  it("accepts idle minutes from 1 to 60 only", () => {
+  it("accepts half-minute idle intervals from 0.5 to 60", () => {
     expect(() => parseConfigPatch({ live: { idleMinutes: 0 } })).toThrow();
     expect(() => parseConfigPatch({ live: { idleMinutes: 61 } })).toThrow();
-    expect(() => parseConfigPatch({ live: { idleMinutes: 2.5 } })).toThrow();
+    expect(() => parseConfigPatch({ live: { idleMinutes: 0.25 } })).toThrow();
     expect(parseConfigPatch({ live: { idleMinutes: 60, readTypedReplies: false } })).toMatchObject({ live: { idleMinutes: 60, readTypedReplies: false } });
   });
   it("does not reload providers for live changes", () => {

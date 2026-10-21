@@ -20,6 +20,27 @@ const upload = async (f: Fake): Promise<Attachment> => ({
 const onDisk = (f: Fake) => `/Users/me/${f.name}`;
 
 describe("intakeFiles", () => {
+  it.each([
+    ["bundle.zip", "application/zip"], ["main.py", "text/plain"],
+    ["data.parquet", ""], ["Dockerfile", ""], ["page.html", "text/html"],
+    ["drawing.svg", "image/svg+xml"], ["clip.mp4", "video/mp4"],
+  ])("uploads a browser file %s without needing a local path", async (name, type) => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      path: "/private/attachments/upload.bin", name, bytes: 4,
+    }), { status: 201 }));
+    const getPath = vi.fn(() => "");
+    try {
+      const out = await intakeFiles([new File(["data"], name, { type })], {
+        allowImages: true, getPath, uploadImage: async () => null,
+      });
+      expect(out.attachments).toEqual([expect.objectContaining({ kind: "file", name })]);
+      expect(out.notice).toBeNull();
+      expect(getPath).not.toHaveBeenCalled();
+      expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({ "content-type": type || "application/octet-stream" });
+    } finally {
+      fetch.mockRestore();
+    }
+  });
   it("uploads a browser audio drop instead of requiring a Finder path", async () => {
     const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
       path: "/private/attachments/note.ogg", name: "Voice note.ogg", bytes: 4,

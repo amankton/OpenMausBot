@@ -1151,6 +1151,7 @@ beforeAll(async () => {
       ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
       HOME: home,
       USERPROFILE: home,
+      OMB_DATA_DIR: join(home, ".openmausbot"),
       OMB_PORT: String(PORT),
       OMB_WEBHOOK_PORT: String(WEBHOOK_PORT),
       OMB_EXTRA_PATH: fakeDockerDir,
@@ -5021,12 +5022,13 @@ describe("harness HTTP API", () => {
       expect(statSync(result.path).mode & 0o777).toBe(0o600);
     }
 
-    const unsupported = await fetch(`${BASE}/api/files?name=payload.zip`, {
+    const archive = await fetch(`${BASE}/api/files?name=payload.zip`, {
       method: "POST",
       headers: { "content-type": "application/zip" },
       body: Buffer.from("archive"),
     });
-    expect(unsupported.status).toBe(400);
+    expect(archive.status).toBe(201);
+    expect(await archive.json()).toMatchObject({ name: "payload.zip", mime: "application/zip" });
 
     const missingName = await fetch(`${BASE}/api/files`, {
       method: "POST",
@@ -11619,7 +11621,7 @@ describe("bot memory API", () => {
       });
 
       const attached = await attach({ path: "budget.xlsx", name: "Q3 budget.xlsx" });
-      expect(attached.status).toBe(200);
+      expect(attached.status, await attached.clone().text()).toBe(200);
       expect(await attached.json()).toMatchObject({ ok: true, name: "Q3 budget.xlsx", bytes: xlsx.byteLength });
       expect((await attach({ path: "song.mp3" })).status).toBe(200);
 
@@ -11661,9 +11663,8 @@ describe("bot memory API", () => {
       const missing = await attach({ path: "/home/cua/workspace/none.pdf" });
       expect(missing.status).toBe(404);
       expect(((await missing.json()) as { error: string }).error).toContain("/home/cua/workspace");
-      const unsupported = await attach({ path: "page.html" });
-      expect(unsupported.status).toBe(415);
-      expect(((await unsupported.json()) as { error: string }).error).toContain("Supported:");
+      const markup = await attach({ path: "page.html" });
+      expect(markup.status).toBe(200);
       expect((await attach({ path: "" })).status).toBe(400);
       expect((await attach({ path: join(home, "outside.pdf") })).status).toBeGreaterThanOrEqual(403);
 
@@ -11677,7 +11678,13 @@ describe("bot memory API", () => {
       expect(readFileSync(join(workspace, "escape", "secret.pdf"), "utf8")).toBe("%PDF-secret");
       expect((await attach({ path: "escape/secret.pdf" })).status).toBeGreaterThanOrEqual(403);
       const afterRefusals = await api("GET", `/api/threads/${bot.threadId}/export?format=json`);
-      expect((afterRefusals.body.messages as Array<{ attachments?: unknown[] }>).filter((message) => message.attachments?.length)).toHaveLength(2);
+      const attachedMessages = (afterRefusals.body.messages as Array<{ id: string; attachments?: Array<{ path: string; name?: string }> }>).filter((message) => message.attachments?.length);
+      expect(attachedMessages).toHaveLength(3);
+      const htmlMessage = attachedMessages.find((message) => message.attachments?.[0]?.name === "page.html")!;
+      const htmlDownload = await serve(htmlMessage.id, htmlMessage.attachments![0]!.path);
+      expect(htmlDownload.headers.get("content-disposition")).toMatch(/^attachment;/);
+      expect(htmlDownload.headers.get("content-type")).toBe("application/octet-stream");
+      expect(htmlDownload.headers.get("x-content-type-options")).toBe("nosniff");
 
       // Running a command needs a Local VM this turn; a bot without one is told so.
       const exec = await fetch(`${BASE}/api/internal/vm-exec`, {
@@ -11689,7 +11696,7 @@ describe("bot memory API", () => {
       expect(((await exec.json()) as { error: string }).error).toContain("no Local VM desktop");
 
       // A turn cannot flood the chat.
-      for (let count = 2; count < 10; count += 1) expect((await attach({ path: "song.mp3" })).status).toBe(200);
+      for (let count = attachedMessages.length; count < 10; count += 1) expect((await attach({ path: "song.mp3" })).status).toBe(200);
       const flooded = await attach({ path: "song.mp3" });
       expect(flooded.status).toBe(429);
     } finally {

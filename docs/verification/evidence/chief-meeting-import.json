@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-10-08T00:43:57.969Z",
+  "status": "passed",
+  "scope": "Real personal Chief App/Composer import with isolated fake-engine server; synthetic edge-case bundle plus actual synthetic capture export when verified below",
+  "captureExport": {
+    "status": "verified",
+    "sha256": "cf05795a25a4d4e423c7b6ea7c2d3f37e38e7a626b23c7deaae42179c2ba4e64",
+    "sessionId": "5d552968-881c-4eb7-b3e2-a1efc107b3ad"
+  },
+  "fixtureUrl": "http://127.0.0.1:22083",
+  "serverLog": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1791420199284-52356.log",
+  "checks": [
+    "Malformed version rejected; cancel preserves existing draft and attachment; source markup renders as text",
+    "Second review starts unchecked; edits revoke confirmation; mobile layout; only selected material appends and survives reload without a fake-engine turn",
+    "Actual reviewed JSON from successful synthetic shared capture gate matches its receipt hash, passes independent personal review, and appends only selected source-attributed material without sending",
+    "Explicit Send alone reaches repository fake engine once, with preserved draft and attachment, and real chat displays its synthetic reply"
+  ],
+  "checkpoints": [
+    {
+      "stage": "initial draft and attachment",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "invalid file rejected",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "cancelled second review",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "reviewed and edited, before adding to draft",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "appended unsent draft",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "reload retains unsent draft and attachment",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "actual shared capture export independently reviewed",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "actual shared export appended unsent",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "actual shared export persists without sending",
+      "fakeEngineTurns": 0
+    },
+    {
+      "stage": "after explicit Send",
+      "fakeEngineTurns": 1
+    }
+  ],
+  "screenshotPath": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\docs\\verification\\evidence\\chief-meeting-import-unsent.png",
+  "ownerProfileUsed": false,
+  "externalProviderUsed": false,
+  "messageRequests": [
+    "/api/bots/711fbb59-c110-482e-8337-0e11af9ed200/messages"
+  ]
+}

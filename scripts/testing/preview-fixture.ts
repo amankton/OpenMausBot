@@ -5,7 +5,11 @@
 // and the /api target are pinned here.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
+import { mkdtemp } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createServer } from "vite";
+import { removeTempDir } from "../../server/testing/cleanup.ts";
 
 export const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -54,8 +58,12 @@ export async function mountPreview(
 ): Promise<MountedPreview> {
   const { entry, route, title, extraRoutes = [], viewport = "width=device-width, initial-scale=1", logLevel } = options;
   const page = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="${escapeHtml(viewport)}"><title>${escapeHtml(title)}</title></head><body><div id="root"></div><script type="module" src="${escapeHtml(entry)}"></script></body></html>`;
+  // A fixture must never replace a running workspace's optimized React cache.
+  const cacheDir = await mkdtemp(join(tmpdir(), "chief-fixture-vite-"));
   const ui = await createServer({
     root: REPO_ROOT,
+    cacheDir,
+    optimizeDeps: { entries: [entry.replace(/^\//, "")] },
     ...(logLevel ? { logLevel } : {}),
     server: { host: "127.0.0.1", port: 0, proxy: {
       "/api": { target: fixture.info.url },
@@ -82,16 +90,18 @@ export async function mountPreview(
         });
       },
     }],
-  });
-  await ui.listen();
+  }).catch(async error => { await removeTempDir(cacheDir); throw error; });
+  try { await ui.listen(); }
+  catch (error) { await ui.close(); await removeTempDir(cacheDir); throw error; }
   const base = ui.resolvedUrls?.local[0];
   if (!base) {
     await ui.close();
+    await removeTempDir(cacheDir);
     throw new Error("the preview server did not report a local URL");
   }
   return {
     previewUrl: new URL(route, base).href,
-    close: () => ui.close(),
+    close: async () => { await ui.close(); await removeTempDir(cacheDir); },
   };
 }
 

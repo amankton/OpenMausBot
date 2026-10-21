@@ -215,15 +215,13 @@ describe("LiveCallController lifecycle", () => {
     expect(t.frames.at(-1)).toMatchObject({ status: "ended", endReason: "idle" });
   });
 
-  it("does not hang up while the bot works, but does while an approval waits", async () => {
+  it("ends idle voice even while the bot works, without cancelling the work", async () => {
     const t = setup();
     await t.start();
     t.setActivity("working");
     await vi.advanceTimersByTimeAsync(10 * 60_000);
-    expect(t.socket().sent.some((e) => e.type === "session.close")).toBe(false);
-    t.setActivity("waiting");
-    await vi.advanceTimersByTimeAsync(5 * 60_000 + IDLE_CHECK_MS);
     expect(t.socket().sent.some((e) => e.type === "session.close")).toBe(true);
+    expect(t.deps.activity("bot1", "t1")).toBe("working");
   });
 
   it("ends the call when the thread is deleted", async () => {
@@ -321,7 +319,7 @@ describe("LiveCallController lifecycle", () => {
     expect(t.controller.current()?.status).toBe("live");
     t.socket().receive({ type: "session.closed", reason: "close_requested" });
     expect(t.controller.current()).toBeNull();
-    expect(t.logs.at(-1)).toMatch(/errors=internal,internal,internal,broadcast$/);
+    expect(t.logs.at(-1)).toMatch(/errors=broadcast,internal,internal,internal,broadcast$/);
   });
 
   // A phone's requests reach the harness as the computer's own (loopback), so
@@ -831,7 +829,7 @@ describe("LiveCallController relay", () => {
   it("keeps a typed message's idle clock running like speech", async () => {
     const t = await live();
     await vi.advanceTimersByTimeAsync(4 * 60_000);
-    t.message({ id: "u1", role: "user", kind: "text", text: "still there?" });
+    t.message({ id: "u1", role: "user", kind: "text", text: "still there?", sendId: "typed-by-owner" });
     await vi.advanceTimersByTimeAsync(4 * 60_000);
     expect(t.socket().sent.some((e) => e.type === "session.close")).toBe(false);
   });
@@ -1110,5 +1108,136 @@ describe("LiveCallController relay", () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(t.socket().appends("instructions").at(-1)).toMatchObject({ content: expect.stringContaining("ls") });
     });
+  });
+});
+
+it('keeps overlapping independently completed requests attached to their original delegation', async () => {
+  const t = setup(); await t.start();
+  t.socket().receive({type:'session.input_transcript.delta',delta:'First task',start_ms:0,end_ms:500});
+  t.socket().receive({type:'session.delegation.created',delegation:{id:'first',target:'client'},offset_ms:500});
+  await vi.advanceTimersByTimeAsync(DELEGATION_SETTLE_MS);
+  t.socket().receive({type:'session.input_transcript.delta',delta:'Second task',start_ms:2000,end_ms:2500});
+  t.socket().receive({type:'session.delegation.created',delegation:{id:'second',target:'client'},offset_ms:2500});
+  await vi.advanceTimersByTimeAsync(DELEGATION_SETTLE_MS);
+  t.message({id:'answer-first',requestMessageId:'m1',text:'First result.',turnTerminal:true});
+  t.message({id:'answer-second',requestMessageId:'m2',text:'Second result.',turnTerminal:true});
+  await vi.advanceTimersByTimeAsync(0);
+  expect(t.socket().appends('commentary')).toEqual([
+    expect.objectContaining({delegation_id:'first',content:'First result.'}),
+    expect.objectContaining({delegation_id:'second',content:'Second result.'}),
+  ]);
+  await t.controller.shutdown();
+});
+it('uses Gemini native adapter while preserving harness send authorization',async()=>{
+ const socket=new FakeSocket('native-gemini','fixture-gemini');
+ const t=setup({settings:()=>({key:'',geminiKey:'fixture-gemini',voice:'',readTypedReplies:true,idleMinutes:5}),gemini:{open:()=>socket}});
+ const result=await t.controller.start({auth:owner,...BOT,client:'web',provider:'gemini',sdp:''});socket.open();
+ expect(result.call.provider).toBe('gemini');expect(t.deps.createSession).not.toHaveBeenCalled();
+ socket.receive({type:'session.delegation.created',delegation:{id:'native-1',target:'client'},offset_ms:1,request:'Inspect the fixture'});
+ await vi.advanceTimersByTimeAsync(DELEGATION_SETTLE_MS);
+ expect(t.deps.send).toHaveBeenCalledWith({auth:owner,botId:'bot1',threadId:'t1',text:'Inspect the fixture'});
+ await t.controller.shutdown();
+});
+
+describe('selected agent spokesperson',()=>{
+ it('ignores specialist mirrors, then summarizes full selected-agent result once with late blocker retained',async()=>{
+  const t=setup();await t.start();
+  t.message({id:'u',role:'user',via:'call',text:'Review every constraint precisely.'});
+  const report='Specialist finding with precise requirements. '.repeat(90)+'BLOCKER: the release is not approved.';
+  t.message({id:'peer',from:{botId:'specialist',name:'Specialist',color:'red'},text:report,requestMessageId:'u',turnTerminal:true});
+  await vi.advanceTimersByTimeAsync(0);expect(t.socket().appends('commentary')).toHaveLength(0);
+  t.message({id:'answer',text:report,requestMessageId:'u',turnTerminal:true});
+  t.patch({id:'answer',text:report,requestMessageId:'u',turnTerminal:true});
+  await vi.advanceTimersByTimeAsync(0);
+  const spoken=t.socket().appends('commentary');expect(spoken).toHaveLength(1);
+  expect(spoken[0].content).toContain('one concise summary');expect(spoken[0].content).not.toContain('Specialist finding');
+  expect(t.socket().appends('thinking').map(e=>e.content).join(' ')).toBe(report);
+  expect(report).toContain('BLOCKER: the release is not approved.');
+ });
+ it('allows an explicitly selected specialist to answer and suppresses another thread and speaker',async()=>{
+  const t=setup();await t.controller.start({auth:owner,botId:'specialist',botName:'Security Reviewer',threadId:'specialist-thread',client:'web',sdp:'offer'});t.socket().open();
+  t.emit({type:'message',threadId:'specialist-thread',message:{id:'u',role:'user',kind:'text',via:'call',text:'Explain your finding',at:1}});
+  t.emit({type:'message',threadId:'t1',message:{id:'wrong-thread',role:'bot',kind:'text',text:'Wrong',turnTerminal:true,requestMessageId:'u',at:2}});
+  t.emit({type:'message',threadId:'specialist-thread',message:{id:'wrong-speaker',role:'bot',kind:'text',text:'Wrong',from:{botId:'other',name:'Other',color:'red'},turnTerminal:true,requestMessageId:'u',at:2}});
+  t.emit({type:'message',threadId:'specialist-thread',message:{id:'right',role:'bot',kind:'text',text:'The exposed token must be rotated.',from:{botId:'specialist',name:'Security Reviewer',color:'red'},turnTerminal:true,requestMessageId:'u',at:3}});
+  await vi.advanceTimersByTimeAsync(0);expect(t.socket().appends('commentary').map(e=>e.content)).toEqual(['The exposed token must be rotated.']);
+ });
+ it('speaks the selected agent continuation for an exact earlier request, but not after ending or switching',async()=>{
+  const t=setup();const first=await t.start();
+  t.message({id:'u',role:'user',via:'call',text:'Ask the specialist.'});
+  t.message({id:'first',text:'I am checking.',requestMessageId:'u',turnTerminal:true});await vi.advanceTimersByTimeAsync(0);
+  t.socket().receive({type:'session.input_transcript.delta',delta:'A new independent question',start_ms:100,end_ms:200});
+  t.socket().receive({type:'session.delegation.created',offset_ms:300,delegation:{id:'new-delegation',target:'client'}});
+  await vi.advanceTimersByTimeAsync(DELEGATION_SETTLE_MS+1);
+  t.message({id:'followup',text:'The specialist found a blocker: approval is missing.',requestMessageId:'u',turnTerminal:true});await vi.advanceTimersByTimeAsync(0);
+  expect(t.socket().appends('commentary').at(-1)?.delegation_id).toBeNull();
+  expect(t.socket().appends('commentary')).toHaveLength(2);
+  const old=t.socket();const ending=t.controller.end(first.call.callId);
+  t.message({id:'during-end',text:'Late old result.',requestMessageId:'u',turnTerminal:true});await vi.advanceTimersByTimeAsync(0);expect(old.appends('commentary')).toHaveLength(2);
+  old.receive({type:'session.closed'});await ending;await t.start();
+  t.message({id:'late',text:'Old result in a new call.',requestMessageId:'u',turnTerminal:true});await vi.advanceTimersByTimeAsync(0);expect(t.socket().appends('commentary')).toHaveLength(0);
+ });
+});
+
+describe("30-second voice cost protection", () => {
+  it("warns at 25 seconds and closes the provider at 30, finalizing usage without stopping work", async () => {
+    const t = setup(); t.settings.idleMinutes = 0.5;
+    await t.start(); t.setActivity("working");
+    await vi.advanceTimersByTimeAsync(24_000);
+    expect(t.controller.current()?.idleWarning).toBe(false);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(t.controller.current()?.idleWarning).toBe(true);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(t.controller.current()?.status).toBe("ending");
+    expect(t.socket().sent.filter(e => e.type === "session.close")).toHaveLength(1);
+    t.socket().receive({ type: "session.closed", usage: { seconds: 30 } });
+    expect(t.controller.current()).toBeNull();
+    expect(t.frames.at(-1)?.endReason).toBe("idle");
+    expect(t.logs.at(-1)).toContain("seconds=30");
+    expect(t.deps.activity("bot1", "t1")).toBe("working");
+    expect(t.listeners.size).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("ignores raw noise, empty transcripts, background patches and usage events", async () => {
+    const t = setup(); t.settings.idleMinutes = 0.5; await t.start();
+    for (let n = 0; n < 6; n++) {
+      t.socket().receive({ type: "session.input_audio.append", audio: "silence" });
+      t.socket().receive({ type: "session.output_audio.delta", delta: "silence" });
+      t.socket().receive({ type: "session.input_transcript.delta", delta: "   " });
+      t.socket().receive({ type: "session.usage.updated", usage: { seconds: n * 5 } });
+      t.patch({ id: "background", kind: "activity", text: "still working" });
+      t.setActivity("working");
+      await vi.advanceTimersByTimeAsync(5_000);
+    }
+    expect(t.controller.current()?.status).toBe("ending");
+    await vi.advanceTimersByTimeAsync(CLOSE_TIMEOUT_MS);
+    expect(t.controller.current()).toBeNull();
+  });
+  it("protects ongoing user and assistant speech, then closes after the final words", async () => {
+    const t = setup(); t.settings.idleMinutes = 0.5; await t.start();
+    for (let n = 0; n < 5; n++) {
+      await vi.advanceTimersByTimeAsync(20_000);
+      t.socket().receive({ type: n % 2 ? "session.output_transcript.delta" : "session.input_transcript.delta", delta: "meaningful speech", start_ms: n * 20000, end_ms: n * 20000 + 100 });
+      expect(t.controller.current()?.status).toBe("live");
+      expect(t.controller.current()?.idleWarning).toBe(false);
+    }
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(t.controller.current()?.status).toBe("ending");
+  });
+  it("renews only on an explicit current-call action and rejects stale calls", async () => {
+    const t = setup(); t.settings.idleMinutes = 0.5; const started = await t.start();
+    await vi.advanceTimersByTimeAsync(25_000);
+    const renewed = t.controller.keepAlive(started.call.callId)!;
+    expect(renewed.idleWarning).toBe(false);
+    expect(renewed.idleDeadlineAt).toBe(Date.now() + 30_000);
+    expect(t.controller.keepAlive("stale")).toBeNull();
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(t.controller.keepAlive(started.call.callId)).toBeNull();
+    expect(t.socket().sent.filter(e => e.type === "session.close")).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(CLOSE_TIMEOUT_MS);
+    await t.start();
+    const deadline = t.controller.current()?.idleDeadlineAt;
+    expect(t.controller.keepAlive(started.call.callId)).toBeNull();
+    expect(t.controller.current()?.idleDeadlineAt).toBe(deadline);
   });
 });

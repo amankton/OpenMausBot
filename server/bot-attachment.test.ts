@@ -95,13 +95,12 @@ describe("saveBotAttachment", () => {
     expect(saved.attachment).toMatchObject({ kind: "file", name: "notes.txt" });
   });
 
-  it("names what is supported when the type is not", async () => {
+  it("returns archives, markup, binaries, and extensionless files as private attachments", async () => {
     for (const name of ["page.html", "logo.svg", "run.exe", "bundle.zip", "noextension"]) {
       writeFileSync(join(WORK, name), "x");
-      await expect(saveBotAttachment({ path: name, roots: [WORK] }), name).rejects.toMatchObject({
-        status: 415,
-        message: expect.stringContaining("Supported:"),
-      });
+      const saved = await saveBotAttachment({ path: name, roots: [WORK] });
+      expect(saved.attachment).toMatchObject({ kind: "file", name });
+      expect(readFileSync(saved.attachment.path, "utf8")).toBe("x");
     }
   });
 

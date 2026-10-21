@@ -1,0 +1,37 @@
+{
+  "verifiedAt": "2026-10-19T20:52:45.188Z",
+  "fixtureUrl": "http://127.0.0.1:20120",
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1792443158494-49440.log",
+  "uiMode": "production",
+  "uiBuild": {
+    "builtAt": "2026-10-19T20:51:32.741Z",
+    "sourceHash": "a29b287203f734fb1eaf6ad52d4c28782356e822e40178708680d1ffe65fcf77",
+    "artifactHash": "6b8207bbe3dd7244d6315313632531c6ebea7bd035119ebd205eaddcc3a34a07"
+  },
+  "navigationTimings": [
+    {
+      "composerReadyMs": 1333,
+      "documentResponseMs": 88,
+      "resources": 24,
+      "sourceModuleRequests": 0
+    },
+    {
+      "composerReadyMs": 306,
+      "documentResponseMs": 4,
+      "resources": 25,
+      "sourceModuleRequests": 0
+    },
+    {
+      "composerReadyMs": 250,
+      "documentResponseMs": 4,
+      "resources": 25,
+      "sourceModuleRequests": 0
+    }
+  ],
+  "chatVisibleWhileInstancesPending": true,
+  "partialVisibleWhileBusy": true,
+  "partialAbsentFromPersistence": true,
+  "partialClearedOnCompletion": true,
+  "finalReplyCount": 1,
+  "pageErrors": []
+}

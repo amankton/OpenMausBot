@@ -53,6 +53,8 @@ export function createDesktopViewer(deps: {
    * maintenance gates as HTTP. Only this route can detach the response socket. */
   function attach(server: Server, handle: (req: IncomingMessage, res: ServerResponse) => Promise<unknown>): void {
     server.on("upgrade", (req, socket, head) => {
+      // Gemini audio upgrades have their own authenticated HTTP route.
+      if (req.url?.split("?")[0] === "/api/live/gemini-audio") return;
       if (stopped || !(socket instanceof Socket)) { socket.destroy(); return; }
       const res = new ServerResponse(req);
       res.assignSocket(socket);

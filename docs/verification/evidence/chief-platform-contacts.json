@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-10-07T20:20:10.000Z",
+  "scope": "Actual retained Platform Contacts; synthetic Chief Acceptance organization only",
+  "project": "chief-platform",
+  "release": "s0.7.426",
+  "checks": [
+    "Previously created Person and edited location persist in a fresh browser context",
+    "Person search excludes nonmatching rows and restores matching row",
+    "Location filter excludes the row and Clear filters restores it",
+    "Person attachment persists; retained blob endpoint returns original synthetic contents",
+    "Company and rich-text description persist in a fresh browser context"
+  ],
+  "attachment": {
+    "bytes": 54,
+    "sha256": "9c271fd8151178cc317075c7bfa3440fedb5e35712ba3e6887899fd2c84b3602"
+  },
+  "pending": [
+    "Employee/Guest lifecycle and multi-user permission checks",
+    "Media and meeting functionality",
+    "Remaining selected modules"
+  ]
+}

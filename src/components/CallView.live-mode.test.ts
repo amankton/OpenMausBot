@@ -10,6 +10,7 @@ vi.mock("./DesktopCapabilities", () => ({
 }));
 
 import { CallButton, CallOverlay, CallTargetButton } from "./CallView";
+import { setLiveProvider } from "@/lib/live-provider";
 import { setCallMode } from "@/lib/call-mode";
 import { endCall, startCall } from "@/lib/call";
 import { configureLiveMedia, dismissKeyPrompt, resetLiveMedia, startLiveCall } from "@/lib/live-call-media";
@@ -32,12 +33,23 @@ const render = (element: ReturnType<typeof createElement>) =>
 
 afterEach(() => {
   setCallMode("turns");
+  setLiveProvider("openai");
   resetLiveMedia();
   endCall();
   vi.unstubAllGlobals();
 });
 
 describe("call modes", () => {
+  it("shows both providers and remembers an explicit Gemini selection", () => {
+    setCallMode("live");
+    setLiveProvider("gemini");
+    const markup = render(createElement(CallButton, { bot }));
+    expect(markup).toContain('aria-label="Live voice provider"');
+    expect(markup).toContain('value="gemini" selected=""');
+    expect(markup).toContain("OpenAI GPT-Live");
+    expect(markup).toContain("Google Gemini Live");
+  });
+
   it("offers a Live call to one bot without on-device dictation or a configured voice", () => {
     setCallMode("turns");
     expect(render(createElement(CallButton, { bot }))).toContain('aria-label="Checking call availability"');

@@ -502,14 +502,16 @@ const appConfigSchema = z.object({
       .optional(),
     jobs: z.object({ roomRouting: z.boolean().optional() }).optional(),
   }).optional(),
-  /** Live calls: an OpenAI project key for GPT-Live, kept apart from every
-   * other OpenAI credential so a Live call never bills an image or engine key
-   * the user did not hand to it. `voice` is a GPT-Live built-in voice name. */
+  /** Live calls use a dedicated key when supplied, otherwise the configured
+   * first-party OpenAI key. Compatible/custom providers are never reused.
+   * Gemini has a separate dedicated key. `voice` is an OpenAI built-in name or saved custom voice ID. */
   live: z.object({
     key: optionalText,
-    voice: z.string().trim().max(40).regex(/^[a-z]*$/, "a Live voice is a lowercase built-in voice name").optional(),
+    geminiKey: optionalText,
+    voice: z.string().trim().max(128).regex(/^(?:[a-z]{0,40}|voice_[A-Za-z0-9_-]{1,122})$/, "a Live voice must be a built-in name or saved voice ID").optional(),
+    voicePrompt: z.string().trim().max(4000).optional(),
     readTypedReplies: z.boolean().optional(),
-    idleMinutes: z.number().int().min(1).max(60).optional(),
+    idleMinutes: z.number().multipleOf(0.5).min(0.5).max(60).optional(),
   }).optional(),
   /** Avatar provider credentials stay separate; choosing a router never reuses a cloud key. */
   imageGen: z.object({
@@ -620,7 +622,7 @@ export interface AppConfig {
   /** The decision model; see the schema above and server/decider. */
   decider?: { enabled?: boolean; provider?: "jev" | "off"; key?: string; baseUrl?: string; jobs?: { roomRouting?: boolean } };
   imageGen?: ImageGenerationConfig;
-  live?: { key?: string; voice?: string; readTypedReplies?: boolean; idleMinutes?: number };
+  live?: { key?: string; geminiKey?: string; voice?: string; voicePrompt?: string; readTypedReplies?: boolean; idleMinutes?: number };
   profile?: { name?: string; email?: string; aboutMe?: string };
   rooms?: { turnTimeoutMinutes: number; handoffLifetimeMinutes?: number; handoffMinRunwayMinutes?: number; handoffHardCapMinutes?: number };
   threads?: { maxConcurrentPerBot: number; eventLogMaxBytes?: number; eventLogRetentionDays?: number };
@@ -763,16 +765,21 @@ export function roomTurnTimeoutMinutes(cfg: AppConfig): number {
   return cfg.rooms?.turnTimeoutMinutes ?? DEFAULT_ROOM_TURN_TIMEOUT_MINUTES;
 }
 
-export const LIVE_IDLE_MINUTES_DEFAULT = 5;
+export const LIVE_IDLE_MINUTES_DEFAULT = 0.5;
 
 /** Non-secret Live settings. The key only shows up as `configured`. */
 export function liveSettingsFor(cfg: AppConfig): LiveSettings {
   const minutes = cfg.live?.idleMinutes;
   return {
-    configured: Boolean(cfg.live?.key?.trim()),
+    configured: Boolean(cfg.live?.key?.trim() || cfg.openai?.key?.trim() || cfg.live?.geminiKey?.trim()),
+    providers: {
+      openai: { configured: Boolean(cfg.live?.key?.trim() || cfg.openai?.key?.trim()), model: "gpt-live-1" },
+      gemini: { configured: Boolean(cfg.live?.geminiKey?.trim()), model: "gemini-3.8-live" },
+    },
     voice: cfg.live?.voice ?? "",
+    ...(cfg.live?.voicePrompt ? { voicePrompt: cfg.live.voicePrompt } : {}),
     readTypedReplies: cfg.live?.readTypedReplies ?? true,
-    idleMinutes: Number.isInteger(minutes) && minutes! >= 1 && minutes! <= 60 ? minutes! : LIVE_IDLE_MINUTES_DEFAULT,
+    idleMinutes: Number.isFinite(minutes) && minutes! >= 0.5 && minutes! <= 60 ? minutes! : LIVE_IDLE_MINUTES_DEFAULT,
   };
 }
 
@@ -1056,6 +1063,7 @@ export function loadConfig(): AppConfig {
   if (process.env.OMB_JEV_API_KEY !== undefined) cfg.decider.key = process.env.OMB_JEV_API_KEY;
   cfg.live = { ...cfg.live };
   if (process.env.OMB_OPENAI_LIVE_KEY !== undefined) cfg.live.key = process.env.OMB_OPENAI_LIVE_KEY;
+  if (process.env.OMB_GEMINI_LIVE_KEY !== undefined) cfg.live.geminiKey = process.env.OMB_GEMINI_LIVE_KEY;
   cfg.imageGen = { ...cfg.imageGen };
   if (process.env.OMB_OPENAI_IMAGE_KEY !== undefined) cfg.imageGen.key = process.env.OMB_OPENAI_IMAGE_KEY;
   if (process.env.OMB_CUSTOM_IMAGE_KEY !== undefined) cfg.imageGen.customApiKey = process.env.OMB_CUSTOM_IMAGE_KEY;
@@ -1121,6 +1129,7 @@ export function syncCredentialEnv(patch: Partial<Omit<AppConfig, "threads" | "ne
     [patch.imageGen?.key, "OMB_OPENAI_IMAGE_KEY"],
     [patch.imageGen?.customApiKey, "OMB_CUSTOM_IMAGE_KEY"],
     [patch.live?.key, "OMB_OPENAI_LIVE_KEY"],
+    [patch.live?.geminiKey, "OMB_GEMINI_LIVE_KEY"],
   ];
   for (const [value, name] of secrets) {
     if (value === undefined) continue;
@@ -1167,6 +1176,7 @@ export const WORKSPACE_CREDENTIAL_ENV = [
   "OMB_OPENAI_IMAGE_KEY",
   "OMB_CUSTOM_IMAGE_KEY",
   "OMB_OPENAI_LIVE_KEY",
+  "OMB_GEMINI_LIVE_KEY",
   "COMPOSIO_API_KEY",
   "OMB_COMPOSIO_BROKER_TOKEN",
   // Cloud Pro's included Boat, voice and decision relay tokens
@@ -1215,6 +1225,7 @@ export function stripWorkspaceCredentialEnv(env: Record<string, string | undefin
  * along in `...process.env` must not flip a subscription CLI onto
  * pay-as-you-go billing the user never granted. */
 export const PROVIDER_CREDENTIAL_ENV = [
+  "HERMES_API_KEY",
   "ANTHROPIC_API_KEY",
   "FACTORY_API_KEY",
   "GEMINI_API_KEY",
@@ -1256,7 +1267,7 @@ const OPENCODE_PROVIDER_KEY_NAME = /^[A-Z][A-Z0-9_]{0,59}_(?:API_KEY|KEY|TOKEN)$
 const OPENCODE_PROVIDER_KEY_VALUE = /^[\x21-\x7e]{1,4096}$/;
 
 /** Why OpenCode can't be given a key under this name, or undefined. A name
- * OpenMaus keeps for itself or another engine would never reach OpenCode:
+ * Chief keeps for itself or another engine would never reach OpenCode:
  * every engine keeps only the credential names it reads (credentialEnv). */
 function openCodeProviderKeyNameRefusal(name: string): string | undefined {
   if (!OPENCODE_PROVIDER_KEY_NAME.test(name)) {

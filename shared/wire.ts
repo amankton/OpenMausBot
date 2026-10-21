@@ -568,7 +568,10 @@ export type LiveEndReason =
   | "sideband-lost" | "deleted" | "shutdown" | "signed-out" | "error";
 
 /** The one Live call a harness runs. Never carries the key or any speech. */
+export type LiveProvider = "openai" | "gemini";
+
 export interface LiveCallState {
+  provider?: LiveProvider;
   callId: string;
   botId: string;
   threadId: string;
@@ -578,14 +581,20 @@ export interface LiveCallState {
   startedAt: number;
   status: LiveCallStatus;
   endReason?: LiveEndReason;
+  /** Server-enforced inactivity deadline; warning is shown in its final five seconds. */
+  idleDeadlineAt?: number;
+  idleWarning?: boolean;
   /** short, user-facing; present when the call ended on a problem */
   error?: string;
 }
 
 /** Non-secret Live settings, as GET /api/config and PATCH /api/live/settings report them. */
 export interface LiveSettings {
+  providers?: Record<LiveProvider, { configured: boolean; model: string }>;
   configured: boolean;
   voice: string;
+  /** Original custom voice description and approved delivery instructions. */
+  voicePrompt?: string;
   readTypedReplies: boolean;
   idleMinutes: number;
 }

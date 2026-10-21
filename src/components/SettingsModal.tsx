@@ -40,7 +40,7 @@ import { UsageSection } from "./UsageSection";
 import { SkillsSection } from "./SkillsSection";
 import { LicenseExpiryBanner } from "./LicenseExpiryBanner";
 import { WorkspacesSection, workspacesAvailable } from "./WorkspacesSection";
-import { SkinPicker } from "./SkinPicker";
+import { AppearancePicker } from "./AppearancePicker";
 import { FONT_IDS, applyFont, readFont, type FontId } from "@/lib/fonts";
 import { RoomTurnTimeoutSettings } from "./RoomTurnTimeoutSettings";
 import { AboutMeSettings } from "./AboutMeSettings";
@@ -937,7 +937,7 @@ export function SettingsModal() {
         return (
           <>
             <Card title={t("settings.skin.title")} subtitle={t("settings.skin.subtitle")}>
-              <SkinPicker />
+              <AppearancePicker />
             </Card>
             <div>
               {/* A paired remote client has no General page; keep the switch reachable. */}

@@ -1,0 +1,2298 @@
+{
+  "failedAt": "2026-10-07T22:32:43.642Z",
+  "checks": [],
+  "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false\n\nCall Log:\n- Timeout 30000ms exceeded while waiting on the predicate",
+  "routes": [
+    "/workbench/chiefacceptance/card/6ac6aa185b1567fb393c76f2",
+    "/workbench/chiefacceptance/love"
+  ],
+  "transport": [
+    [
+      {
+        "connectionState": "closed",
+        "iceConnectionState": "closed",
+        "signalingState": "closed",
+        "candidates": []
+      }
+    ],
+    []
+  ],
+  "transportHistory": [
+    [
+      {
+        "at": 1791412334870,
+        "index": 0,
+        "state": "new",
+        "ice": "new",
+        "candidates": [
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412334995,
+        "index": 0,
+        "state": "new",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412334995,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "candidate-pair",
+            "state": "waiting",
+            "nominated": false,
+            "requestsSent": 0,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412335790,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 13,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412336789,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 29,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412337787,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 45,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412338790,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 61,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412339790,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 77,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412340787,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 93,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412341789,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 109,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412342790,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 125,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412343787,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 141,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      },
+      {
+        "at": 1791412344790,
+        "index": 0,
+        "state": "connecting",
+        "ice": "checking",
+        "candidates": [
+          {
+            "type": "candidate-pair",
+            "state": "in-progress",
+            "nominated": false,
+            "requestsSent": 157,
+            "responsesReceived": 0,
+            "requestsReceived": 0,
+            "responsesSent": 0,
+            "address": "redacted-interface",
+            "bytesSent": 0,
+            "bytesReceived": 0
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58421
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 33277
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 55036
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58424
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58417
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58418
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58422
+          },
+          {
+            "type": "remote-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 18088
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58423
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "srflx",
+            "address": "redacted-interface",
+            "port": 32323
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58425
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58419
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "tcp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 9
+          },
+          {
+            "type": "local-candidate",
+            "protocol": "udp",
+            "candidateType": "host",
+            "address": "redacted-interface",
+            "port": 58420
+          }
+        ]
+      }
+    ],
+    []
+  ],
+  "remoteCandidates": [
+    [
+      {
+        "index": 0,
+        "candidate": {
+          "protocol": "tcp",
+          "address": "redacted-interface",
+          "port": "18088",
+          "type": "host"
+        }
+      },
+      {
+        "index": 0,
+        "candidate": {
+          "protocol": "tcp",
+          "address": "redacted-interface",
+          "port": "18088",
+          "type": "host"
+        }
+      },
+      {
+        "index": 0,
+        "candidate": {
+          "protocol": "tcp",
+          "address": "redacted-interface",
+          "port": "18088",
+          "type": "host"
+        }
+      }
+    ],
+    []
+  ],
+  "iceErrors": [
+    [
+      {
+        "code": 701,
+        "text": "STUN host lookup received error.",
+        "url": "stun:global.stun.twilio.com:3478"
+      },
+      {
+        "code": 701,
+        "text": "STUN host lookup received error.",
+        "url": "stun:global.stun.twilio.com:3478"
+      },
+      {
+        "code": 701,
+        "text": "STUN host lookup received error.",
+        "url": "stun:global.stun.twilio.com:3478"
+      },
+      {
+        "code": 701,
+        "text": "STUN host lookup received error.",
+        "url": "stun:global.stun.twilio.com:3478"
+      },
+      {
+        "code": 701,
+        "text": "STUN host lookup received error.",
+        "url": "stun:global.stun.twilio.com:3478"
+      }
+    ],
+    []
+  ],
+  "networkAddressesRedacted": true
+}

@@ -173,7 +173,7 @@ class ShareItemLoaderTest {
     }
 
     @Test
-    fun aZipIsLeftOutOfAShareThatAlsoCarriesText() {
+    fun aZipIsIncludedInAShareThatAlsoCarriesText() {
         val archive = content("archive.zip", "application/zip", byteArrayOf(0x50, 0x4B, 0x03, 0x04))
 
         val items = ShareItemLoader.load(
@@ -187,26 +187,26 @@ class ShareItemLoaderTest {
         )
 
         assertEquals(listOf("the build output"), items.text)
-        assertEquals(emptyList(), items.attachments)
-        assertEquals(1, items.ignoredCount)
+        assertEquals("archive.zip", items.attachments.single().name)
+        assertEquals("application/zip", items.attachments.single().mime)
+        assertEquals(0, items.ignoredCount)
     }
 
     @Test
-    fun aShareOfNothingButAZipIsRefused() {
+    fun aShareOfNothingButAZipIsAccepted() {
         val archive = content("archive.zip", "application/zip", byteArrayOf(0x50, 0x4B, 0x03, 0x04))
 
-        val refusal = assertFailsWith<ShareLoadException> {
-            ShareItemLoader.load(
-                send {
-                    type = "application/zip"
-                    putExtra(Intent.EXTRA_STREAM, archive)
-                },
-                resolver,
-                inboxRoot,
-            )
-        }
+        val items = ShareItemLoader.load(
+            send {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, archive)
+            },
+            resolver,
+            inboxRoot,
+        )
 
-        assertEquals("There isn't any text, link, image, or supported document to send.", refusal.message)
+        assertEquals("archive.zip", items.attachments.single().name)
+        assertEquals(0, items.ignoredCount)
     }
 
     private fun send(build: Intent.() -> Unit): Intent = Intent(Intent.ACTION_SEND).apply(build)

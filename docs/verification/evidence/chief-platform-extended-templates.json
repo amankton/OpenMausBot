@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-08T00:41:33.630Z",
+  "scope": "Synthetic chiefacceptance only; no owner workspace, external email, or changes to existing members/roles",
+  "phase": "templates",
+  "mode": "deployed",
+  "buildReceiptSha256": "7060287280246df74dce6187085be3df2d6ca9d3c9eec39b0d49a663ee1ecc3d",
+  "servedBuiltAssets": [],
+  "mainBodyTemplate": true,
+  "checks": [
+    "A synthetic text template is saved in workspace settings, inserted using the main Card body toolbar, and persists for a fresh ordinary member; Activity editors stay unchanged"
+  ],
+  "remainingCoverage": [
+    "ReadOnlyGuest and destructive member lifecycle operations are outside this acceptance scope",
+    "Cross-member private-calendar visibility is not covered by own-calendar scheduling acceptance"
+  ],
+  "forbiddenRequests": 0,
+  "frontImage": "sha256:7f1249e6e368e9bea05f41e65605354ab5f3ed7c42fbfb8b7939e64c766c9939"
+}

@@ -455,13 +455,14 @@ export function messageFileDisposition(name: string): string {
   return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
-/** Keep a friendly transport name without allowing it to disguise the bytes'
- * canonical extension (for example PDF bytes named setup.exe). */
+/** Keep a friendly transport name. A generic .bin storage suffix carries no
+ * format information; known formats retain their canonical extension. */
 export function messageFileDownloadName(displayName: string | undefined, canonicalName: string): string {
   const canonical = safeDisplayName(canonicalName);
   if (!displayName) return canonical;
   const display = safeDisplayName(displayName);
   const actualExtension = extname(canonical);
+  if (actualExtension.toLowerCase() === ".bin") return display;
   if (!actualExtension) return canonical;
   if (extname(display).toLowerCase() === actualExtension.toLowerCase()) return display;
   const displayExtension = extname(display);

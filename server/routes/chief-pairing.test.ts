@@ -17,7 +17,9 @@ async function fixture({ auth = { kind: "loopback", scopes: ["admin"] } as Reque
   const route = createChiefPairingRoutes({ directory, localOnly, origin: enabled ? "http://127.0.0.1:12345" : undefined,
     bots: () => [{ id: "synthetic-agent", name: "Synthetic agent" }] });
   const server = createServer(async (req, res) => {
-    const url = new URL(req.url!, origin);
+    // The main server uses an internal localhost URL even when Vite forwards
+    // the browser's original Host and Origin on another port.
+    const url = new URL(req.url!, origin.replace("127.0.0.1", "localhost"));
     await route({ req, res, url, path: url.pathname, method: req.method!, auth, json, readBody });
   });
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -51,5 +53,23 @@ describe("personal pairing HTTP boundary", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(value).toEqual({ enabled: true, connections: [], bots: [{ id: "synthetic-agent", name: "Synthetic agent" }] });
     expect(JSON.stringify(value)).not.toMatch(/privateKey|runtimeSecret/);
+  });
+  it("accepts the browser-facing origin instead of the internal routing URL", async () => {
+    const f = await fixture({ enabled: false });
+    const response = await f.request("", { method: "POST", headers: { Origin: f.origin } });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ enabled: false });
+  });
+  it("rejects different loopback origins and forwarded origin spoofing", async () => {
+    const f = await fixture({ enabled: false });
+    for (const headers of [
+      { Origin: f.origin.replace("127.0.0.1", "localhost") },
+      { Origin: "http://127.0.0.1:1" },
+      { Origin: f.origin, "X-Forwarded-Host": "127.0.0.1" },
+      { Origin: f.origin.replace("http:", "https:"), "X-Forwarded-Proto": "https" },
+      { Origin: f.origin, "X-Forwarded-For": "127.0.0.1" },
+      { Origin: f.origin, Forwarded: "for=127.0.0.1" },
+    ]) expect((await f.request("", { method: "POST", headers })).status).toBe(403);
+    expect(readdirSync(f.directory)).toEqual([]);
   });
 });

@@ -1,0 +1,11 @@
+{
+  "verifiedAt": "2026-10-10T23:08:04.3057036Z",
+  "passed": true,
+  "personalChiefHealthy": true,
+  "workspaceHttpStatus": 200,
+  "pairingEnabled": true,
+  "runtimeFilesPreserved": true,
+  "existingContainerIdsPreserved": true,
+  "isolatedRestartFixturePassed": true,
+  "shortcut": "Restart Chief and Workspace (Dev).lnk"
+}

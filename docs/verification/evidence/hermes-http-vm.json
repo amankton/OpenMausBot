@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-20T17:45:27.484Z",
+  "passed": true,
+  "fixtureUrl": "http://127.0.0.1:22094",
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1792518298513-63520.log",
+  "container": "openmausbot-computer-acc1d1398907fd50",
+  "isolatedPerBotVm": true,
+  "screenshotOnlyMarkerRead": true,
+  "marker": "HTTP_VM_0C2DF81817",
+  "streamed": true,
+  "approvalCards": 1,
+  "transport": "HTTP/SSE + standalone plugin + app MCP",
+  "acp": false,
+  "toolEvents": [
+    {
+      "type": "item.started",
+      "title": "computer_get_desktop_state"
+    },
+    {
+      "type": "item.completed",
+      "ok": true
+    }
+  ]
+}

@@ -506,15 +506,15 @@ describe("shared files", () => {
     resetDir();
   });
 
-  it("allows useful document mimes but not executables, archives, or active markup", () => {
+  it("accepts arbitrary valid media types and rejects malformed headers", () => {
     expect(extensionForFileMime("text/plain; charset=utf-8")).toBe(".txt");
     expect(extensionForFileMime("application/pdf")).toBe(".pdf");
     expect(extensionForFileMime("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe(".docx");
-    expect(extensionForFileMime("application/zip")).toBeNull();
-    expect(extensionForFileMime("application/x-msdownload")).toBeNull();
-    expect(extensionForFileMime("application/octet-stream")).toBeNull();
-    expect(extensionForFileMime("text/html")).toBeNull();
-    expect(extensionForFileMime("image/svg+xml")).toBeNull();
+    for (const mime of ["application/zip", "application/x-msdownload", "application/octet-stream", "text/html", "image/svg+xml"]) {
+      expect(extensionForFileMime(mime)).toBe(".bin");
+    }
+    expect(extensionForFileMime("invalid")).toBeNull();
+    expect(extensionForFileMime("*/*")).toBeNull();
   });
 
   it("sanitizes the display name and derives its extension from the mime", () => {
@@ -523,7 +523,30 @@ describe("shared files", () => {
     expect(() => sanitizeSharedFileName("../../secret.txt", "text/plain")).toThrow(/filename, not a path/);
     expect(() => sanitizeSharedFileName("..\\..\\secret.txt", "text/plain")).toThrow(/filename, not a path/);
     expect(() => sanitizeSharedFileName("..%2F..%2Fsecret.txt", "text/plain")).toThrow(/filename, not a path/);
-    expect(() => sanitizeSharedFileName("notes.txt", "application/zip")).toThrow(/supported document/);
+    expect(sanitizeSharedFileName("archive.zip", "application/zip")).toBe("archive.zip");
+    expect(sanitizeSharedFileName("main.py", "text/plain")).toBe("main.py");
+    expect(sanitizeSharedFileName(".env", "application/octet-stream")).toBe(".env");
+  });
+
+  it.each([
+    ["bundle.zip", "application/zip", ".zip"],
+    ["bundle.tar.gz", "application/gzip", ".gz"],
+    ["main.py", "text/plain", ".py"],
+    ["page.html", "text/html", ".html"],
+    ["drawing.svg", "image/svg+xml", ".svg"],
+    ["data.parquet", "application/octet-stream", ".parquet"],
+    ["Dockerfile", "", ".bin"],
+  ])("preserves %s bytes and name, including retries after a cold scan", async (name, mime, suffix) => {
+    const bytes = Buffer.from([0, 255, 80, 75, 3, 4]);
+    const chunks = async function* () { yield bytes; };
+    const saved = await saveFile(chunks(), name, mime, { uploadId: UPLOAD_A });
+    expect(saved.name).toBe(name);
+    expect(saved.path).toBe(join(ATTACHMENTS_DIR, `${UPLOAD_A}${suffix}`));
+    expect(readFileSync(saved.path)).toEqual(bytes);
+    __resetAttachmentAccountingForTests();
+    expect((await saveFile(chunks(), name, mime, { uploadId: UPLOAD_A })).path).toBe(saved.path);
+    await expect(saveFile(chunks(), "different.pdf", "application/pdf", { uploadId: UPLOAD_A })).rejects.toMatchObject({ status: 409 });
+    await expect(saveImageUpload(Buffer.from("image"), "image/png", UPLOAD_A)).rejects.toMatchObject({ status: 409 });
   });
 
   it("streams a file under a generated name with private permissions", async () => {

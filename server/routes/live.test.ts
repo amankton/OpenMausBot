@@ -203,3 +203,31 @@ describe("live routes", () => {
     });
   });
 });
+
+it('starts Gemini without SDP and returns only a ticketed browser transport',async()=>{
+ const transport=vi.fn(()=>'/api/live/gemini-audio?ticket=fixture-ticket');const d=deps({geminiTransport:transport});
+ const result=await request(d,'POST','/api/live/session',{botId:'bot1',provider:'gemini',client:'web'}, {origin:'http://127.0.0.1:5299'});
+ expect(result).toMatchObject({status:201,body:{transport:{type:'websocket',url:'/api/live/gemini-audio?ticket=fixture-ticket'}}});
+ expect(d.calls.start).toHaveBeenCalledWith(expect.objectContaining({provider:'gemini',sdp:''}));expect(transport).toHaveBeenCalledWith('c1','http://127.0.0.1:5299',expect.objectContaining({kind:'loopback'}));
+});
+it('rejects provider confusion and missing OpenAI SDP before starting',async()=>{
+ const d=deps({geminiTransport:()=>'/fixture'});
+ for(const body of [{provider:'gemini',sdp:'offer'},{provider:'openai'},{provider:'other'}])expect((await request(d,'POST','/api/live/session',{botId:'bot1',client:'web',...body})).status).toBe(400);
+ expect(d.calls.start).not.toHaveBeenCalled();
+});
+
+it('accepts custom voice IDs and bounded performance settings, refusing malformed IDs',async()=>{
+ const d=deps();
+ expect((await request(d,'PATCH','/api/live/settings',{voice:'voice_AbC123',voicePrompt:'Speak a little quicker.'})).status).toBe(200);
+ expect(d.saved).toEqual([{voice:'voice_AbC123',voicePrompt:'Speak a little quicker.'}]);
+ for(const body of [{voice:'voice_'},{voice:'voice_x/invalid'},{voicePrompt:'x'.repeat(4001)}]) expect((await request(deps(),'PATCH','/api/live/settings',body)).status).toBe(400);
+});
+
+it("accepts a 30-second limit and only renews a named active call", async () => {
+  const d = deps();
+  d.calls.keepAlive = vi.fn(id => id === "c1" ? { ...d.calls.current()!, idleWarning: false, idleDeadlineAt: 30_000 } : null);
+  expect((await request(d, "PATCH", "/api/live/settings", { idleMinutes: 0.5 })).status).toBe(200);
+  expect((await request(d, "POST", "/api/live/call/keep", { callId: "c1" })).status).toBe(200);
+  expect((await request(d, "POST", "/api/live/call/keep", { callId: "stale" })).status).toBe(404);
+  expect((await request(d, "POST", "/api/live/call/keep", {})).status).toBe(400);
+});

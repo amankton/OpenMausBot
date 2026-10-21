@@ -241,7 +241,7 @@ object ShareItemLoader {
             target.delete()
             throw ShareLoadException(SharePolicy.tooLarge(displayName, 25))
         }
-        if (resolvedMime !in SharePolicy.DOCUMENT_MIMES) {
+        if (!com.openmausbot.companion.core.AttachmentPolicy.validMime(resolvedMime)) {
             target.delete()
             throw ShareLoadException(SharePolicy.unsupportedDocument(displayName))
         }

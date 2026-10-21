@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clampAppend, commentaryChunks, FULL_ANSWER_IN_CHAT, joinFragments, LiveTranscript } from "./live-call.ts";
+import { clampAppend, commentaryChunks, liveResultContextChunks, FULL_ANSWER_IN_CHAT, joinFragments, LiveTranscript } from "./live-call.ts";
 
 describe("LiveTranscript", () => {
   it("rebuilds each delegated request from the words spoken since the previous one", () => {
@@ -110,4 +110,12 @@ describe("clampAppend", () => {
     expect(clamped).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
     expect(clamped.endsWith("…")).toBe(true);
   });
+});
+
+it('retains complete long result context including the final blocker within append limits',()=>{
+ const report=Array.from({length:100},(_,i)=>`Finding ${i}: complete specialist analysis.`).join(' ')+' BLOCKER: deployment credential is missing.';
+ const chunks=liveResultContextChunks(report);
+ expect(chunks.length).toBeGreaterThan(3);
+ expect(chunks.join(' ')).toBe(report);
+ expect(chunks.every(c=>new TextEncoder().encode(c).length<=500)).toBe(true);
 });

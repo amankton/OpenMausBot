@@ -1,0 +1,55 @@
+{
+  "completedAt": "2026-10-07T21:45:08.443Z",
+  "scope": "Backend repair build and read-only model compatibility; runtime UI retest pending",
+  "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "patchSha256": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
+  "images": {
+    "love": "sha256:047ba56f5548e7a2b2a1f5b485c90cceca89a1c2a831718f78c61bafebb50e66",
+    "workspace": "sha256:1b6c679990a88306500467b08411b83f4acbd5959b25d5abe4e0e03a5b1e59ff",
+    "transactor": "sha256:8d115eaa4250e3efff4399998171256274ff2bbd0a754a86e21151ff0a37ac64",
+    "tool": "sha256:9f399ea67c0b5ef9221b6e1f2b78c96051da6417ca741504dff1bb0f67485e95"
+  },
+  "modelSha256": "553be1e397fe8480263f19e3ecd8a485a709140012560f1376f6d5db9e2a8d8e",
+  "buildOperations": 399,
+  "typeValidationOperations": 272,
+  "focusedTests": 27,
+  "backupProvenanceTests": 3,
+  "workspaces": [
+    {
+      "slug": "chiefacceptance",
+      "backup": {
+        "status": "passed",
+        "receiptPath": "backups/chiefacceptance-before-meeting-repair-20261007/receipt.json",
+        "receiptSha256": "df8b4aa8d61200a46cc34945f7d34439309bd8a90bca24dd11137f0d7b24c3db",
+        "manifestSha256": "04a938d445b6aa5cad142b10762ccb065d0be39899f07e2a9bd143dcfe663311"
+      },
+      "modelLoad": {
+        "status": "passed",
+        "readOnly": true,
+        "completedAt": "2026-10-07T21:44:45.641Z",
+        "modelSha256": "553be1e397fe8480263f19e3ecd8a485a709140012560f1376f6d5db9e2a8d8e",
+        "logSha256": "ec59b7a8fb396bc8cf89f4e54b8bf87badd383edf23a04ec5854dbce1b2c43ed"
+      },
+      "existingRecordsPreserved": true
+    },
+    {
+      "slug": "chiefexecutivesuite",
+      "backup": {
+        "status": "passed",
+        "receiptPath": "backups/chiefexecutivesuite-before-meeting-repair-20261007/receipt.json",
+        "receiptSha256": "1e39932ced5c94c98cbdfeeb5ae350c290e7df946f47312b051dc7d5b1aa743f",
+        "manifestSha256": "83ea25828c24d72930c67587aa0264f19ba16634e6e57df51193967f7a64381c"
+      },
+      "modelLoad": {
+        "status": "passed",
+        "readOnly": true,
+        "completedAt": "2026-10-07T21:44:57.502Z",
+        "modelSha256": "553be1e397fe8480263f19e3ecd8a485a709140012560f1376f6d5db9e2a8d8e",
+        "logSha256": "e17be943321bdc2cad7a8c1200df9f9736031a0fb9497c284b000a7c750e9efe"
+      },
+      "existingRecordsPreserved": true
+    }
+  ],
+  "migrationsExecuted": false,
+  "servicesReplaced": false
+}

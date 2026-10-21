@@ -388,6 +388,12 @@ export function verificationServerEnvironment(parentEnv: NodeJS.ProcessEnv, data
     childEnv.OMB_OPENAI_LIVE_URL = liveUrl;
     if (parentEnv.OMB_OPENAI_LIVE_KEY) childEnv.OMB_OPENAI_LIVE_KEY = parentEnv.OMB_OPENAI_LIVE_KEY;
   }
+  // Gemini fixture credentials cross only with an owned loopback fake.
+  const geminiUrl = parentEnv.OMB_GEMINI_LIVE_URL?.trim() ?? "";
+  if (/^ws:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(geminiUrl)) {
+    childEnv.OMB_GEMINI_LIVE_URL = geminiUrl;
+    if (parentEnv.OMB_GEMINI_LIVE_KEY) childEnv.OMB_GEMINI_LIVE_KEY = parentEnv.OMB_GEMINI_LIVE_KEY;
+  }
   // Voice-note e2e fault injection: arms the one-shot audio-append failure
   // prelude inside the fixture server (see fail-audio-append-once.mjs).
   if (parentEnv.OMB_TEST_FAIL_AUDIO_APPEND_ONCE) {
@@ -426,10 +432,15 @@ export async function launchVerificationServer(
   boatFixtureApi?: string,
   /** Chief office fixtures keep fake agents and a disposable home. Media, if
    * supplied, must be an explicitly owned loopback development server. */
-  chiefOffice?: { media?: { url: string; key: string; secret: string }; platformUrl?: string },
+  chiefOffice?: { media?: { url: string; key: string; secret: string }; platformUrl?: string; lifecycleOrigin?: string },
+  /** Explicit opt-in real Hermes smoke; app data/home remain disposable.
+   * Credentials are passed only to the backend, never fixture info/config. */
+  hermesHttp?: { baseUrl: string; apiKey: string; model: string; toolsDirectory?: string },
 ): Promise<VerificationServer> {
   // Explicit programmatic grant only; never inherit a real Platform setting.
   const platformUrl = chiefOffice?.platformUrl === undefined ? undefined : verificationPlatformUrl(chiefOffice.platformUrl);
+  const pairingOrigin = chiefOffice?.lifecycleOrigin === undefined ? undefined : verificationPlatformUrl(chiefOffice.lifecycleOrigin);
+  if (pairingOrigin && new URL(pairingOrigin).pathname !== "/") throw new ControlOmbError("Pairing verification requires an owned loopback origin");
   if (boatFixtureApi) {
     if (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(boatFixtureApi)) {
       throw new ControlOmbError("Boat verification requires an explicit loopback HTTP provider");
@@ -458,6 +469,7 @@ export async function launchVerificationServer(
   writeFileSync(join(dataDir, "config.json"), JSON.stringify({
     ...(boatFixtureApi ? { box: { token: "box_verification_fixture" } } : {}),
     instances: {
+      ...(hermesHttp ? { hermes: { driver: "hermesAgent" } } : {}),
       // The synthetic map omits the default computer engine. Register it
       // only when an owned Boat provider backs this fixture's cloud panel.
       ...(boatFixtureApi ? { computer: { driver: "boxAgent" } } : {}),
@@ -475,9 +487,20 @@ export async function launchVerificationServer(
 
   const log = openSync(logPath, "a", 0o600);
   const childEnv = verificationServerEnvironment(parentEnv, dataDir, port);
+  if (hermesHttp) {
+    childEnv.HERMES_API_BASE_URL = hermesHttp.baseUrl;
+    childEnv.HERMES_API_KEY = hermesHttp.apiKey;
+    childEnv.HERMES_API_MODEL = hermesHttp.model;
+    childEnv.HERMES_TRANSPORT = "http";
+    if (hermesHttp.toolsDirectory) {
+      childEnv.HERMES_TOOL_BRIDGE_ENABLED = "1";
+      childEnv.HERMES_TOOL_BRIDGE_DIR = hermesHttp.toolsDirectory;
+    }
+  }
   if (chiefOffice) {
     childEnv.CHIEF_OFFICE_ENABLED = "1";
     if (platformUrl) childEnv.CHIEF_PLATFORM_URL = platformUrl;
+    if (pairingOrigin) childEnv.CHIEF_LIFECYCLE_ORIGIN = new URL(pairingOrigin).origin;
     if (chiefOffice.media) {
       if (!/^ws:\/\/127\.0\.0\.1:\d{1,5}$/.test(chiefOffice.media.url)) throw new ControlOmbError("Chief verification media must be loopback only");
       Object.assign(childEnv, { CHIEF_LIVEKIT_URL: chiefOffice.media.url, CHIEF_LIVEKIT_API_KEY: chiefOffice.media.key, CHIEF_LIVEKIT_API_SECRET: chiefOffice.media.secret });

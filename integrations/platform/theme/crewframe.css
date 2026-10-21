@@ -1,0 +1,172 @@
+html[data-crewframe-skin] {
+  --cf-canvas: #ffffff; --cf-panel: #fafafa; --cf-raised: #f5f5f5;
+  --cf-ink: #0a0a0a; --cf-muted: #737373; --cf-line: #e5e5e5; --cf-accent: #fe7d4d;
+  color-scheme: light;
+}
+html[data-crewframe-skin='dark'] {
+  --cf-canvas: #18181b; --cf-panel: #141415; --cf-raised: #262626;
+  --cf-ink: #fafafa; --cf-muted: #a1a1a1; --cf-line: #333333; --cf-accent: #d9ff7a;
+  color-scheme: dark;
+}
+html[data-crewframe-skin], html[data-crewframe-skin] body { background-color: var(--cf-canvas); }
+html[data-crewframe-skin] body,
+html[data-crewframe-skin] body * {
+  --theme-back-color: var(--cf-canvas);
+  --theme-panel-color: var(--cf-panel);
+  --theme-content-color: var(--cf-ink);
+  --theme-caption-color: var(--cf-ink);
+  --theme-secondary-color: var(--cf-muted);
+  --theme-halfcontent-color: var(--cf-muted);
+  --theme-text-primary-color: var(--cf-ink);
+  --theme-text-placeholder-color: var(--cf-muted);
+  --theme-navpanel-icons-color: var(--cf-muted);
+  --theme-divider-color: var(--cf-line);
+  --theme-popup-color: var(--cf-panel);
+  --theme-popup-divider: var(--cf-line);
+  --theme-navpanel-color: var(--cf-panel);
+  --theme-navpanel-hovered: var(--cf-raised);
+  --theme-navpanel-selected: var(--cf-raised);
+  --theme-button-default: var(--cf-raised);
+  --theme-button-hovered: var(--cf-line);
+  --theme-button-contrast-color: var(--cf-custom-ink, #171717);
+  --theme-button-contrast-enabled: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-gradient: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-hover-gradient: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-active-gradient: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-border: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-hover-border: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-attention-hover-shadow: none;
+  --theme-button-attention-focus-shadow: 0 0 0 2px var(--cf-ink);
+  --theme-button-attention-active-shadow: none;
+  --popup-bg-color: var(--cf-panel);
+  --global-surface-01-BackgroundColor: var(--cf-canvas);
+  --global-surface-02-BackgroundColor: var(--cf-panel);
+  --global-surface-03-BackgroundColor: var(--cf-raised);
+
+}
+
+html[data-crewframe-skin] body,
+html[data-crewframe-skin] body * {
+  --theme-button-contrast-hovered: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-contrast-pressed: var(--cf-custom-accent, var(--cf-accent));
+  --theme-button-focused-border: var(--cf-custom-accent, var(--cf-accent));
+}
+
+/* Current workspace components use both legacy and design-system token families. */
+html[data-crewframe-skin] body,
+html[data-crewframe-skin] body * {
+  --primary-button-default: var(--cf-custom-accent, var(--cf-accent));
+  --primary-button-hovered: color-mix(in srgb, var(--cf-custom-accent, var(--cf-accent)) 88%, var(--cf-ink));
+  --primary-button-pressed: color-mix(in srgb, var(--cf-custom-accent, var(--cf-accent)) 80%, var(--cf-ink));
+  --primary-button-focused: var(--cf-custom-accent, var(--cf-accent));
+  --primary-button-color: var(--cf-custom-ink, #171717);
+  --primary-button-content-color: var(--cf-custom-ink, #171717);
+  --primary-button-outline: var(--cf-custom-accent, var(--cf-accent));
+  --primary-button-transparent: color-mix(in srgb, var(--cf-custom-accent, var(--cf-accent)) 15%, transparent);
+  --global-accent-BackgroundColor: var(--cf-custom-accent, var(--cf-accent));
+  --global-accent-IconColor: var(--cf-custom-accent, var(--cf-accent));
+  --global-accent-TextColor: var(--cf-ink);
+  --global-on-accent-TextColor: var(--cf-custom-ink, #171717);
+  --button-accent-LabelColor: var(--cf-custom-ink, #171717);
+  --button-accent-IconColor: var(--cf-custom-ink, #171717);
+  --global-focus-BorderColor: var(--cf-custom-accent, var(--cf-accent));
+  --theme-editbox-focus-border: var(--cf-custom-accent, var(--cf-accent));
+}
+
+html[data-crewframe-skin] body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: var(--cf-canvas); color: var(--cf-ink); }
+
+/* Newer workspace controls, selection, inputs, links and popovers. */
+html[data-crewframe-skin] body,
+html[data-crewframe-skin] body * {
+  --button-primary-BackgroundColor: var(--cf-custom-accent, var(--cf-accent));
+  --button-primary-hover-BackgroundColor: var(--cf-custom-accent, var(--cf-accent));
+  --button-primary-active-BackgroundColor: var(--cf-custom-accent, var(--cf-accent));
+  --selector-active-BackgroundColor: var(--cf-custom-accent, var(--cf-accent));
+  --selector-IconColor: var(--cf-custom-ink, #171717);
+  --button-primary-loading-LabelColor: var(--cf-custom-ink, #171717);
+  --button-primary-BorderColor: var(--cf-line);
+  --global-ui-BorderColor: var(--cf-line);
+  --global-surface-01-BorderColor: var(--cf-line);
+  --global-surface-02-BorderColor: var(--cf-line);
+  --global-subtle-ui-BorderColor: var(--cf-line);
+  --global-popover-BorderColor: var(--cf-line);
+  --button-secondary-BorderColor: var(--cf-line);
+  --input-BorderColor: var(--cf-line);
+  --selector-BorderColor: var(--cf-line);
+  --global-ui-BackgroundColor: var(--cf-raised);
+  --global-ui-hover-BackgroundColor: var(--cf-raised);
+  --global-ui-active-BackgroundColor: var(--cf-raised);
+  --global-ui-highlight-BackgroundColor: var(--cf-raised);
+  --global-ui-hover-highlight-BackgroundColor: var(--cf-raised);
+  --global-surface-01-hover-BackgroundColor: var(--cf-raised);
+  --global-surface-03-hover-BackgroundColor: var(--cf-raised);
+  --global-subtle-BackgroundColor: var(--cf-raised);
+  --global-popover-hover-BackgroundColor: var(--cf-raised);
+  --button-secondary-BackgroundColor: var(--cf-raised);
+  --button-secondary-hover-BackgroundColor: var(--cf-raised);
+  --button-secondary-active-BackgroundColor: var(--cf-raised);
+  --button-tertiary-hover-BackgroundColor: var(--cf-raised);
+  --button-tertiary-active-BackgroundColor: var(--cf-raised);
+  --input-BackgroundColor: var(--cf-raised);
+  --input-hover-BackgroundColor: var(--cf-raised);
+  --selector-BackgroundColor: var(--cf-raised);
+  --global-popover-BackgroundColor: var(--cf-panel);
+  --global-primary-LinkColor: var(--cf-ink);
+  --global-primary-IconColor: var(--cf-ink);
+  --global-primary-TextColor: var(--cf-ink);
+  --global-on-nuance-TextColor: var(--cf-ink);
+  --button-subtle-LabelColor: var(--cf-ink);
+  --button-subtle-IconColor: var(--cf-ink);
+  --input-TextColor: var(--cf-ink);
+  --input-LabelColor: var(--cf-ink);
+  --input-search-IconColor: var(--cf-ink);
+  --global-secondary-TextColor: var(--cf-muted);
+  --global-tertiary-TextColor: var(--cf-muted);
+  --input-filled-LabelColor: var(--cf-muted);
+  --input-PlaceholderColor: var(--cf-muted);
+  --input-HelperColor: var(--cf-muted);
+}
+
+/* Papra Tag: rounded-lg, muted fill, 6px color dot, 8px gap and compact padding.
+   Scoped selectors deliberately exclude syntax highlighting and equation tags. */
+html[data-crewframe-skin][data-crewframe-skin] :is(.tag.svelte-x9hfx6, .tag-item.svelte-zplcz5) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .5rem;
+  padding: .25rem .625rem;
+  min-height: 1.5rem;
+  border: 0;
+  border-radius: .5rem;
+  background: var(--cf-raised) !important;
+  color: var(--cf-ink) !important;
+  font-size: .875rem;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: none;
+}
+html[data-crewframe-skin][data-crewframe-skin] :is(.tag.svelte-x9hfx6, .tag-item.svelte-zplcz5)::before {
+  content: '';
+  position: static;
+  transform: none;
+  flex: 0 0 .375rem;
+  width: .375rem;
+  height: .375rem;
+  border-radius: 50%;
+  background: var(--tag-color, var(--papra-tag-color, var(--cf-accent)));
+}
+html[data-crewframe-skin][data-crewframe-skin] :is(.tag-button, .more-tags, .usertag-container, .antiSection-header__tag) {
+  border-radius: .5rem;
+  background: var(--cf-raised);
+  color: var(--cf-ink);
+}
+html[data-crewframe-skin][data-crewframe-skin] :is(.tag-item.svelte-1kty5r5, .filter-overflow-badge) {
+  border-radius: .375rem;
+  padding: .125rem .625rem;
+  font-size: .75rem;
+  font-weight: 600;
+}
+/* Native status bar and pinned workspace tabs otherwise retain fixed dark fills. */
+html[data-crewframe-skin] .antiStatusBar { background: var(--cf-panel) !important; color: var(--cf-ink) !important; border-color: var(--cf-line) !important; }
+html[data-crewframe-skin] .antiStatusBar .container.horizontal.primary { background: var(--cf-panel) !important; color: var(--cf-muted) !important; border-color: var(--cf-line) !important; }
+html[data-crewframe-skin] .antiStatusBar .container.horizontal.primary:is(.active, :hover) { background: var(--cf-raised) !important; color: var(--cf-ink) !important; }

@@ -13,6 +13,10 @@ const { version } = JSON.parse(
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The optimizer's default HTML crawl ignores neither runtime captures nor
+  // packaging output. Start at the actual app; its lazy routes are discovered
+  // through imports, without scanning work/, .chief-local/, or release/.
+  optimizeDeps: { entries: ["index.html"] },
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },

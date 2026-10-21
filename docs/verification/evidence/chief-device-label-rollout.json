@@ -1,0 +1,17 @@
+{
+  "verifiedAt": "2026-10-08T06:47:07.1014612Z",
+  "passed": true,
+  "serviceCount": 17,
+  "changedContainers": [
+    "front"
+  ],
+  "otherImagesPreserved": true,
+  "mountsPreserved": true,
+  "frontImage": "sha256:7cb6940d310df0c9d54e022bc75048ec17bb538ebe14a9525e12e8abacb8fb53",
+  "buildReceiptSha256": "2bb22ddbdd0cef9de51553fff4fa7f3dfdf4498ce0a240a77c916eee5abc9982",
+  "deviceLabelPatchSha256": "d57d0153be360af54024519fac7692eeae1361be141010cbc09f96bb3f434f3a",
+  "deployedDeviceLabelsPassed": true,
+  "physicalInputsUsed": false,
+  "deployedBrowserReceiptSha256": "7e268dbd3e4b8d17bd6275d71314d24d6fc29c74ca28c67851a0cd7d29b3b290",
+  "ownerBrowser": "Refreshed; shared-workspace sign-in required. Physical hardware names not verified."
+}

@@ -18,7 +18,7 @@
 // it happens, which is why waiting feels like listening to someone work
 // rather than listening to nothing.
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Check, ChevronDown, Loader2, Phone, PhoneOff, X } from "lucide-react";
+import { AudioLines, Check, ChevronDown, Loader2, Phone, PhoneOff, X } from "lucide-react";
 
 import { useStore, visibleMessages, type Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
@@ -40,6 +40,8 @@ import { isRoutineApproval, isSkillApproval, pendingApprovals, spokenApprovalPro
 import { track } from "@/lib/analytics";
 import { useDesktopCapabilities } from "./DesktopCapabilities";
 import { callCapabilityHelp, type CallCapabilityHelp } from "@/lib/call-capability";
+import { LIVE_PROVIDERS, liveProviderConfigured, setLiveProvider, useLiveProvider, providerDisclosure } from "@/lib/live-provider";
+import type { LiveProvider } from "../../shared/wire";
 import { VoiceSetupDialog } from "./VoiceSetupDialog";
 
 type Phase = "listening" | "sending" | "working" | "speaking";
@@ -134,7 +136,8 @@ export function CallTargetButton({
   const turnsReady = capabilitiesReady && supported && voiceReady;
   const unavailable = !active && !liveElsewhere && !liveMode && !turnsReady;
   const voiceSetupRequired = capabilitiesReady && supported && !voiceReady;
-  const liveConfigured = Boolean(state.config?.live?.configured);
+  const provider = useLiveProvider();
+  const liveConfigured = liveProviderConfigured(state.config?.live, provider);
   // On the person's Cloud, the Live key is saved there, not on this computer.
   const cloudHome = state.config?.cloudHome === true;
   const [helpOpen, setHelpOpen] = useState(false);
@@ -213,7 +216,7 @@ export function CallTargetButton({
       }
       setKeyOpen(false);
       onStart("live");
-      void startLiveCall({ botId: targetId, threadId: liveThreadId });
+      void startLiveCall({ botId: targetId, threadId: liveThreadId, provider });
       return;
     }
     if (!turnsReady) {
@@ -261,6 +264,18 @@ export function CallTargetButton({
   if (liveMode && !onCall && liveLineHeldElsewhere(media, state.liveCall)) return null;
   return (
     <div ref={rootRef} className="relative flex items-center">
+      {canLive && liveMode && (
+        <select
+          aria-label="Live voice provider"
+          title={providerDisclosure(provider)}
+          value={provider}
+          disabled={liveRunning || active}
+          onChange={(event) => { closePopovers(); setLiveProvider(event.target.value as LiveProvider); }}
+          className="mr-1 max-w-[140px] rounded-md border border-hairline bg-panel px-1 py-1 text-xs text-ink"
+        >
+          {LIVE_PROVIDERS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+        </select>
+      )}
       <button
         ref={buttonRef}
         disabled={liveElsewhere || (onLiveCall && media.phase === "ending")}
@@ -284,11 +299,13 @@ export function CallTargetButton({
         aria-expanded={unavailable ? helpOpen : opensKey ? keyPopover : undefined}
         aria-controls={unavailable ? helpId : opensKey ? keyId : undefined}
         aria-label={label}
-        title={label}
+        title={onLiveCall && media.phase === "starting" ? `${label} · Connecting…` : label}
+        aria-busy={onLiveCall && media.phase === "starting" ? true : undefined}
+        data-voice-state={onLiveCall ? media.phase : media.botId === targetId && media.phase === "failed" ? "failed" : "idle"}
         data-call-button={placement}
         className={cn(
-          "relative flex shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60",
-          composer ? "h-8 gap-1.5 px-2.5" : "size-9",
+          "relative flex shrink-0 items-center justify-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:opacity-60",
+          composer ? "size-8 border border-hairline/60" : "size-9",
           active
             ? "bg-danger text-white hover:brightness-110"
             : composer
@@ -300,10 +317,13 @@ export function CallTargetButton({
                 : "text-ink-secondary hover:bg-raised hover:text-ink",
         )}
       >
-        {active
-          ? <PhoneOff size={composer ? 15 : 17} />
-          : <Phone size={composer ? 16 : 17} aria-hidden="true" />}
-        {composer && <span className="text-xs font-medium">{active ? "End call" : "Call"}</span>}
+        {onLiveCall && media.phase === "starting"
+          ? <Loader2 size={17} aria-hidden="true" />
+          : active
+            ? <PhoneOff size={17} aria-hidden="true" />
+            : composer
+              ? <AudioLines size={18} strokeWidth={1.8} aria-hidden="true" />
+              : <Phone size={17} aria-hidden="true" /> }
         {unavailable && (
           <span className="absolute right-1 top-1 size-1.5 rounded-full bg-warning ring-2 ring-app" aria-hidden="true" />
         )}
@@ -353,12 +373,13 @@ export function CallTargetButton({
           className={cn("animate-pop-in absolute right-0 z-30 w-[340px] max-w-[90vw] rounded-xl shadow-2xl", composer ? "bottom-full mb-1.5" : "top-full mt-1.5")}
         >
           <LiveKeySetup
+            provider={provider}
             key={`${targetId}:${liveThreadId}`}
             compact
             onSaved={() => {
               setKeyOpen(false);
               onStart("live");
-              void startLiveCall({ botId: targetId, threadId: liveThreadId });
+              void startLiveCall({ botId: targetId, threadId: liveThreadId, provider });
             }}
           />
         </div>

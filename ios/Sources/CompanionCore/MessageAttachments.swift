@@ -92,7 +92,7 @@ public enum AttachmentPolicy {
     public static func kind(forMIME value: String) -> PendingMessageAttachment.Kind? {
         let mime = normalizedMIME(value)
         if imageMIMETypes.contains(mime) { return .image }
-        if documentMIMETypes.contains(mime) { return .file }
+        if validMIME(mime) { return .file }
         return nil
     }
 
@@ -115,7 +115,7 @@ public enum AttachmentPolicy {
                     throw AttachmentPolicyError.itemTooLarge(name: name, limitMB: 10)
                 }
             case .file:
-                guard documentMIMETypes.contains(mime) else {
+                guard validMIME(mime) else {
                     throw AttachmentPolicyError.unsupportedType(name)
                 }
                 guard attachment.data.count <= maximumFileBytes else {

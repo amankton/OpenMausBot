@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, RefreshCw, Users } from "lucide-react";
 import { api } from "@/state/store";
+import { ChiefConnectionsHost } from "./ChiefConnectionsHost";
 import { ChiefPairingPanel } from "./ChiefPairingPanel";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { WORKSPACE_HELLO, WORKSPACE_READY, WORKSPACE_SLOT, workspaceSlot, type WorkspaceSlot } from "@/lib/workspace-shell";
@@ -36,22 +37,39 @@ export function sharedWorkspacePermissions(url: string, chiefOrigin: string): st
 const linkClass = "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-hairline/60 bg-panel px-3 py-2 text-[12px] font-medium text-ink hover:bg-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const menuLinkClass = "flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium text-ink hover:bg-control focus-visible:outline-2 focus-visible:outline-accent";
 
-export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry }: {
+export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry, onConnections }: {
   status: SharedWorkspaceStatus | null;
   error: string;
   loading: boolean;
   origin: string;
   onRetry: () => void;
+  onConnections?: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const [generation, setGeneration] = useState(0);
   const [open, setOpen] = useState(false);
   const [pairingOpen, setPairingOpen] = useState(false);
   const [slot, setSlot] = useState<WorkspaceSlot | null>(null);
   usePopoverDismiss(open, menu, () => { setOpen(false); trigger.current?.focus(); });
   const url = status?.enabled === true && status.available === true ? sharedWorkspaceUrl(status.url, origin) : null;
+  useEffect(() => {
+    if (!url) return;
+    const targetOrigin = new URL(url).origin;
+    const sync = () => frame.current?.contentWindow?.postMessage({ type: 'crewframe:theme', mode: document.documentElement.dataset.crewframeSkin ?? null, accent: document.documentElement.style.getPropertyValue('--chief-custom-accent'), ink: document.documentElement.style.getPropertyValue('--chief-custom-ink') }, targetOrigin);
+    const receive = (event: MessageEvent) => {
+      if (event.source === frame.current?.contentWindow && event.origin === targetOrigin && event.data?.type === 'crewframe:theme-ready') sync();
+    };
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-crewframe-skin', 'style'] });
+    window.addEventListener('message', receive);
+    frame.current?.addEventListener('load', sync);
+    const element = frame.current;
+    sync();
+    return () => { observer.disconnect(); window.removeEventListener('message', receive); element?.removeEventListener('load', sync); };
+  }, [url, generation]);
   useEffect(() => {
     setSlot(null);
     if (!url) return;
@@ -68,7 +86,7 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
     window.addEventListener("message", receive);
     connect();
     return () => window.removeEventListener("message", receive);
-  }, [url]);
+  }, [url, generation]);
   useEffect(() => {
     if (!open) return;
     const blur = () => { if (document.activeElement === frame.current) setOpen(false); };
@@ -91,20 +109,26 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
         <nav id={menuId} aria-label="Workspace actions" hidden={!open} className="absolute left-0 top-full mt-1 max-h-[calc(100dvh-4rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-hairline bg-panel p-2 shadow-lg">
           <div className="px-3 py-2"><p className="text-sm font-semibold">Chief Executive Suite</p><p className="text-xs text-ink-secondary">Shared workspace</p></div>
           <a className={menuLinkClass} href="/" onClick={() => setOpen(false)}>Open personal workspace<ArrowUpRight size={14} /></a>
+          {onConnections && <button type="button" className={menuLinkClass} onClick={() => { setOpen(false); onConnections(); }}>Apps / Connections</button>}
           <button type="button" className={menuLinkClass} aria-expanded={pairingOpen} onClick={() => setPairingOpen(value => !value)}>Connect personal Chief<ChevronDown size={14} /></button>
           {pairingOpen && <ChiefPairingPanel />}
           {url && <a className={menuLinkClass} href={url} rel="noreferrer" onClick={() => setOpen(false)}>Open shared workspace directly<ArrowUpRight size={14} /></a>}
           <button className={`${linkClass} w-full justify-start border-0`} type="button" disabled={loading} onClick={onRetry}><RefreshCw size={14} />{loading ? "Checking connection…" : "Retry connection"}</button>
+          {url && <button type="button" className={menuLinkClass} onClick={() => {
+            setSlot(null); setGeneration(value => value + 1); setOpen(false);
+          }}>Reload workspace<RefreshCw size={14} /></button>}
+          {url && <p className="px-3 py-2 text-xs text-ink-secondary">Reloading may discard unsaved workspace edits.</p>}
           <p className="mt-2 border-t border-hairline/50 px-3 py-3 text-xs leading-relaxed text-ink-secondary">Your shared workspace has its own sign-in. Camera and microphone stay off until you turn them on. Screen sharing requires your action and browser permission.</p>
         </nav>
       </div>
     </header>
     {url ? <iframe
         ref={frame}
-        key={url}
+        key={`${url}:${generation}`}
         src={url}
         title="Chief organization workspace"
-        className="min-h-0 w-full flex-1 border-0 bg-white"
+        name={typeof document !== 'undefined' && document.documentElement.dataset.crewframeSkin === 'light' ? 'crewframe-light' : 'crewframe-dark'}
+        className="min-h-0 w-full flex-1 border-0 bg-app"
         sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
         allow={sharedWorkspacePermissions(url, origin)}
         referrerPolicy="no-referrer"
@@ -123,6 +147,7 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
 }
 
 export function SharedWorkspacePage() {
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<SharedWorkspaceStatus | null>(null);
   const [error, setError] = useState("");
@@ -136,5 +161,8 @@ export function SharedWorkspacePage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [attempt]);
-  return <SharedWorkspaceSurface status={status} error={error} loading={loading} origin={location.origin} onRetry={() => setAttempt(value => value + 1)} />;
+  return <>
+    <SharedWorkspaceSurface status={status} error={error} loading={loading} origin={location.origin} onRetry={() => setAttempt(value => value + 1)} onConnections={status && !error && !loading ? () => setConnectionsOpen(true) : undefined} />
+    {connectionsOpen && <ChiefConnectionsHost onClose={() => setConnectionsOpen(false)} />}
+  </>;
 }

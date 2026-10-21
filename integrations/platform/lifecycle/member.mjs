@@ -10,7 +10,9 @@ function ordinaryClaims(token) {
     const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url'));
     if (!uuid(claims.account) || !uuid(claims.workspace) || claims.account === systemAccount ||
         Object.keys(claims).some(k => !['account', 'workspace', 'extra', 'exp', 'nbf', 'iat'].includes(k)) ||
-        (claims.extra != null && (typeof claims.extra !== 'object' || Array.isArray(claims.extra) || Object.keys(claims.extra).length))) throw Error();
+        (claims.extra != null && (typeof claims.extra !== 'object' || Array.isArray(claims.extra) ||
+          Object.keys(claims.extra).some(k => k !== 'authMethod') ||
+          ('authMethod' in claims.extra && !['password', 'otp'].includes(claims.extra.authMethod))))) throw Error();
     return claims;
   } catch { throw new AccessError(401, 'An ordinary workspace member credential is required'); }
 }

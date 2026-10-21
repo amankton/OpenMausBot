@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-08T00:41:03.777Z",
+  "servicesRunning": 17,
+  "changedServices": [
+    "front",
+    "love"
+  ],
+  "originalServiceImagesAndIdsPreservedExcept": [
+    "front",
+    "love"
+  ],
+  "allOriginalMountsPreserved": true,
+  "additiveVolume": "chief-platform_capture_metadata",
+  "workspaceMigrationsPerformed": false,
+  "images": {
+    "front": "sha256:7f1249e6e368e9bea05f41e65605354ab5f3ed7c42fbfb8b7939e64c766c9939",
+    "love": "sha256:9507248f82c2402c40fe679f622c7c1533774c9f7e0d99384f0551edef14aaa9"
+  }
+}

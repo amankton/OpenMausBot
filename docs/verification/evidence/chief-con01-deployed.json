@@ -1,13 +1,13 @@
 {
   "passed": true,
-  "verifiedAt": "2026-10-10T19:44:25.791Z",
+  "verifiedAt": "2026-10-10T20:51:59.757Z",
   "deployed": true,
   "syntheticOnly": true,
   "authorityStubs": false,
   "membershipEpochRequired": true,
   "accountImage": "sha256:ab29a21385208a501394eb0a91efebb467c593c39909751ec0c68d1f1abac692",
-  "lifecycleImage": "sha256:892862ae149d4cfa1013f3ec9ba2b4bc0be4b00cd5fc58486829baae2de0b7b2",
   "frontImage": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
+  "lifecycleImage": "sha256:26f0254887f40be703c5380b3846be5b2813cfb5cbde321b0d0a0842eff00f57",
   "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
   "checks": [
     "Actual deployed Accounts epoch, active Employee lookup, nginx, lifecycle SQL and compiled UI complete two-sided synthetic pairing without authority stubs",

@@ -111,7 +111,7 @@ class SharePolicyTest {
         assertEquals(SharePolicy.StreamKind.FILE, SharePolicy.classifyStream("text/plain", "notes.txt"))
         assertEquals(SharePolicy.StreamKind.TEXT, SharePolicy.classifyStream("text/html", null))
         assertEquals(SharePolicy.StreamKind.URL, SharePolicy.classifyStream("text/x-uri", null))
-        assertEquals(SharePolicy.StreamKind.IGNORE, SharePolicy.classifyStream("application/zip", "a.zip"))
+        assertEquals(SharePolicy.StreamKind.FILE, SharePolicy.classifyStream("application/zip", "a.zip"))
         assertTrue(SharePolicy.validWebUrl("https://example.com/story"))
         assertFalse(SharePolicy.validWebUrl("file:///tmp/notes.pdf"))
         assertFalse(SharePolicy.validWebUrl("https://"))

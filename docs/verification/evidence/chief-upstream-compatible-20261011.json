@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-12T02:42:53.4118325Z",
+  "upstreamTag": "v0.1.107",
+  "deployment": "compatible backports to source runtime only",
+  "newBackendPid": 66572,
+  "backendRestarted": true,
+  "sameDataDir": true,
+  "botsUnchanged": true,
+  "configUnchanged": true,
+  "devicesUnchanged": true,
+  "pairedDevices": 1,
+  "tailnetName": "the-box.tail0d3f36.ts.net",
+  "uiStatus": 200,
+  "phoneHealth": "openmausbot",
+  "cellularRetestPerformed": false,
+  "installedDesktopUpdated": false,
+  "platformImagesUpdated": false
+}

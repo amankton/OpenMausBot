@@ -40,6 +40,8 @@ const AUTO_RETRY_CODES = new Set([
   "control_plane_unavailable",
   "internal_error",
   "rate_limited",
+  "cf_rate_limited",
+  "endpoint_rate_limited",
   "credential_rotation_rate_limited",
 ]);
 
@@ -176,6 +178,8 @@ const FRIENDLY_MESSAGES = Object.freeze({
   signed_out: "Your sign-in expired. Email yourself a new code to reconnect.",
   network_unavailable: "Chief Executive Suite could not reach its secure connection service. Check your internet and try again.",
   rate_limited: "Too many attempts were made. Wait a little, then try again.",
+  cf_rate_limited: "The HTTPS provider is temporarily rate-limiting connection setup. Your sign-in is saved. We'll retry automatically; local pairing still works.",
+  endpoint_rate_limited: "The HTTPS provider is temporarily rate-limiting connection setup. Your sign-in is saved. We'll retry automatically; local pairing still works.",
   credential_rotation_rate_limited: "This computer was reconnected too often. Wait a little, then try again.",
   installation_limit_reached: "This account has reached its computer limit. Remove an old computer and try again.",
   installation_exists: "This computer is already connected. Try again to recover it.",

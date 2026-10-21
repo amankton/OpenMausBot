@@ -16,11 +16,27 @@ test('privileged token forms never reach the membership authority', async () => 
   const verify = verifier(async () => { calls++; throw Error('Unexpected call'); });
   for (const claims of [
     { account, workspace, extra: { admin: true } },
+    { account, workspace, extra: { admin: 'true', authMethod: 'password' } },
+    { account, workspace, extra: { service: 'accounts', authMethod: 'otp' } },
+    { account, workspace, extra: { authMethod: 'unknown' } },
+    { account, workspace, extra: { authMethod: { password: true } } },
     { account, workspace, grant: 'system' },
     { account: '1749089e-22e6-48de-af4e-165e18fbd2f9', workspace },
     { account, workspace, extra: [] }
   ]) await rejected(() => verify(token(claims)), 401);
   assert.equal(calls, 0);
+});
+
+test('ordinary password and OTP login metadata still requires authoritative membership', async () => {
+  for (const authMethod of ['password', 'otp']) {
+    const membershipEpoch = randomUUID(); let step = 0;
+    const values = [{ result: { account, workspace, role: 'OWNER' } },
+      { result: [{ person: account, role: 'OWNER', membershipEpoch }] }, { dataType: 'TotalArray', value: [{ _id: 'synthetic-owner' }] }];
+    const signedIn = token({ account, workspace, extra: { authMethod } });
+    assert.equal((await verifier(async () => response(values[step++]))(signedIn)).membershipEpoch, membershipEpoch);
+    assert.equal(step, 3);
+    await rejected(() => verifier(async () => response({ error: { code: 'platform:status:Forbidden' } }))(signedIn), 403);
+  }
 });
 
 test('ordinary token claims cannot override authoritative workspace identity', async () => {

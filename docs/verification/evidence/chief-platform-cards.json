@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-10-07T20:28:31.337Z",
+  "scope": "Actual retained Cards and companion; synthetic organization only",
+  "checks": [
+    "Card title, editable rich body and inserted table persist in a fresh browser context",
+    "Current-time line updates its label and vertical position without navigation under a controlled two-minute clock advance",
+    "Switching the companion from Calendar to compact Office preserves the open Card and its rich content",
+    "Closing and reopening the companion keeps the main Card open",
+    "Event created by clicking a calendar time slot persists in a second fresh browser context"
+  ],
+  "clock": {
+    "before": {
+      "label": "1:28pm",
+      "top": "975.867px"
+    },
+    "after": {
+      "label": "1:30pm",
+      "top": "978px"
+    }
+  },
+  "pending": [
+    "Spaces and Types editing",
+    "Card attachments, mentions, emoji and templates",
+    "Meeting admission, shared presence and AV",
+    "Recording and follow-up workflows"
+  ]
+}

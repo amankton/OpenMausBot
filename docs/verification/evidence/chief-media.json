@@ -1,0 +1,53 @@
+{
+  "verifiedAt": "2026-10-07T18:31:46.091Z",
+  "source": "two isolated browser contexts, synthetic canvas + oscillator tracks; no real devices",
+  "ownerStats": {
+    "state": "connected",
+    "tracks": [
+      {
+        "kind": "video",
+        "source": "camera",
+        "bytes": 5317,
+        "frames": 11
+      },
+      {
+        "kind": "audio",
+        "source": "microphone",
+        "bytes": 5110,
+        "frames": 0
+      },
+      {
+        "kind": "video",
+        "source": "screen_share",
+        "bytes": 3656,
+        "frames": 1
+      }
+    ]
+  },
+  "guestStats": {
+    "state": "connected",
+    "tracks": [
+      {
+        "kind": "video",
+        "source": "camera",
+        "bytes": 4940,
+        "frames": 11
+      },
+      {
+        "kind": "audio",
+        "source": "microphone",
+        "bytes": 5336,
+        "frames": 0
+      },
+      {
+        "kind": "video",
+        "source": "screen_share",
+        "bytes": 3656,
+        "frames": 1
+      }
+    ]
+  },
+  "privateAgentApiStatus": 401,
+  "allTracksStopped": true,
+  "meetingEnded": true
+}

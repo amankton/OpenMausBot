@@ -70,7 +70,7 @@ try {
   // operations below use the exact production Accounts SQL implementation.
   let accountsUrl = 'http://fixture/accounts';
   const signingKey = randomBytes(32).toString('hex');
-  const signedBody = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url') + '.' + Buffer.from(JSON.stringify({ account, workspace })).toString('base64url');
+  const signedBody = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url') + '.' + Buffer.from(JSON.stringify({ account, workspace, extra: { authMethod: 'password' } })).toString('base64url');
   const token = signedBody + '.' + createHmac('sha256', signingKey).update(signedBody).digest('base64url');
   if (process.argv.includes('--account-image') || process.argv.includes('--release-image')) {
     accountImage = docker(['image', 'inspect', 'chief-account:con01-epochs', '--format', '{{.Id}}']);
@@ -161,7 +161,7 @@ try {
   assert.equal((await db.getWorkspaceMembers(workspace)).find(m => m.person === other).membershipEpoch, otherEpoch);
   checks.push('Authority outage/missing epoch fails closed without destroying a valid session; other members remain unchanged');
   if (process.argv.includes('--release-image')) {
-    const body = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url') + '.' + Buffer.from(JSON.stringify({ account: other, workspace })).toString('base64url');
+    const body = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url') + '.' + Buffer.from(JSON.stringify({ account: other, workspace, extra: { authMethod: 'otp' } })).toString('base64url');
     const otherToken = body + '.' + createHmac('sha256', signingKey).update(body).digest('base64url');
     // Explicit Employee stub for this container-only test. It accepts only the
     // two generated tokens and exact workspace/query shape; no owner authority.

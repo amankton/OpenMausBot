@@ -5,6 +5,8 @@
 // companion allows the first four for the phone apps (companion/src/routes.ts).
 // The fifth, device-revoked, is the companion's own notice that it unpaired a
 // phone; a phone can never send it (companion/src/routes.ts COMPANION_NOTICES).
+import { requestOrigin } from "../request-auth.ts";
+import type { RequestAuth } from "../request-auth.ts";
 import type { IncomingMessage } from "node:http";
 import { z } from "zod";
 import type { LiveSettings } from "../../shared/wire.ts";
@@ -13,11 +15,12 @@ import { LiveCallBusyError, type LiveCallController } from "../live-call-control
 import { PASS, type RouteContext, type RouteHandler } from "./table.ts";
 
 export interface LiveRouteDeps {
-  calls: Pick<LiveCallController, "start" | "end" | "current" | "deviceRevoked">;
+  calls: Pick<LiveCallController, "start" | "end" | "current" | "deviceRevoked"> & Partial<Pick<LiveCallController, "keepAlive">>;
   /** The bot and chat a call goes to; no threadId means the bot's current chat. Null when either is unknown. */
   resolveTarget(botId: string, threadId: string | undefined): { botId: string; botName: string; threadId: string } | null;
+  geminiTransport?(callId: string, origin: string, auth: RequestAuth): string;
   settings(): LiveSettings;
-  saveSettings(patch: { voice?: string; readTypedReplies?: boolean; idleMinutes?: number }): Promise<LiveSettings>;
+  saveSettings(patch: { voice?: string; voicePrompt?: string; readTypedReplies?: boolean; idleMinutes?: number }): Promise<LiveSettings>;
 }
 
 const id = z.string().regex(/^[\w-]{1,120}$/);
@@ -25,16 +28,18 @@ const sessionBody = z.object({
   botId: id,
   threadId: id.optional(),
   // Not trimmed: the SDP offer goes to OpenAI byte for byte.
-  sdp: z.string().min(1).refine((sdp) => Buffer.byteLength(sdp) <= MAX_SDP_BYTES),
+  sdp: z.string().min(1).refine((sdp) => Buffer.byteLength(sdp) <= MAX_SDP_BYTES).optional(),
+  provider: z.enum(["openai", "gemini"]).optional(),
   client: z.enum(["desktop", "web", "ios", "android"]),
-}).strict();
+}).strict().refine(body => body.provider === "gemini" ? body.sdp === undefined : body.sdp !== undefined);
 const endBody = z.object({ callId: z.string().min(1).max(120) }).strict();
 // Strict, so `key` (or anything else) is refused rather than ignored: the key
 // is saved through the desktop's credential store or PUT /api/config, never here.
 const settingsBody = z.object({
-  voice: z.string().trim().max(40).regex(/^[a-z]*$/).optional(),
+  voice: z.string().trim().max(128).regex(/^(?:[a-z]{0,40}|voice_[A-Za-z0-9_-]{1,122})$/).optional(),
+  voicePrompt: z.string().trim().max(4000).optional(),
   readTypedReplies: z.boolean().optional(),
-  idleMinutes: z.number().int().min(1).max(60).optional(),
+  idleMinutes: z.number().multipleOf(0.5).min(0.5).max(60).optional(),
 }).strict();
 
 const DEVICE_ID = /^[\w-]{1,128}$/;
@@ -70,7 +75,14 @@ export function createLiveRoutes(deps: LiveRouteDeps): RouteHandler {
       try {
         // A phone's call is bound to the phone, so unpairing it ends the call.
         const device = companionDevice(req);
-        const { call, sdp } = await deps.calls.start({ auth, ...(device ? { device } : {}), ...target, client: parsed.data.client, sdp: parsed.data.sdp });
+        const provider = parsed.data.provider ?? "openai";
+        const origin = typeof req.headers.origin === "string" ? req.headers.origin : requestOrigin(req) ?? "";
+        if (provider === "gemini" && (!deps.geminiTransport || !/^https?:\/\//.test(origin))) return json(res, 400, { error: "Gemini audio requires a browser origin." });
+        const { call, sdp } = await deps.calls.start({ auth, ...(device ? { device } : {}), ...target, client: parsed.data.client, sdp: parsed.data.sdp ?? "", provider });
+        if (provider === "gemini") {
+          try { return json(res, 201, { call, transport: { type: "websocket", url: deps.geminiTransport!(call.callId, origin, auth) } }); }
+          catch (error) { await deps.calls.end(call.callId); throw error; }
+        }
         return json(res, 201, { call, transport: { type: "webrtc", sdp } });
       } catch (error) {
         if (error instanceof LiveCallBusyError) return json(res, 409, { error: error.message, activeCall: error.call });
@@ -90,6 +102,13 @@ export function createLiveRoutes(deps: LiveRouteDeps): RouteHandler {
     }
 
     if (method === "GET" && path === "/api/live/call") return json(res, 200, { call: deps.calls.current() });
+
+    if (method === "POST" && path === "/api/live/call/keep") {
+      const parsed = endBody.safeParse(await bodyOf(req, readBody));
+      if (!parsed.success) return json(res, 400, { error: "The request was not valid." });
+      const call = deps.calls.keepAlive?.(parsed.data.callId);
+      return call ? json(res, 200, { call }) : json(res, 404, { error: "That call is not running." });
+    }
 
     // The companion unpaired a phone: end the call that phone holds, if any.
     if (method === "POST" && path === "/api/live/device-revoked") {

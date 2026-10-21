@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-10-10T19:04:59.608Z",
+  "capturedAt": "2026-10-10T20:50:53.620Z",
   "passed": true,
-  "candidateImage": "sha256:892862ae149d4cfa1013f3ec9ba2b4bc0be4b00cd5fc58486829baae2de0b7b2",
+  "candidateImage": "sha256:26f0254887f40be703c5380b3846be5b2813cfb5cbde321b0d0a0842eff00f57",
   "proxyImage": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
   "accountImage": "sha256:ab29a21385208a501394eb0a91efebb467c593c39909751ec0c68d1f1abac692",
   "checks": [

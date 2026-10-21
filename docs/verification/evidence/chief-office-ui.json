@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-07T18:43:19.134Z",
+  "source": "Actual Chief UI, two isolated browser contexts and disposable backend, synthetic media only",
+  "checks": [
+    "person and photo",
+    "one-use access then explicit invitation acceptance",
+    "room join",
+    "real UI mic/camera/screen controls and remote rendering",
+    "participant-authored concern and assigned action",
+    "selected-only download",
+    "private agent API rejection",
+    "leave stops every acquired track",
+    "history survives browser reload",
+    "20 personal spaces",
+    "390px no horizontal overflow",
+    "owner navigation",
+    "logout cannot fall back to owner"
+  ],
+  "privateApiStatus": 401,
+  "pageErrors": []
+}

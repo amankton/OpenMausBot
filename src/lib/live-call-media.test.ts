@@ -243,7 +243,7 @@ describe("live call media", () => {
   });
 
   it("names why a call ended", () => {
-    expect(endNotice("idle")).toEqual({ text: "Call ended after a long silence.", dropped: false });
+    expect(endNotice("idle")).toEqual({ text: "Voice ended after inactivity. Agent work continues in chat.", dropped: false });
     expect(endNotice("sideband-lost")).toEqual({ text: "Call dropped.", dropped: true });
     expect(endNotice("hung-up").dropped).toBe(false);
     // a retry cannot help a call whose sign-in ended
@@ -583,7 +583,7 @@ describe("ending a call", () => {
     onServerCall({ ...call, status: "ending" });
     expect(liveMedia()).toMatchObject({ phase: "ending", hangingUp: false });
     onServerCall({ ...call, status: "ended", endReason: "idle" });
-    expect(liveMedia()).toMatchObject({ phase: "ended", notice: "Call ended after a long silence.", action: null });
+    expect(liveMedia()).toMatchObject({ phase: "ended", notice: "Voice ended after inactivity. Agent work continues in chat.", action: "retry" });
   });
 
   it("stops capturing as soon as OpenAI closes the call, before the reason grace period", async () => {
@@ -593,7 +593,7 @@ describe("ending a call", () => {
     expect(track.stopped).toBe(true);
     expect(liveMedia()).toMatchObject({ phase: "live", notice: null });
     onServerCall({ ...call, status: "ended", endReason: "idle" });
-    expect(liveMedia()).toMatchObject({ phase: "ended", notice: "Call ended after a long silence." });
+    expect(liveMedia()).toMatchObject({ phase: "ended", notice: "Voice ended after inactivity. Agent work continues in chat." });
   });
 
   it("says Hanging up… after this window's own Hang up, and ends quietly on the computer's word", async () => {
@@ -902,4 +902,97 @@ describe("a blocked microphone", () => {
     await starting;
     expect(liveMedia()).toMatchObject({ phase: "idle", notice: null, action: null });
   });
+});
+
+
+describe("Gemini call integration", () => {
+  function setup() {
+    const transport = { start: vi.fn(async () => {}), stop: vi.fn(), setMuted: vi.fn() };
+    let callbacks: Parameters<NonNullable<Parameters<typeof configureLiveMedia>[0]["createGemini"]>>[0];
+    request.mockImplementation(async (path: string) => {
+      if (path === "/api/live/session") return { call: { ...call, provider: "gemini", status: "live" }, transport: { type: "websocket", url: "/api/live/gemini-audio?ticket=fixture" } };
+      return {};
+    });
+    const createPeer = vi.fn(() => peer as unknown as RTCPeerConnection);
+    configureLiveMedia({ ...fakes(), createPeer, createGemini: (value) => { callbacks = value; return transport; } });
+    return { transport, createPeer, event: (event: Record<string, unknown>) => callbacks.onEvent(event), fail: () => callbacks.onError(new Error("fixture disconnect")) };
+  }
+  it("connects without SDP, captions events, mutes and releases transport", async () => {
+    const fixture = setup();
+    await startLiveCall({ botId: "b1", threadId: "t1", provider: "gemini" });
+    expect(fixture.createPeer).not.toHaveBeenCalled();
+    expect(JSON.parse(String(request.mock.calls[0][1].body))).toMatchObject({ provider: "gemini", botId: "b1" });
+    expect(JSON.parse(String(request.mock.calls[0][1].body))).not.toHaveProperty("sdp");
+    expect(liveMedia()).toMatchObject({ phase: "live", provider: "gemini" });
+    fixture.event({ type: "session.output_transcript.delta", delta: "Working on it." });
+    expect(liveMedia().caption).toBe("Working on it.");
+    setLiveMuted(true);
+    expect(fixture.transport.setMuted).toHaveBeenLastCalledWith(true);
+    await hangUpLiveCall();
+    expect(fixture.transport.stop).toHaveBeenCalled();
+    expect(track.stopped).toBe(true);
+    expect(endRequests()).toEqual(["c1"]);
+  });
+  it("retains Gemini on retry after a dropped connection", async () => {
+    const fixture = setup();
+    await startLiveCall({ botId: "b1", threadId: "t1", provider: "gemini" });
+    fixture.fail();
+    expect(liveMedia()).toMatchObject({ phase: "failed", provider: "gemini", action: "retry" });
+    takeLiveCallAction();
+    await vi.waitFor(() => expect(fixture.transport.start).toHaveBeenCalledTimes(2));
+    expect(liveMedia().provider).toBe("gemini");
+  });
+  it("ends a late server session after hangup while creating it", async () => {
+    const fixture = setup();
+    let resolve!: (value: unknown) => void;
+    request.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    const pending = startLiveCall({ botId: "b1", threadId: "t1", provider: "gemini" });
+    await vi.waitFor(() => expect(resolve).toBeDefined());
+    await hangUpLiveCall();
+    resolve({ call: { ...call, provider: "gemini", status: "live" }, transport: { type: "websocket", url: "/api/live/gemini-audio?ticket=fixture" } });
+    await pending;
+    expect(fixture.transport.start).not.toHaveBeenCalled();
+    expect(endRequests()).toEqual(["c1"]);
+    expect(liveMedia().phase).toBe("idle");
+  });
+});
+
+
+it("idle end retains an explicit reconnect action without restarting the microphone", async () => {
+  vi.useFakeTimers();
+  await startLiveCall({ botId: "b1", threadId: "t1" });
+  onServerCall({ ...call, status: "ended", endReason: "idle" });
+  expect(track.stopped).toBe(true);
+  expect(liveMedia()).toMatchObject({ phase: "ended", action: "retry" });
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(liveMedia()).toMatchObject({ phase: "ended", action: "retry" });
+  expect(request.mock.calls.filter(([path]) => path === "/api/live/session")).toHaveLength(1);
+});
+
+it("page exit closes provider media and sends one keepalive end request", async () => {
+  const { leaveLiveCall } = await import("./live-call-media");
+  await startLiveCall({ botId: "b1", threadId: "t1" });
+  leaveLiveCall(); leaveLiveCall();
+  expect(track.stopped).toBe(true);
+  expect(peer.closed).toBe(true);
+  expect(peer.channel.sent.filter(text => JSON.parse(text).type === "session.close")).toHaveLength(1);
+  expect(request).toHaveBeenCalledWith("/api/live/call/end", expect.objectContaining({ keepalive: true }));
+  expect(endRequests()).toEqual(["c1"]);
+});
+
+it("Hang up stops playback and transport before the server acknowledges closure", async () => {
+  const stopRemote = vi.fn();
+  configureLiveMedia({ ...fakes(), stopRemote });
+  await startLiveCall({ botId: "b1", threadId: "t1" });
+  let resolveEnd;
+  request.mockImplementationOnce(() => new Promise(resolve => { resolveEnd = resolve; }));
+  stopRemote.mockClear();
+  const ending = hangUpLiveCall();
+  expect(track.stopped).toBe(true);
+  expect(stopRemote).toHaveBeenCalled();
+  expect(peer.closed).toBe(true);
+  expect(liveMedia().phase).toBe("ending");
+  resolveEnd!({ call: null });
+  await ending;
+  expect(liveMedia().phase).toBe("idle");
 });

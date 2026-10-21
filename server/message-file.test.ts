@@ -323,11 +323,15 @@ describe("message-linked files", () => {
   it("refuses traversal and a symlink that resolves outside the allowed root", async () => {
     const secret = join(outside, "secret.md");
     writeFileSync(secret, "not for this conversation");
-    symlinkSync(secret, join(workspace, "escape.md"));
+    // Directory junctions exercise the same containment check on Windows
+    // without requiring file-symlink privileges.
+    const escapedPath = process.platform === "win32" ? "escape/secret.md" : "escape.md";
+    if (process.platform === "win32") symlinkSync(outside, join(workspace, "escape"), "junction");
+    else symlinkSync(secret, join(workspace, "escape.md"));
 
     await expect(openMessageFile("../outside/secret.md", [workspace]))
       .rejects.toMatchObject({ status: 403 });
-    await expect(openMessageFile("escape.md", [workspace]))
+    await expect(openMessageFile(escapedPath, [workspace]))
       .rejects.toMatchObject({ status: 403 });
   });
 
@@ -354,5 +358,7 @@ describe("message-linked files", () => {
     expect(messageFileDownloadName("Quarterly report.pdf", "4e8d.pdf")).toBe("Quarterly report.pdf");
     expect(messageFileDownloadName("setup.exe", "4e8d.pdf")).toBe("setup.pdf");
     expect(messageFileDownloadName("preview.jpg", "4e8d.png")).toBe("preview.png");
+    expect(messageFileDownloadName("Dockerfile", "4e8d.bin")).toBe("Dockerfile");
+    expect(messageFileDownloadName(".env", "4e8d.bin")).toBe(".env");
   });
 });

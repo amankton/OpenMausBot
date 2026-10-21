@@ -1,0 +1,74 @@
+/* Scoped to Crewframe embeds; semantic status colors retain their meaning. */
+html[data-crewframe-skin] .bg-accent { color: var(--color-accent-ink); }
+:root[data-crewframe-skin] {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --color-app: #ffffff;
+  --color-panel: #fafafa;
+  --color-raised: #f5f5f5;
+  --color-raised-hover: #e5e5e5;
+  --color-composer: #fafafa;
+  --color-composer-ring: #e5e5e5;
+  --color-menu: #ffffff;
+  --color-card: #fafafa;
+  --color-inset: #f5f5f5;
+  --color-control: #f5f5f5;
+  --color-hairline: #e5e5e5;
+  --color-ink: #0a0a0a;
+  --color-ink-secondary: #525252;
+  --color-ink-tertiary: #737373;
+  --color-accent: #fe7d4d;
+  --color-accent-border: #fe7d4d;
+  --color-focus: #b94319;
+  --color-accent-text: #a83913;
+  --color-bubble-user: #f5f5f5;
+  color-scheme: light;
+}
+:root[data-crewframe-skin='dark'] {
+  --color-app: #18181b;
+  --color-panel: #141415;
+  --color-raised: #262626;
+  --color-raised-hover: #333333;
+  --color-composer: #262626;
+  --color-composer-ring: #333333;
+  --color-menu: #18181b;
+  --color-card: #262626;
+  --color-inset: #141415;
+  --color-control: #262626;
+  --color-hairline: #333333;
+  --color-ink: #fafafa;
+  --color-ink-secondary: #d4d4d4;
+  --color-ink-tertiary: #a1a1a1;
+  --color-accent: #d9ff7a;
+  --color-accent-border: #d9ff7a;
+  --color-focus: #d9ff7a;
+  --color-accent-text: #d9ff7a;
+  --color-bubble-user: #262626;
+  color-scheme: dark;
+}
+
+/* Profiles take precedence over deployment branding without changing its saved values. */
+:root[data-crewframe-skin] {
+  --chief-profile-accent: #fe7d4d;
+  --chief-profile-focus: #b94319;
+  --chief-profile-text: #a83913;
+  --color-accent: var(--chief-custom-accent, var(--chief-profile-accent)) !important;
+  --color-accent-border: var(--chief-custom-accent, var(--chief-profile-accent)) !important;
+  --color-accent-ink: var(--chief-custom-ink, #171717) !important;
+  --color-focus: var(--chief-custom-accent, var(--chief-profile-focus)) !important;
+  --color-accent-text: var(--chief-custom-accent, var(--chief-profile-text)) !important;
+}
+:root[data-crewframe-skin='dark'] {
+  --chief-profile-accent: #d9ff7a;
+  --chief-profile-focus: #d9ff7a;
+  --chief-profile-text: #d9ff7a;
+}
+
+:root[data-chief-appearance='custom'][data-crewframe-skin] {
+  --color-accent-text: var(--color-ink) !important;
+  --color-focus: var(--color-ink) !important;
+}
+html[data-crewframe-skin='light'] .chief-on-dark { display: none; }
+html[data-crewframe-skin='light'] .chief-on-light { display: block; }
+html[data-crewframe-skin='dark'] .chief-on-light { display: none; }
+html[data-crewframe-skin='dark'] .chief-on-dark { display: block; }
+html[data-crewframe-skin='light'] :is(.rounded-lg, .rounded-xl, .rounded-2xl):is(.bg-panel, .bg-raised) { box-shadow: inset 0 .25px 1.5px #ffffff29, 0 0 1.5px #00000029, 0 2px 5px #00000024; }

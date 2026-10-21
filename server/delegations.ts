@@ -1008,6 +1008,7 @@ export function buildDelegationRevivalPrompt(targetName: string): string {
     "[A delegated task just completed]",
     `The task you delegated to @${targetName} has finished, and their reply is now in this conversation.`,
     "Pick the work back up: review the reply, then answer the user with the outcome — lead with the concrete result and say what happens next. Do not re-delegate the same task.",
+    "Remain the user-facing spokesperson. Synthesize the findings, material uncertainty, blockers and decisions concisely; keep the full specialist report available in the conversation. Do not copy the report into your spoken response unless explicitly asked. Brevity applies only to presentation: preserve complete, specific task briefs, constraints, analysis, tool execution, tests and artifacts.",
   ].join("\n\n");
 }
 
@@ -1019,6 +1020,7 @@ export function buildDelegationFailurePrompt(targetName: string, reason: string)
     "[A delegated task failed]",
     `The task you delegated to @${targetName} did not finish: ${reason}`,
     "Take over: tell the user what failed in plain terms, then decide the next step — retry with a narrower task, do the work yourself, or propose an alternative. Do not re-delegate the exact same task unchanged.",
+    "Remain the user-facing spokesperson. Synthesize the findings, material uncertainty, blockers and decisions concisely; keep the full specialist report available in the conversation. Do not copy the report into your spoken response unless explicitly asked. Brevity applies only to presentation: preserve complete, specific task briefs, constraints, analysis, tool execution, tests and artifacts.",
   ].join("\n\n");
 }
 

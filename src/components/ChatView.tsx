@@ -119,6 +119,7 @@ import { useCanWriteIn } from "@/lib/cloud-guest";
 import { latestReply, type TranscriptSnapshot } from "@/lib/transcript-announcer";
 import { pendingApprovals } from "./PendingApproval";
 import { TranscriptAnnouncer } from "./TranscriptAnnouncer";
+import { PartialReply } from "./PartialReply";
 
 /** Long user messages collapse behind a fade so pasted walls of text don't
  * bury the conversation; bots get full markdown. */
@@ -1436,6 +1437,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               onReply={selectReply}
             />
           </ChatRowsContext.Provider>
+          <PartialReply key={bot.threadId} threadId={bot.threadId} active={Boolean(bot.busy)} connected={state.connected} hidden={laterCount > 0} />
           {laterCount > 0 && (
             <div className="flex justify-center">
               <button

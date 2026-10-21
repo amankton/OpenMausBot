@@ -41,3 +41,9 @@ deploy/podman/.env.*
 !deploy/podman/.env.example
 /.env
 /.chief-local/
+
+# Local verification output and diagnostic scratch work can contain owner data.
+/.validate/
+/work/
+__pycache__/
+*.pyc

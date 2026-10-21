@@ -1,0 +1,44 @@
+{
+  "verifiedAt": "2026-10-07T22:48:56.827Z",
+  "browser": "153.0.8010.12",
+  "generatedCanvasOnly": true,
+  "appSessions": false,
+  "libraryVersion": "1.0.1",
+  "probeBundleSha256": "2de684172f81ce797e4900ebca6cfb9a7bb25d824b65765897e12946a6776cc9",
+  "results": [
+    {
+      "paused": false,
+      "durationMs": 1812.300000011921,
+      "rawBytes": 43782,
+      "fixedBytes": 43788,
+      "before": {
+        "duration": "Infinity",
+        "finite": false
+      },
+      "after": {
+        "duration": "1.8123",
+        "finite": true,
+        "seekDelta": 1.1102230246251565e-16,
+        "readyState": 4
+      },
+      "tracksEnded": true
+    },
+    {
+      "paused": true,
+      "durationMs": 1804.2000000476837,
+      "rawBytes": 45632,
+      "fixedBytes": 45638,
+      "before": {
+        "duration": "Infinity",
+        "finite": false
+      },
+      "after": {
+        "duration": "1.8042",
+        "finite": true,
+        "seekDelta": 1.1102230246251565e-16,
+        "readyState": 4
+      },
+      "tracksEnded": true
+    }
+  ]
+}

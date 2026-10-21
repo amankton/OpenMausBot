@@ -1,0 +1,135 @@
+{
+  "verifiedAt": "2026-10-07T22:44:00.826Z",
+  "scope": "Host integration only — synthetic collaboration service, NOT Contacts acceptance",
+  "source": "Real Chief isolated fake-engine server, real Vite/React host, fresh Chrome context",
+  "chiefUrl": "http://127.0.0.1:5173/workspace",
+  "syntheticPlatformUrl": "http://localhost:62748/workbench/fixture/contact/persons",
+  "serverLog": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1791413023308-32656.log",
+  "checks": [
+    "trusted local owner API and cross-site denial",
+    "real server availability probe",
+    "sidebar opens separate host window and personal Team map remains",
+    "retired Shared Office navigation is absent and Team map opens Shared Workspace",
+    "legacy office URL redirects to workspace without forwarding old credentials",
+    "interactive iframe on distinct hostname",
+    "no cookies/authorization/referrer forwarded",
+    "no parent access or private storage",
+    "sandbox blocks top navigation",
+    "media and local-network policy delegated only to exact iframe origin; clipboard/geolocation remain denied",
+    "no initial media acquisition; explicit fake camera/microphone start succeeds and Stop ends all tracks",
+    "successful availability retry retains frame and unsaved draft",
+    "390px layout",
+    "unavailable state unmounts iframe",
+    "retry recovers"
+  ],
+  "fakeDevicesOnly": true,
+  "screenCaptureInvoked": false,
+  "mediaStarted": {
+    "calls": 1,
+    "tracks": [
+      {
+        "kind": "audio",
+        "state": "live"
+      },
+      {
+        "kind": "video",
+        "state": "live"
+      }
+    ]
+  },
+  "isolation": {
+    "parentReadable": false,
+    "cookieEmpty": true,
+    "privateStorageEmpty": true,
+    "mediaPermissions": {
+      "camera": true,
+      "microphone": true,
+      "display-capture": true,
+      "local-network": true,
+      "loopback-network": true,
+      "clipboard-read": false,
+      "clipboard-write": false,
+      "geolocation": false
+    },
+    "delegatedOrigins": {
+      "camera": [
+        "http://localhost:62748"
+      ],
+      "microphone": [
+        "http://localhost:62748"
+      ],
+      "display-capture": [
+        "http://localhost:62748"
+      ],
+      "local-network": [
+        "http://localhost:62748"
+      ],
+      "loopback-network": [
+        "http://localhost:62748"
+      ]
+    },
+    "foreignOriginDenied": true
+  },
+  "requests": [
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/workbench/fixture/contact/persons",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/workbench/fixture/contact/persons",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/config.json",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    },
+    {
+      "path": "/workbench/fixture/contact/persons",
+      "cookie": false,
+      "authorization": false,
+      "referer": false
+    }
+  ]
+}

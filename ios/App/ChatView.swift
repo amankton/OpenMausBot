@@ -295,7 +295,7 @@ struct ChatView: View {
         }
         .fileImporter(
             isPresented: $showingFileImporter,
-            allowedContentTypes: [.content],
+            allowedContentTypes: [.item],
             allowsMultipleSelection: true,
             onCompletion: importFiles
         )

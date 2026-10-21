@@ -1,0 +1,34 @@
+{
+  "verifiedAt": "2026-10-07T23:11:42.705Z",
+  "scope": "Actual retained Contacts avatar and Tracker controls; existing synthetic Chief Acceptance records only",
+  "recordIds": {
+    "person": "6ac6a7555ab6380ca5be8f5b",
+    "issue": "TSK-1"
+  },
+  "checks": [
+    "Existing synthetic Person accepts generated PNG through crop Save and avatar Save; stored image bytes are retrievable",
+    "Cancelling a replacement crop and closing avatar selection leaves the saved Person avatar unchanged",
+    "Cancelling after local crop Save does not replace the record; the original image survives navigation and remains downloadable",
+    "Existing synthetic Tracker issue assigns the real synthetic partner and changes its status through retained controls",
+    "A separately authenticated fresh partner context reads the same persisted avatar image bytes",
+    "Assignment and chosen status persist for a separately authenticated partner in a fresh browser context"
+  ],
+  "avatar": {
+    "bytes": 706,
+    "sha256": "249e0f507774184f34c92998dd25b50a18a87eb162746cd8099b996fdd6699a5"
+  },
+  "tracker": {
+    "assignee": "Chief Meeting Partner",
+    "previousStatus": "In Progress",
+    "persistedStatus": "Todo"
+  },
+  "limitations": [
+    "Retained Assignee search matches stored name fragments; full displayed name Chief Meeting Partner returned no row. This acceptance uses the unique fragment Meeting."
+  ],
+  "pending": [
+    "Employee/Guest role authorization and lifecycle",
+    "Card main-body files/mentions/emoji/templates",
+    "Card Spaces/Types",
+    "Team planner scheduling"
+  ]
+}

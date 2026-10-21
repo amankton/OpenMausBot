@@ -1,0 +1,241 @@
+{
+  "checkedAt": "2026-10-20T17:08:47.042Z",
+  "health": 200,
+  "capabilities": 200,
+  "fixtureUrl": "http://127.0.0.1:21600",
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1792516097108-75232.log",
+  "first": {
+    "firstContentMs": 2720,
+    "totalMs": 3652,
+    "deltaCount": 6
+  },
+  "second": {
+    "firstContentMs": 2133,
+    "totalMs": 2613
+  },
+  "conversationContinuity": true,
+  "stop": true,
+  "renderedInRealChatUi": true,
+  "visiblePartialReplyLengths": [
+    13,
+    20,
+    44,
+    69,
+    75,
+    13,
+    15,
+    74
+  ],
+  "noNewAcpProcess": true,
+  "existingAcpProcessCount": 0,
+  "browserEventsAndLogsContainNoKey": true,
+  "timings": [
+    {
+      "component": "hermes.http",
+      "stage": "received",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 2
+    },
+    {
+      "component": "hermes.http",
+      "stage": "dispatch",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 2,
+      "dispatchLatencyMs": 2
+    },
+    {
+      "component": "hermes.http",
+      "stage": "headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 18,
+      "status": 202
+    },
+    {
+      "component": "hermes.http",
+      "stage": "stream_headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_f19a38d69cf74caa96141f1569b6982f",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 83,
+      "status": 200
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_event",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_f19a38d69cf74caa96141f1569b6982f",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 2583,
+      "timeToFirstEventMs": 2581
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_content",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_f19a38d69cf74caa96141f1569b6982f",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 2583,
+      "timeToFirstContentMs": 2581
+    },
+    {
+      "component": "hermes.http",
+      "stage": "final",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_f19a38d69cf74caa96141f1569b6982f",
+      "turnId": "34852ddc-f948-40f9-8aae-c85ae7da6771",
+      "elapsedMs": 3220,
+      "ok": true,
+      "reason": "end_turn",
+      "dispatchLatencyMs": 2,
+      "timeToFirstContentMs": 2581,
+      "totalMs": 3220
+    },
+    {
+      "component": "hermes.http",
+      "stage": "received",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 0
+    },
+    {
+      "component": "hermes.http",
+      "stage": "dispatch",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 0,
+      "dispatchLatencyMs": 0
+    },
+    {
+      "component": "hermes.http",
+      "stage": "headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 9,
+      "status": 202
+    },
+    {
+      "component": "hermes.http",
+      "stage": "stream_headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_a2c9e9386b8d47889741884f84b9ef7e",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 40,
+      "status": 200
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_event",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_a2c9e9386b8d47889741884f84b9ef7e",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 2022,
+      "timeToFirstEventMs": 2022
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_content",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_a2c9e9386b8d47889741884f84b9ef7e",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 2022,
+      "timeToFirstContentMs": 2022
+    },
+    {
+      "component": "hermes.http",
+      "stage": "final",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_a2c9e9386b8d47889741884f84b9ef7e",
+      "turnId": "efd61a8d-1cf6-4a09-90cc-4bd1873d14c8",
+      "elapsedMs": 2469,
+      "ok": true,
+      "reason": "end_turn",
+      "dispatchLatencyMs": 0,
+      "timeToFirstContentMs": 2022,
+      "totalMs": 2469
+    },
+    {
+      "component": "hermes.http",
+      "stage": "received",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 0
+    },
+    {
+      "component": "hermes.http",
+      "stage": "dispatch",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 0,
+      "dispatchLatencyMs": 0
+    },
+    {
+      "component": "hermes.http",
+      "stage": "headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 72,
+      "status": 202
+    },
+    {
+      "component": "hermes.http",
+      "stage": "stream_headers",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_9da229189c7c4865ac4bb2b4e20a4186",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 214,
+      "status": 200
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_event",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_9da229189c7c4865ac4bb2b4e20a4186",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 3881,
+      "timeToFirstEventMs": 3881
+    },
+    {
+      "component": "hermes.http",
+      "stage": "first_content",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_9da229189c7c4865ac4bb2b4e20a4186",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 3881,
+      "timeToFirstContentMs": 3881
+    },
+    {
+      "component": "hermes.http",
+      "stage": "error",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_9da229189c7c4865ac4bb2b4e20a4186",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 4016,
+      "category": "cancelled"
+    },
+    {
+      "component": "hermes.http",
+      "stage": "final",
+      "conversationId": "chief-24c93ab225d1b2e465b6de311cfca47f51c62daaf00cb6f7a6121851c0e2703d",
+      "runId": "run_9da229189c7c4865ac4bb2b4e20a4186",
+      "turnId": "dc1bdcc0-5fa1-44f4-8e86-229189871a7a",
+      "elapsedMs": 4053,
+      "ok": true,
+      "reason": "interrupted",
+      "dispatchLatencyMs": 0,
+      "timeToFirstContentMs": 3881,
+      "totalMs": 4053
+    }
+  ],
+  "serverStopVerified": {
+    "httpStatus": 200,
+    "status": "cancelled",
+    "runId": "run_9da229189c7c4865ac4bb2b4e20a4186"
+  },
+  "browserBundleScan": {
+    "filesScanned": 384,
+    "hermesKeyFound": false
+  }
+}

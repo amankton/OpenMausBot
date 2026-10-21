@@ -74,11 +74,8 @@ const IMAGE_MIMES: Record<string, string> = {
   "image/webp": ".webp",
 };
 
-/** Useful document and audio formats accepted by the upload endpoint.
- * Generic archives, binaries, HTML, SVG, and executable/script mimes stay
- * out. Office/OpenDocument packages are allowed because they are documents,
- * despite using ZIP internally. The claimed mime determines the extension;
- * an attacker-controlled filename never does. */
+/** Canonical extensions for familiar formats; other files retain their safe
+ * filename suffix. Uploading stores bytes without executing or extracting them. */
 const FILE_MIMES: Readonly<Record<string, string>> = {
   "video/mp4": ".mp4",
   "video/webm": ".webm",
@@ -141,6 +138,9 @@ function scanAttachmentUsageAndCleanup(now = Date.now()): { bytes: number; remov
   let removed = 0;
   for (const entry of readdirSync(ATTACHMENTS_DIR, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
+    if (UPLOAD_ID.test(entry.name.slice(0, 36))) {
+      KNOWN_ATTACHMENT_EXTENSIONS.add(entry.name.slice(36));
+    }
     const path = join(ATTACHMENTS_DIR, entry.name);
     // A live partial is represented by its in-memory reservation. A fresh
     // orphan from a crashed process still occupies disk and therefore counts
@@ -310,14 +310,11 @@ async function withUploadLock<T>(uploadId: string | undefined, operation: () => 
   }
 }
 
-/** Every committed attachment name is `${uuid}${extension}` for one of these
- * fixed extensions — saveFile/saveImage never write any other suffix — so
- * whether a given upload ID is already committed, and under which content
- * type, can be answered with a handful of direct stats instead of a scan
- * over every file in the directory. */
-const KNOWN_ATTACHMENT_EXTENSIONS = Array.from(
-  new Set([...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES)]),
-);
+/** Rebuilt by the quota scan on startup and extended on each file commit,
+ * so retries also detect IDs used by arbitrary file formats. */
+const KNOWN_ATTACHMENT_EXTENSIONS = new Set([
+  ...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES),
+]);
 
 /** Missing or unreadable candidates count as absent here; the atomic link
  * still detects a collision if a file exists when an upload commits. */
@@ -334,6 +331,7 @@ function statSizeIfFile(path: string): number | null {
  * already committed under a different accepted content type. */
 function committedPathForUpload(uploadId: string, extension: string): string | null {
   ensureAttachmentsDir();
+  committedBytes();
   const exactPath = join(ATTACHMENTS_DIR, `${uploadId}${extension}`);
   if (statSizeIfFile(exactPath) !== null) return exactPath;
   for (const other of KNOWN_ATTACHMENT_EXTENSIONS) {
@@ -374,16 +372,17 @@ function normalizedMime(mime: string | undefined): string | null {
 
 export function extensionForFileMime(mime: string | undefined): string | null {
   const value = normalizedMime(mime);
-  return value ? FILE_MIMES[value] ?? null : null;
+  if (!value || value.length > 127 || !/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/.test(value)) return null;
+  return FILE_MIMES[value] ?? ".bin";
 }
 
-/** Strip platform-reserved characters and replace any sender-provided
- * extension with the canonical one for the accepted mime. Separators and
+/** Strip platform-reserved characters. Familiar document/audio formats keep
+ * canonical extensions; general files and plain text retain their suffix. Separators and
  * encoded separators are rejected rather than massaged so traversal attempts
  * remain visible as bad requests. */
 export function sanitizeSharedFileName(name: string, mime: string): string {
-  const extension = extensionForFileMime(mime);
-  if (!extension) throw statusError(400, "content-type must be a supported document or audio type");
+  const canonical = extensionForFileMime(mime);
+  if (!canonical) throw statusError(400, "content-type must be a valid media type");
 
   const normalized = name.normalize("NFKC").trim();
   if (!normalized) throw statusError(400, "name is required");
@@ -393,13 +392,15 @@ export function sanitizeSharedFileName(name: string, mime: string): string {
   }
 
   const dot = normalized.lastIndexOf(".");
-  const withoutExtension = dot > 0 ? normalized.slice(0, dot) : normalized;
+  const preserveName = canonical === ".bin" || normalizedMime(mime) === "text/plain";
+  const extension = preserveName ? "" : canonical;
+  const withoutExtension = !preserveName && dot > 0 ? normalized.slice(0, dot) : normalized;
   const safeCharacters = Array.from(withoutExtension, (character) => {
     const code = character.charCodeAt(0);
     return code <= 31 || code === 127 || "<>:\"|?*".includes(character) ? "_" : character;
   }).join("");
   const stem = safeCharacters
-    .replace(/^\.+/, "")
+    .replace(/^\.{2,}/, "")
     .replace(/[.\s]+$/, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -408,7 +409,7 @@ export function sanitizeSharedFileName(name: string, mime: string): string {
   return `${boundedStem}${extension}`;
 }
 
-/** Stream one shared document to a generated file without ever collecting
+/** Stream one shared file to a generated file without ever collecting
  * the request in memory. A failed, empty, or oversized upload leaves no
  * partial file behind. */
 export async function saveFile(
@@ -417,12 +418,14 @@ export async function saveFile(
   mime: string,
   options: { uploadId?: string; expectedBytes?: number } = {},
 ): Promise<SavedFile> {
-  const normalized = normalizedMime(mime);
+  const normalized = normalizedMime(mime) ?? "application/octet-stream";
   if (!normalized || !extensionForFileMime(normalized)) {
-    throw statusError(400, "content-type must be a supported document or audio type");
+    throw statusError(400, "content-type must be a valid media type");
   }
   const name = sanitizeSharedFileName(originalName, normalized);
-  const extension = extensionForFileMime(normalized)!;
+  const suffix = extname(name).toLowerCase();
+  const extension = /^\.[a-z0-9][a-z0-9_+-]{0,31}$/.test(suffix)
+    ? suffix : extensionForFileMime(normalized)!;
   const uploadId = validateAttachmentUploadId(options.uploadId);
   const expectedBytes = options.expectedBytes;
   if (expectedBytes !== undefined && (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0)) {
@@ -493,6 +496,7 @@ export async function saveFile(
       try {
         const accountingVersion = attachmentAccountingVersion;
         await link(partialPath, path);
+        KNOWN_ATTACHMENT_EXTENSIONS.add(extension);
         addCommittedBytes(bytes, accountingVersion);
         await unlink(partialPath);
       } catch (error) {

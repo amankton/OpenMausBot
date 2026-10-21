@@ -1,0 +1,10 @@
+{
+  "unauthenticatedTokenStatus": 401,
+  "network": "none",
+  "captureStatus": 403,
+  "credentials": "synthetic only",
+  "image": "sha256:9ac0abe4d068ccad8c1eb6bf119b3e940b473bed7493baaeadc049f3e73f6e39",
+  "gracefulExit": true,
+  "recordingAvailable": false,
+  "fixtureRemoved": true
+}

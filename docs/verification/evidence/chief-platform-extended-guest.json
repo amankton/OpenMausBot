@@ -1,0 +1,15 @@
+{
+  "verifiedAt": "2026-10-08T00:14:18.968Z",
+  "scope": "Synthetic chiefacceptance only; no owner workspace, external email, or changes to existing members/roles",
+  "phase": "guest",
+  "checks": [
+    "Distinct synthetic Guest joins via local one-use link without email; current account API confirms exact workspace/GUEST role and rejects inviting elevated USER"
+  ],
+  "pending": [
+    "Guest phase rechecks live account MAIL_URL is absent; if configured, no sign-up is attempted",
+    "Uncertain writes are retained for reconciliation, never retried as creates or removed with broad cleanup",
+    "ReadOnlyGuest, destructive lifecycle operations, and cross-member private-calendar visibility remain separate coverage",
+    "Prepared selectors require the first scheduled browser run; source inspection is not UI acceptance"
+  ],
+  "forbiddenRequests": 0
+}

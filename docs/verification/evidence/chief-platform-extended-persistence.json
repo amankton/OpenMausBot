@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-08T00:30:41.163Z",
+  "scope": "Synthetic chiefacceptance only; no owner workspace, external email, or changes to existing members/roles",
+  "phase": "persistence",
+  "mode": "deployed",
+  "servedBuiltAssets": [],
+  "mainBodyTemplate": false,
+  "checks": [
+    "Pre-restart Person location, exact saved avatar and attachment bytes, and Company rich text remain readable by a fresh ordinary member",
+    "Pre-restart Tracker TSK-1 assignment and status persist; this phase only reads fixtures and binds the exact service/mount preservation receipts"
+  ],
+  "remainingCoverage": [
+    "ReadOnlyGuest and destructive member lifecycle operations are outside this acceptance scope",
+    "Cross-member private-calendar visibility is not covered by own-calendar scheduling acceptance"
+  ],
+  "forbiddenRequests": 0,
+  "contactsReceiptSha256": "c07cc35bc4444b2ada77c6e9504d08132a7102e131c9b6227dd5b6e838bc9176",
+  "avatarTrackerReceiptSha256": "9289b79c937096e9468e970b638c85c3da624ccaa218d31fff53c41f845c2e0a",
+  "rolloutReceiptSha256": "8463f165f81dcf08eba4d23cb3a7095f8e0bdb125a64e9a98bf513ca09b15161",
+  "restoredReceiptSha256": "df8ab088b22ff4fbaca6f50f1bfadfb17cdef57d4d7ba359ee326b906b6e96a1"
+}

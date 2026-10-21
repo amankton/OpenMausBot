@@ -1,0 +1,44 @@
+# Bacca and Solo: remaining cold-response latency
+
+The owner requested further cold-start work and actual response measurements for Bacca and Solo. Both retain GPT-6.1 Sol, Low reasoning and their existing OpenAI Codex route. The first installed-Hermes correction is in `agent/turn_iteration_prep.py`: translated thinking text is resolved only when a callback or permitted terminal spinner will display it. ACP browser streaming previously parsed the localization catalog for an announcement it discarded.
+
+The new regression tests failed on the old implementation for both invisible-output cases. All four new cases and the existing quiet-spinner case pass after the correction. Visible translated callback/spinner output remains intact. Memory recall, credential resolution, model selection, tool schemas and session pooling are unchanged. The exact diff, test commands and rollback patch are in [the implementation handoff](../../work/performance-20261019/cold-announcement-fix.md).
+
+## Measurement method
+
+The real-response fixture runs the production Chief renderer/backend and installed Hermes ACP runtime using each real profile separately, in temporary Chief data directories. It sends actual provider requests and measures first readable provider text, first visible browser text and completion. Synthetic prompts never enter live conversations; test barriers suppress conversation persistence, retention, background review and tool execution while retaining memory recall and advertised tool schemas. It tests one fresh process and two pooled follow-ups per run. Model/reasoning/profile assertions verify adoption. The fixture uses the managed base Python with normal bootstrap validation, not the canonical executable shim/CLI dispatch; browser timings do not include that shim's separate launch overhead.
+
+Detailed baseline and repeated post-change results, screenshots, cleanup evidence and raw timings are maintained in [the response report](../../work/performance-20261019/provider-cold-response-report.md). Completion polling adds up to roughly one second of observation granularity; first-text timings use stream/DOM events.
+
+Final browser verification after both source corrections:
+
+| Real profile | Cold first visible text | Cold completion | Warm first visible text | Warm completion |
+| --- | ---: | ---: | ---: | ---: |
+| Bacca/default | 14.618 s | 16.913 s | 2.513 / 4.538 s | 4.797 / 6.804 s |
+| Solo | 27.509 s | 27.980 s | 2.350 / 1.978 s | 4.779 / 4.795 s |
+
+Bacca spent 12.554 s before dispatch and 1.999 s from dispatch to first readable provider text. Solo spent 17.894 s before dispatch (including 10.583 s constructing its agent) and another 9.562 s awaiting provider text. Every final request retained GPT-6.1 Sol/Low; all six completed and no browser page errors occurred. These are actual rendered replies, not health checks. The final Solo tail proves cold-start consistency remains unresolved. The prior four spinner-only runs ranged from 12.960–23.241 s cold and 1.668–2.845 s warm; neither the best run nor the average should conceal the final tail. No observed retry occurred at the instrumented dispatch boundary; internal network retries were not separately counted.
+
+## Attribution and limits
+
+The first Bacca baseline took 50.197 seconds to visible text, but 46.238 seconds elapsed before provider dispatch. Solo took 20.182 seconds, including 17.519 seconds before dispatch. Bacca's first import stage alone took 26.764 seconds. A contemporaneous Windows observation found only 615,632 KB free of 32,678,460 KB physical RAM and about 6.4 GB of pagefile usage. This is evidence of host pressure, not proof that all import time was caused by paging. A later standalone instrumented bootstrap took 2.686 seconds, including 2.482 seconds for required PM validation. Host/cache variation prevents attributing the entire before/after difference to the small code fix.
+
+Docker remained responsive at 283 ms with all 40 original containers ready. Chief and Hermes health endpoints responded in milliseconds while real first responses took seconds: endpoint health is explicitly not conversational performance evidence. See `work/performance-20261019/provider-cold-infra-audit.json` and the later host-resource snapshot.
+
+Provider review found existing shared HTTP keepalive pools, IPv4/IPv6 connection racing for official Codex chat requests, bounded retries and conditional locked token refresh. The separate model-metadata HTTP path lacked that connection racing. A four-line correction in `agent/model_metadata_http.py` now uses the existing helper only for the official HTTPS Codex route, leaving the client constructor, TLS verification, timeout budgets, proxy routing and redirect credential stripping intact. Two new route tests failed before the correction; all 38 selected tests passed afterward, including the existing IPv6-failure fallback and real redirect/proxy/TLS checks. See [the transport handoff](../../work/performance-20261019/provider-metadata-transport-handoff.md). Both scoped rollback patches passed reverse-apply checks without being applied. The transport patch artifact initially had newline normalization problems; it was rebuilt byte-preserving and checked again without changing production source or tests.
+
+A possible duplicate model-catalog lookup was not established as an actual duplicate request; picker and agent credentials can differ, and picker already has its own cache. No speculative credential/catalog cache or timeout reduction was applied. Hindsight's first-use SDK import remains; simply moving it earlier would shift rather than eliminate work. No memory recall was removed to improve timing.
+
+A subsequent no-model construction probe used explicit wall timers with thread identities. It measured a 4.036-second agent build: importing `run_agent` 1.167 s, MCP readiness 0.780 s, and `AIAgent.__init__` 2.006 s (including client construction 0.791 s, tool loading 0.588 s and a metadata request 0.555 s). Nested timings must not be added twice. This probe did not reproduce the earlier 10.163-second build or establish an IPv6 stall. An earlier cProfile result mixed thread activity and produced incoherent attribution; it is retained as invalid for causal attribution. Raw wall evidence: `work/performance-20261019/cold-agent-build-default-wall.json`.
+
+Profiling cleanup limitation: the owned process exited, but deletion of `C:/Users/amank/AppData/Local/Temp/chief-agent-build-aC8TTV` was rejected by automatic approval review with only "blocked by policy". No bypass was attempted. The subsequent probe intentionally retained `C:/Users/amank/AppData/Local/Temp/chief-agent-build-uByMxq`. These are isolated fixture working directories; the probe process and observed descendants are no longer running. Actual browser fixtures cleaned up their own temporary data successfully.
+
+Fresh ACP processes loaded both installed source changes for final verification. To activate the metadata correction in native Bacca/Solo and the other gateway profiles as well, a gateway-owned graceful reload was requested after the gateway confirmed zero active agents at 2026-10-20 03:58:03 UTC. Activation evidence is recorded in `C:/Users/amank/AppData/Local/hermes/reports/provider-cold-activation-20261019.json`; readiness confirmation follows below. These are local source patches, not an upstream release, and a Hermes update may overwrite them. Scoped rollback patches must be checked against intervening edits before use. Consistently fast cold responses remain unresolved.
+
+## Completed activation and final service checks
+
+Live gateway control confirmed the replacement running at 2026-10-20 04:00:39 UTC: PID 52756, start fingerprint 179246870478, all 21 profiles loaded and all six configured connections connected. The old process exited after its own graceful drain, with no active agents at restart. Canonical start to full readiness took approximately 131 seconds; this service startup measurement is separate from the actual conversation timings above.
+
+Six Docker observations during activation all returned HTTP 200 in 251–327 ms with 40 containers running. The final audit at 04:01:47–04:01:53 UTC found all 40 original containers ready, Chief backend/UI responding in 3/4 ms, Workspace in 31 ms, Phone in 32 ms and Hermes in 7 ms. Authenticated Hermes discovery completed in 5.708 seconds. Evidence: `work/performance-20261019/provider-cold-final-docker.json` and `provider-cold-final-service-audit.json`.
+
+A read-only check using this replacement's boot timestamp also confirmed Nolan and all ten repaired swarm profiles registered their 14 filesystem tools using their Windows roots, with no invalid-root failures. Evidence: `work/performance-20261019/provider-cold-filesystem-live.json`. This verifies the prior workspace repair survived the reload; it does not replace actual conversational timing evidence.

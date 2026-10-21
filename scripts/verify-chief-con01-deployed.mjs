@@ -1,5 +1,6 @@
 // Explicitly authorized Playwright release test. Synthetic accounts only.
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { chromium, expect } from '@playwright/test';
 import { readFile, writeFile, mkdtemp } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,6 +11,11 @@ import { ChiefPairingRuntime } from '../server/chief-pairing.ts';
 const origin='http://localhost:18087', path=origin+'/workbench/chiefacceptance/setting/integrations';
 const json=async p=>JSON.parse(await readFile(p,'utf8'));
 const rollout=await json(join(ROOT,'docs/verification/evidence/chief-con01-local-rollout.json'));assert.equal(rollout.passed,true);
+const deployedImages=()=>Object.fromEntries(['account','front','lifecycle'].map(service=>[service+'Image',execFileSync('docker',[
+  'inspect',service==='lifecycle'?'chief-lifecycle-local-chief-lifecycle-1':`chief-platform-${service}-1`,'--format','{{.Image}}'
+],{encoding:'utf8',windowsHide:true}).trim()]));
+const images=deployedImages();
+assert.equal(images.accountImage,rollout.accountImage);assert.equal(images.frontImage,rollout.frontImage);
 const states=await Promise.all(['acceptance-state.json','acceptance-partner-state.json'].map(n=>json(join(ROOT,'.chief-local/platform',n))));
 for(const state of states)assert.ok(!JSON.stringify(state).includes('chiefexecutivesuite')&&state.origins.some(o=>o.origin===origin&&o.localStorage.some(r=>r.name.includes('chiefacceptance'))));
 const directory=await mkdtemp(join(ROOT,'.chief-local/m1-pairing/deployed-runtime-'));
@@ -72,8 +78,9 @@ try {
   await embeddedFrame.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect.poll(async()=>{try{await runtime.check(embeddedConnection.id);return 200}catch(e){return e.status}}).toBe(403);
   checks.push('Cross-site sandboxed workspace iframe stores the Secure partitioned Chief cookie, retains pairing on outer-page reload, and revokes the signed runtime on sign-out');
+  assert.deepEqual(deployedImages(),images,'Deployment changed during verification');
   const receipt={passed:true,verifiedAt:new Date().toISOString(),deployed:true,syntheticOnly:true,authorityStubs:false,membershipEpochRequired:true,
-    accountImage:rollout.accountImage,lifecycleImage:rollout.lifecycleImage,frontImage:rollout.frontImage,buildReceiptSha256:rollout.buildReceiptSha256,checks,
+    ...images,buildReceiptSha256:rollout.buildReceiptSha256,checks,
     limitations:['Local loopback pilot; no cloud/TLS acceptance','Outage/retry UI verified separately on the same compiled build','No real specialist dispatch']};
   await writeFile(join(ROOT,'docs/verification/evidence/chief-con01-deployed.json'),JSON.stringify(receipt,null,2));console.log(JSON.stringify(receipt));
 } catch(error) {

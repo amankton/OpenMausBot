@@ -59,8 +59,8 @@ describe("createLiveSession", () => {
     await createLiveSession({ key: "k", sdp: OFFER, bot: BOT, history: [], cloudHome: true, fetchImpl });
     await createLiveSession({ key: "k", sdp: OFFER, bot: BOT, history: [], cloudHome: false, fetchImpl });
     const [cloud, computer] = fetchImpl.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).session.instructions as string);
-    expect(cloud).toContain("runs on the user's My Cloud, their always-on OpenMausBot in the cloud, not on their own computer.");
-    expect(computer).toContain("runs in OpenMausBot on the user's own computer.");
+    expect(cloud).toContain("runs on the user's My Cloud, their always-on Chief Executive Suite in the cloud, not on their own computer.");
+    expect(computer).toContain("runs in Chief Executive Suite on the user's own computer.");
     expect(computer).not.toContain("My Cloud");
   });
 
@@ -118,7 +118,7 @@ describe("live startup context", () => {
 
   it("writes one-line instructions from the bot's own profile", () => {
     const text = liveInstructions({ name: "  Rigel\n", title: "QA", description: "Line one\nline two" });
-    expect(text.split("\n")[0]).toBe("You are Rigel, QA, an AI agent that runs in OpenMausBot on the user's own computer. Line one line two");
+    expect(text.split("\n")[0]).toBe("You are Rigel, QA, an AI agent that runs in Chief Executive Suite on the user's own computer. Line one line two");
     expect(text).toContain("Never answer it yourself.");
   });
 
@@ -126,9 +126,9 @@ describe("live startup context", () => {
   // runs on the person's own computer offers what it cannot reach.
   it("on a Cloud, says the voice runs on the user's My Cloud, not their own computer", () => {
     const text = liveInstructions({ name: "Rigel", title: "QA" }, { cloudHome: true });
-    expect(text.split("\n")[0]).toBe("You are Rigel, QA, an AI agent that runs on the user's My Cloud, their always-on OpenMausBot in the cloud, not on their own computer.");
+    expect(text.split("\n")[0]).toBe("You are Rigel, QA, an AI agent that runs on the user's My Cloud, their always-on Chief Executive Suite in the cloud, not on their own computer.");
     expect(text).not.toContain("OMB");
-    expect(liveInstructions({ name: "Rigel" }, { cloudHome: false }).split("\n")[0]).toBe("You are Rigel, an AI agent that runs in OpenMausBot on the user's own computer.");
+    expect(liveInstructions({ name: "Rigel" }, { cloudHome: false }).split("\n")[0]).toBe("You are Rigel, an AI agent that runs in Chief Executive Suite on the user's own computer.");
   });
 
   it("tells the voice to answer 'is it still working?' from the status notes, not by delegating", () => {
@@ -141,7 +141,7 @@ describe("live startup context", () => {
   // when asked which AI model it is. It is the bot, and it checks without asking.
   it("makes the voice the bot itself: first person, no backend talk, no asking to check", () => {
     const text = liveInstructions({ name: "CFO", title: "Chief Financial Officer" });
-    expect(text.split("\n")[0]).toBe("You are CFO, Chief Financial Officer, an AI agent that runs in OpenMausBot on the user's own computer.");
+    expect(text.split("\n")[0]).toBe("You are CFO, Chief Financial Officer, an AI agent that runs in Chief Executive Suite on the user's own computer.");
     expect(text).not.toContain("only the voice");
     expect(text).not.toContain("voice of");
     expect(text).toContain("Never mention a backend, delegation, a voice layer, or another system or model doing the work");
@@ -214,4 +214,15 @@ describe("liveErrorMessage", () => {
     expect(liveErrorMessage(400, "session.client")).not.toMatch(/voice/);
     expect(liveErrorMessage(400)).toMatch(/call settings/);
   });
+});
+
+it('sends saved custom voices as IDs with their approved performance prompt', async () => {
+ const fetchImpl=okFetch();
+ await createLiveSession({key:'fixture',sdp:OFFER,bot:BOT,history:[],cloudHome:false,voice:'voice_AbC123',voicePrompt:'Keep the pitch. Speak 15 percent faster.',fetchImpl});
+ const session=JSON.parse(String(fetchImpl.mock.calls[0][1]?.body)).session;
+ expect(session.audio.output.voice).toEqual({id:'voice_AbC123'});
+ expect(session.instructions).toContain('Keep the pitch. Speak 15 percent faster.');
+ expect(session.instructions).not.toContain('unhurried pace');
+ await createLiveSession({key:'fixture',sdp:OFFER,bot:BOT,history:[],cloudHome:false,voice:'cedar',voicePrompt:'Custom-only description',fetchImpl});
+ expect(JSON.parse(String(fetchImpl.mock.calls[1][1]?.body)).session.instructions).not.toContain('Custom-only description');
 });

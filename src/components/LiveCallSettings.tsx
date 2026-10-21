@@ -2,19 +2,22 @@ import { useCallback, useId, useState } from "react";
 
 import { LIVE_VOICE_OPTIONS } from "../../shared/live-call";
 import { t } from "@/lib/i18n";
-import { liveDisclosure } from "@/lib/call-mode";
 import { api, useStore, type ConfigStatus } from "@/state/store";
-import type { LiveSettings } from "../../shared/wire";
+import { LIVE_PROVIDERS, liveProviderConfigured, setLiveProvider, useLiveProvider, providerDisclosure } from "@/lib/live-provider";
+import { hangUpLiveCall, isLiveCallRunning, useLiveMedia } from "@/lib/live-call-media";
+import type { LiveProvider, LiveSettings } from "../../shared/wire";
 import { LiveKeySetup } from "./LiveKeySetup";
 
-const IDLE_CHOICES = [1, 2, 3, 5, 10, 15, 30, 60];
+const IDLE_CHOICES = [0.5, 1, 2, 3, 5, 10, 15, 30, 60];
 
 /** The gear in the call bar. Voice, typed replies, idle minutes and the key.
  * It takes focus when it opens, so Escape closes it; `onClose` (Escape) puts
  * focus back on the gear. */
 export function LiveCallSettings({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
-  const live: LiveSettings = state.config?.live ?? { configured: false, voice: "", readTypedReplies: true, idleMinutes: 5 };
+  const live: LiveSettings = state.config?.live ?? { configured: false, voice: "", readTypedReplies: true, idleMinutes: 0.5 };
+  const provider = useLiveProvider();
+  const media = useLiveMedia();
   const [saving, setSaving] = useState(false);
   const [changingKey, setChangingKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +49,8 @@ export function LiveCallSettings({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       const status: ConfigStatus = window.ogb?.setCredential
-        ? await window.ogb.setCredential("openaiLiveKey", "")
-        : await api("/api/config", { method: "PUT", body: JSON.stringify({ live: { key: "" } }) });
+        ? await window.ogb.setCredential(provider === "gemini" ? "geminiLiveKey" : "openaiLiveKey", "")
+        : await api("/api/config", { method: "PUT", body: JSON.stringify({ live: { [provider === "gemini" ? "geminiKey" : "key"]: "" } }) });
       dispatch({ type: "configStatus", config: status });
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : String(removeError));
@@ -70,6 +73,20 @@ export function LiveCallSettings({ onClose }: { onClose: () => void }) {
       }}
     >
       <label className="flex items-center justify-between gap-2">
+        <span className="text-ink-secondary">Voice provider</span>
+        <select aria-label="Voice provider" value={provider} disabled={saving} onChange={async (event) => {
+          const next = event.target.value as LiveProvider;
+          setSaving(true);
+          if (isLiveCallRunning(media.phase)) await hangUpLiveCall();
+          setLiveProvider(next);
+          setChangingKey(false);
+          setSaving(false);
+        }} className="min-w-0 rounded-md border border-hairline bg-panel px-2 py-1 text-ink">
+          {LIVE_PROVIDERS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+        </select>
+      </label>
+      <div className="text-[11.5px] text-ink-tertiary">Changing provider ends the current call. Start a new call to connect.</div>
+      {provider === "openai" && <label className="flex items-center justify-between gap-2">
         <span className="text-ink-secondary">{t("call.live.voice")}</span>
         <select
           value={voice}
@@ -77,11 +94,11 @@ export function LiveCallSettings({ onClose }: { onClose: () => void }) {
           onChange={(event) => void save({ voice: event.target.value })}
           className="min-w-0 rounded-md border border-hairline/60 bg-panel px-2 py-1 text-ink outline-none"
         >
-          {!known && <option value={voice}>{voice}</option>}
+          {!known && <option value={voice}>{voice.startsWith("voice_") ? "Custom Chief voice" : voice}</option>}
           {LIVE_VOICE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
         </select>
-      </label>
-      <div className="-mt-2 text-[11.5px] text-ink-tertiary">{t("call.live.voiceNext")}</div>
+      </label>}
+      {provider === "openai" && <div className="-mt-2 text-[11.5px] text-ink-tertiary">{t("call.live.voiceNext")}</div>}
       <label className="flex items-center justify-between gap-2">
         <span className="text-ink-secondary">{t("call.live.readTyped")}</span>
         <input
@@ -102,7 +119,7 @@ export function LiveCallSettings({ onClose }: { onClose: () => void }) {
           className="rounded-md border border-hairline/60 bg-panel px-2 py-1 text-ink outline-none"
         >
           {[...new Set([...IDLE_CHOICES, live.idleMinutes])].sort((a, b) => a - b).map((minutes) => (
-            <option key={minutes} value={minutes}>{minutes}</option>
+            <option key={minutes} value={minutes}>{minutes * 60} seconds</option>
           ))}
         </select>
       </label>
@@ -112,15 +129,16 @@ export function LiveCallSettings({ onClose }: { onClose: () => void }) {
           <button type="button" className="text-accent hover:underline" onClick={() => setChangingKey((open) => !open)}>
             {t("call.live.keyChange")}
           </button>
-          {live.configured && (
+          {liveProviderConfigured(live, provider) && (
             <button type="button" className="text-danger hover:underline" disabled={saving} onClick={() => void removeKey()}>
               {t("call.live.keyRemove")}
             </button>
           )}
         </span>
       </div>
-      {changingKey && <LiveKeySetup compact onSaved={() => setChangingKey(false)} />}
-      <div className="text-[11.5px] text-ink-tertiary">{liveDisclosure({ cloudHome: state.config?.cloudHome === true })} {t("call.live.cost")}</div>
+      {provider === "gemini" && <div className="text-xs text-ink-secondary">Gemini uses its configured server key and default voice.</div>}
+      {changingKey && <LiveKeySetup provider={provider} compact onSaved={() => setChangingKey(false)} />}
+      <div className="text-[11.5px] text-ink-tertiary">{providerDisclosure(provider)}</div>
       {error && <div className="text-[12px] text-danger">{error}</div>}
     </div>
   );

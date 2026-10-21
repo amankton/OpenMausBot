@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-10T23:26:09.376Z",
+  "syntheticOnly": true,
+  "sixDigitPairing": true,
+  "unauthenticatedRosterRejected": true,
+  "authenticatedRosterReachable": true,
+  "ownerControlNotExposed": true,
+  "actualIPhoneTested": false,
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\chief-phone-verification-1791674769068.log"
+}

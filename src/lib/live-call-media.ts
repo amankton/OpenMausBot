@@ -6,12 +6,13 @@
 // (server/live-call-controller.ts). This module never sends appends:
 // its data channel may only send session.close.
 import { useSyncExternalStore } from "react";
-import type { LiveCallState, LiveEndReason } from "../../shared/wire";
+import type { LiveCallState, LiveEndReason, LiveProvider } from "../../shared/wire";
 import { api, ApiError } from "@/state/store";
 import { openExternalLink } from "./app-links";
 import { endCall, startCall } from "./call";
 import { desktopCapabilitiesNow } from "./desktop";
 import { t } from "./i18n";
+import { GeminiLiveMedia } from "./gemini-live-media";
 
 export type LiveMediaPhase = "idle" | "starting" | "live" | "ending" | "ended" | "failed";
 
@@ -26,6 +27,8 @@ export function isLiveCallRunning(phase: LiveMediaPhase): boolean {
 
 export interface LiveMediaState {
   phase: LiveMediaPhase;
+  provider?: LiveProvider;
+  usageTokens?: number;
   callId: string | null;
   botId: string | null;
   threadId: string | null;
@@ -53,6 +56,7 @@ export interface LiveMediaState {
 export interface LiveMediaDeps {
   getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream>;
   createPeer(): RTCPeerConnection;
+  createGemini(callbacks: { onEvent(event: Record<string, unknown>): void; onError(error: Error): void; onClose(): void }): Pick<GeminiLiveMedia, "start" | "stop" | "setMuted">;
   request<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T>;
   playRemote(track: MediaStreamTrack): Promise<void> | void;
   stopRemote(): void;
@@ -90,6 +94,7 @@ const defaults: LiveMediaDeps = {
     if (typeof RTCPeerConnection === "undefined") throw new LiveUnsupportedError(t("call.live.unsupported"));
     return new RTCPeerConnection();
   },
+  createGemini: (callbacks) => new GeminiLiveMedia(callbacks),
   request: (path, init) => api(path, init),
   playRemote: async (track) => {
     audio ??= Object.assign(document.createElement("audio"), { autoplay: true });
@@ -117,6 +122,8 @@ let generation = 0;
 let microphone: MediaStream | null = null;
 let peer: RTCPeerConnection | null = null;
 let channel: RTCDataChannel | null = null;
+let gemini: Pick<GeminiLiveMedia, "start" | "stop" | "setMuted"> | null = null;
+let geminiReady = false;
 let heardTimer: ReturnType<typeof setTimeout> | null = null;
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -209,12 +216,13 @@ function liveClient(capabilities: DesktopCapabilities): "desktop" | "web" {
   return capabilities.dictation.reasonCode === "desktop-app-required" ? "web" : "desktop";
 }
 
-export async function startLiveCall(target: { botId: string; threadId: string }): Promise<void> {
+export async function startLiveCall(target: { botId: string; threadId: string; provider?: LiveProvider }): Promise<void> {
   if (isLiveCallRunning(state.phase)) return;
   release();
+  const provider = target.provider ?? "openai";
   const mine = ++generation;
   serverAttached = false;
-  set({ ...IDLE, phase: "starting", botId: target.botId, threadId: target.threadId });
+  set({ ...IDLE, phase: "starting", provider, botId: target.botId, threadId: target.threadId });
   startCall(target.botId);
   try {
     const stream = await deps.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
@@ -222,6 +230,32 @@ export async function startLiveCall(target: { botId: string; threadId: string })
     microphone = stream;
     // Mute can be pressed while the call connects.
     for (const track of stream.getAudioTracks()) track.enabled = !state.muted;
+    if (provider === "gemini") {
+      const result = await deps.request<{ call: LiveCallState; transport: { type: "websocket"; url: string } }>("/api/live/session", {
+        method: "POST",
+        body: JSON.stringify({ botId: target.botId, threadId: target.threadId, provider, client: liveClient(deps.capabilities()) }),
+        timeoutMs: 35_000,
+      });
+      if (mine !== generation) { void endOnServer(result.call.callId); return; }
+      const seen = serverCall;
+      set({ callId: result.call.callId });
+      applyServerCall(result.call);
+      if (seen?.callId === result.call.callId) applyServerCall(seen);
+      if (mine !== generation) return;
+      if (result.transport.type !== "websocket") throw new Error("Invalid Gemini audio transport.");
+      const transport = deps.createGemini({
+        onEvent: (event) => { if (mine === generation) onChannelMessage(JSON.stringify(event)); },
+        onError: (error) => { if (mine === generation) void dropped(error.message); },
+        onClose: () => { if (mine === generation && isLiveCallRunning(state.phase)) void dropped(t("call.live.dropped")); },
+      });
+      gemini = transport;
+      transport.setMuted(state.muted);
+      await transport.start(result.transport.url, stream);
+      if (mine !== generation) { transport.stop(); return; }
+      geminiReady = true;
+      goLiveWhenReady();
+      return;
+    }
     const connection = deps.createPeer();
     peer = connection;
     connection.ontrack = (event) => {
@@ -287,9 +321,9 @@ export async function startLiveCall(target: { botId: string; threadId: string })
     // the session exists but this window cannot join it: free the harness's one call
     if (state.callId) void endOnServer(state.callId);
     release();
-    if (body?.needsKey) return set({ ...IDLE, needsKey: true, botId: target.botId, threadId: target.threadId });
-    if (body?.activeCall) return set({ ...IDLE, phase: "failed", botId: target.botId, threadId: target.threadId, busyWith: body.activeCall, notice: busyText(body.activeCall) });
-    const failed = { ...IDLE, phase: "failed" as const, botId: target.botId, threadId: target.threadId };
+    if (body?.needsKey) return set({ ...IDLE, provider, needsKey: true, botId: target.botId, threadId: target.threadId });
+    if (body?.activeCall) return set({ ...IDLE, provider, phase: "failed", botId: target.botId, threadId: target.threadId, busyWith: body.activeCall, notice: busyText(body.activeCall) });
+    const failed = { ...IDLE, provider, phase: "failed" as const, botId: target.botId, threadId: target.threadId };
     // No microphone at all is not a permission: connect one, then try again.
     if (error instanceof DOMException && error.name === "NotFoundError") return set({ ...failed, notice: t("call.live.micMissing"), action: "retry" });
     if (error instanceof DOMException && error.name === "NotAllowedError") {
@@ -314,6 +348,8 @@ export async function hangUpLiveCall(): Promise<void> {
   // Keep the channel alive until its close command and the end request leave.
   stopCapturing();
   sendClose();
+  // Do not keep playing audio while a slow end request waits for the provider.
+  release();
   if (callId) await endOnServer(callId);
   // The harness's end frame, or a newer call, got here first: leave it be.
   if (mine !== generation) return;
@@ -322,6 +358,7 @@ export async function hangUpLiveCall(): Promise<void> {
 }
 
 export function setLiveMuted(muted: boolean): void {
+  gemini?.setMuted(muted);
   for (const track of microphone?.getAudioTracks() ?? []) track.enabled = !muted;
   set({ muted });
 }
@@ -366,9 +403,9 @@ export function dismissKeyPrompt(botId: string): void {
 /** The stopped call's one action: call this bot again, or open this page in
  * the web browser, which can give it the microphone. */
 export function takeLiveCallAction(): void {
-  const { action, botId, threadId, phase } = state;
-  if (phase !== "failed") return;
-  if (action === "retry" && botId && threadId) void startLiveCall({ botId, threadId });
+  const { action, botId, threadId, phase, provider } = state;
+  if (phase !== "failed" && phase !== "ended") return;
+  if (action === "retry" && botId && threadId) void startLiveCall({ botId, threadId, provider });
   else if (action === "open-in-browser" && globalThis.location?.href) deps.openInBrowser(globalThis.location.href);
 }
 
@@ -424,7 +461,7 @@ function applyServerCall(call: LiveCallState | null) {
     // Only the hang-up this window asked for ends quietly: one another
     // device made reads "Call ended.", as the reason's words say.
     if (call.endReason === "hung-up" && state.hangingUp) endQuietly();
-    else finish(endNotice(call.endReason), call.error);
+    else finish(endNotice(call.endReason), call.error, call.endReason === "idle");
     return;
   }
   // Any status but connecting and ended means the computer's side reached
@@ -434,8 +471,7 @@ function applyServerCall(call: LiveCallState | null) {
   if (call.status === "ending") {
     // The line is closing, even when another device asked for it: keep the
     // title until its reason arrives, but stop sending microphone audio now.
-    stopCapturing();
-    stopConnectWait();
+    release();
     if (state.phase !== "ending") set({ phase: "ending" });
     return;
   }
@@ -446,7 +482,7 @@ function applyServerCall(call: LiveCallState | null) {
  * attached to the session, and this window's own data channel is open (the
  * iPhone's rule). The clock counts from that moment, on this computer. */
 function goLiveWhenReady() {
-  if (state.phase !== "starting" || !serverAttached || channel?.readyState !== "open") return;
+  if (state.phase !== "starting" || !serverAttached || !(geminiReady || channel?.readyState === "open")) return;
   set({ phase: "live", startedAt: Date.now() });
 }
 
@@ -459,18 +495,39 @@ function endQuietly() {
 
 /** The call is over. `detail`: the harness's own words for why, shown
  * first (as on the phones); the reason still decides drop and Try again. */
-function finish(notice: { text: string; dropped: boolean }, detail?: string) {
+function finish(notice: { text: string; dropped: boolean }, detail?: string, reconnect = false) {
   sendClose();
   release();
   generation += 1;
-  const { botId, threadId } = state;
+  const { botId, threadId, provider } = state;
   set({
-    ...IDLE, phase: notice.dropped ? "failed" : "ended", botId, threadId,
-    notice: detail?.trim() || notice.text, action: notice.dropped ? "retry" : null,
+    ...IDLE, phase: notice.dropped ? "failed" : "ended", botId, threadId, provider,
+    notice: detail?.trim() || notice.text, action: notice.dropped || reconnect ? "retry" : null,
   });
-  if (!notice.dropped) {
+  if (!notice.dropped && !reconnect) {
     noticeTimer = setTimeout(dismissLiveNotice, ENDED_NOTICE_MS);
   }
+}
+
+/** Explicit interaction only; no heartbeat that could prolong an unattended call. */
+export async function keepLiveCall(): Promise<void> {
+  const callId = state.callId;
+  if (!callId || !isLiveCallRunning(state.phase)) return;
+  const result = await deps.request<{ call: LiveCallState }>("/api/live/call/keep", {
+    method: "POST", body: JSON.stringify({ callId }), timeoutMs: 8_000,
+  });
+  if (state.callId === callId) onServerCall(result.call);
+}
+
+/** Page exit must release capture immediately and request real provider closure. */
+export function leaveLiveCall(): void {
+  if (!isLiveCallRunning(state.phase)) return;
+  const callId = state.callId;
+  sendClose();
+  release();
+  generation += 1;
+  set({ ...IDLE });
+  if (callId) void deps.request("/api/live/call/end", { method: "POST", body: JSON.stringify({ callId }), keepalive: true }).catch(() => {});
 }
 
 async function dropped(text: string) {
@@ -485,11 +542,14 @@ async function endOnServer(callId: string): Promise<void> {
 }
 
 function onChannelMessage(raw: unknown) {
-  let event: { type?: unknown; delta?: unknown };
+  let event: { type?: unknown; delta?: unknown; usage?: { total_tokens?: unknown } };
   try {
     event = JSON.parse(String(raw)) as { type?: unknown; delta?: unknown };
   } catch {
     return;
+  }
+  if (event.type === "session.usage.updated" && Number.isSafeInteger(event.usage?.total_tokens) && Number(event.usage?.total_tokens) >= 0) {
+    set({ usageTokens: Number(event.usage?.total_tokens) });
   }
   if (event.type === "session.closed") {
     stopCapturing();
@@ -547,6 +607,7 @@ function sendClose() {
 }
 
 function stopCapturing() {
+  gemini?.setMuted(true);
   microphone?.getTracks().forEach((track) => track.stop());
   microphone = null;
 }
@@ -557,6 +618,10 @@ function release() {
   stopGestureWait?.();
   stopGestureWait = null;
   stopCapturing();
+  const oldGemini = gemini;
+  gemini = null;
+  geminiReady = false;
+  oldGemini?.stop();
   try { channel?.close(); } catch { /* already closed */ }
   channel = null;
   try { peer?.close(); } catch { /* already closed */ }

@@ -82,8 +82,8 @@ object SharePolicy {
         if (inferred in IMAGE_MIMES) return StreamKind.IMAGE
         if (inferred in DOCUMENT_MIMES) return StreamKind.FILE
         if (normalized == "text/x-uri" || normalized == "text/uri-list") return StreamKind.URL
-        if (normalized.startsWith("text/")) return StreamKind.TEXT
-        return StreamKind.IGNORE
+        if (normalized.startsWith("text/") && fileName.isNullOrBlank()) return StreamKind.TEXT
+        return StreamKind.FILE
     }
 
     fun mimeForExtension(extension: String): String? = when (extension.lowercase()) {

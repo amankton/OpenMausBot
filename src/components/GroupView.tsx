@@ -69,6 +69,7 @@ import { highlightCitationSource } from "@/lib/citations-dom";
 import { latestReply, type TranscriptSnapshot } from "@/lib/transcript-announcer";
 import { pendingApprovals } from "./PendingApproval";
 import { TranscriptAnnouncer } from "./TranscriptAnnouncer";
+import { PartialReply } from "./PartialReply";
 import { dayLabel, localDay } from "@/lib/transcript-derivations";
 
 /** One finished tool step in a room. Same pill the 1:1 chat uses, minus the
@@ -1401,6 +1402,7 @@ export function GroupView({ group }: { group: Group }) {
             emergingId={popping?.id}
             onReply={selectReply}
           />
+          <PartialReply key={`${group.threadId}:${group.busyBotId ?? ""}`} threadId={group.threadId} active={Boolean(group.busyBotId)} connected={state.connected} hidden={laterCount > 0} />
           {laterCount > 0 && (
             <div className="flex justify-center">
               <button

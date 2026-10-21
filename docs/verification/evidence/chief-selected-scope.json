@@ -1,0 +1,125 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-08T00:44:42.621Z",
+  "scope": "Selected local Chief collaboration integration; historical module gates plus same-build deployed template, capture and recording regressions and exact-export private import",
+  "frontImage": "sha256:7f1249e6e368e9bea05f41e65605354ab5f3ed7c42fbfb8b7939e64c766c9939",
+  "buildReceiptSha256": "7060287280246df74dce6187085be3df2d6ca9d3c9eec39b0d49a663ee1ecc3d",
+  "route": "/workspace",
+  "legacyRoute": "/office redirects to /workspace",
+  "ownerDataUsedForMutations": false,
+  "servicesRunning": 17,
+  "personalImportUnsentUntilExplicitSend": true,
+  "receipts": [
+    {
+      "file": "chief-platform-contacts.json",
+      "sha256": "c07cc35bc4444b2ada77c6e9504d08132a7102e131c9b6227dd5b6e838bc9176",
+      "verifiedAt": "2026-10-07T20:20:10.000Z",
+      "checks": 5
+    },
+    {
+      "file": "chief-platform-cards.json",
+      "sha256": "fc82392bee0ab766cdb5c6d0037e37f34803c6add5629ed48382bea6bef9c2a7",
+      "verifiedAt": "2026-10-07T20:28:31.337Z",
+      "checks": 5
+    },
+    {
+      "file": "chief-platform-modules.json",
+      "sha256": "6dde7364c2fead9921e5ee9d950c10e46b50fbfe9ba2667b5f37cd9c6205c9ec",
+      "verifiedAt": "2026-10-07T20:37:06.231Z",
+      "checks": 5
+    },
+    {
+      "file": "chief-platform-contact-tracker.json",
+      "sha256": "9289b79c937096e9468e970b638c85c3da624ccaa218d31fff53c41f845c2e0a",
+      "verifiedAt": "2026-10-07T23:11:42.705Z",
+      "checks": 6
+    },
+    {
+      "file": "chief-platform-meetings.json",
+      "sha256": "d4eed361dc8729f6e9e46e5185416cb9f698440ee149de848ec14736b59f122e",
+      "verifiedAt": "2026-10-07T22:37:08.356Z",
+      "checks": 6
+    },
+    {
+      "file": "chief-shared-workspace-host.json",
+      "sha256": "d2e40801131c02cb12c8dbbedeeedfe7e1967a6e2150a99193c8901d44edaf06",
+      "verifiedAt": "2026-10-07T22:44:00.826Z",
+      "checks": 15
+    },
+    {
+      "file": "chief-platform-extended-contacts.json",
+      "sha256": "948ddef776eab4075d294d08c078e57aba67a598aee9e42dbf595db1c8b27b24",
+      "verifiedAt": "2026-10-08T00:09:49.878Z",
+      "checks": 2
+    },
+    {
+      "file": "chief-platform-extended-guest.json",
+      "sha256": "d7130e7314302e675e87b328d0b701d6ef3476dd90d9cd234a86f49e04fc7eb7",
+      "verifiedAt": "2026-10-08T00:14:18.968Z",
+      "checks": 1
+    },
+    {
+      "file": "chief-platform-extended-structures.json",
+      "sha256": "8099efa16f6d3e6236d9efc04fdb998e8ddc6660b45cb84c668f9e1df15d4ae0",
+      "verifiedAt": "2026-10-08T00:13:20.116Z",
+      "checks": 1
+    },
+    {
+      "file": "chief-platform-extended-content.json",
+      "sha256": "c5b287458b1723d3ddf245691142b72ea4bf2191dc3c0121128417a9cb71ccdf",
+      "verifiedAt": "2026-10-08T00:18:19.912Z",
+      "checks": 1
+    },
+    {
+      "file": "chief-platform-extended-planner.json",
+      "sha256": "cb05339d44f4046cf175bcaddb6e133fb60c0e77829bc09c392891c83f23e3c4",
+      "verifiedAt": "2026-10-08T00:17:07.021Z",
+      "checks": 3
+    },
+    {
+      "file": "chief-platform-extended-persistence.json",
+      "sha256": "276ef6fdd20cb08ba2c4221f6f3cb2df46a5405c475db4175028308257aeb5e8",
+      "verifiedAt": "2026-10-08T00:30:41.163Z",
+      "checks": 2
+    },
+    {
+      "file": "chief-platform-extended-templates.json",
+      "sha256": "8919102d79b552b69a16690e1853bf5c8d0ccad57b88f8c1a0f4a4787e22ba85",
+      "verifiedAt": "2026-10-08T00:41:33.630Z",
+      "checks": 1
+    },
+    {
+      "file": "chief-platform-capture.json",
+      "sha256": "fb0f1edaff1dc0175c263b609d5b61fd0a1301b0b4549d641315c55665d8dfaa",
+      "verifiedAt": "2026-10-08T00:42:35.270Z",
+      "checks": 6
+    },
+    {
+      "file": "chief-platform-recording.json",
+      "sha256": "0581bf2c39acf8af8ff8079a81db80cd13e76ebfdae8c22988813fa9d4fd6ef5",
+      "verifiedAt": "2026-10-08T00:42:57.338Z",
+      "checks": 6
+    },
+    {
+      "file": "chief-meeting-import.json",
+      "sha256": "c2abffb77fae105f4e375f35535d9b5078eb8bb77385a5ffa428c9739fd4081a",
+      "verifiedAt": "2026-10-08T00:43:57.969Z",
+      "checks": 4
+    },
+    {
+      "file": "chief-platform-capture-rollout.json",
+      "sha256": "543b2c7a2d96b73208bbdf11ed2ca81fb71154f838278464e40399d9b928a34e",
+      "verifiedAt": "2026-10-08T00:41:03.777Z"
+    }
+  ],
+  "remainingOutsideSelectedScope": [
+    "HR and Processes deferred",
+    "External calendar, Gmail, Telegram and other external integrations unconfigured",
+    "Printing unverified",
+    "ReadOnlyGuest, destructive member lifecycle and cross-member private-calendar visibility not covered"
+  ],
+  "knownLimits": [
+    "Existing file authorization is workspace-wide, not target-document ACL",
+    "Transport-held cancellation does not prove transactional rollback of a server-side upload commit race"
+  ]
+}

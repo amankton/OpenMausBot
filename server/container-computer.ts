@@ -135,7 +135,7 @@ const LINUX_WHEELS = {
  * The first RUN also rejects a defective base image before anything uses it:
  * some published ARM64 layers of upstream bases have shipped zero-byte
  * OpenSSL libraries, which surfaces later as a baffling "curl: error while
- * loading shared libraries … file too short" that reads as a network fault.
+ * loading shared libraries â€¦ file too short" that reads as a network fault.
  * The gate names the actual problem at the step that can act on it. */
 export function managedImageDockerfile(): string {
   return `FROM ${BASE_IMAGE}
@@ -149,7 +149,7 @@ RUN set -eux; \\
     esac; \\
     for ssl_lib in "/lib/$lib_triplet/libssl.so.3" "/lib/$lib_triplet/libcrypto.so.3"; do \\
       if [ -e "$ssl_lib" ] && [ ! -s "$ssl_lib" ]; then \\
-        echo "pinned base image is defective on $arch: $ssl_lib is zero bytes, so curl cannot start — re-pull or replace the base image instead of debugging the wheel download" >&2; \\
+        echo "pinned base image is defective on $arch: $ssl_lib is zero bytes, so curl cannot start â€” re-pull or replace the base image instead of debugging the wheel download" >&2; \\
         exit 1; \\
       fi; \\
     done; \\
@@ -266,11 +266,10 @@ export async function containerRuntimeStatus(
   runner: CommandRunner = sh,
   platform: NodeJS.Platform = process.platform,
 ): Promise<ContainerRuntimeStatus> {
-  // Podman is the supported Windows VM lane and owns the pinned managed image.
-  // Docker may also be installed and healthy on the same host, so the generic
-  // Docker-first order would silently select an empty, unrelated image store.
+  // Keep Windows agent desktops in Podman's image and storage boundary.
+  // A stopped or missing Podman must never select an unrelated Docker desktop.
   const candidates: Runtime[] = platform === "win32"
-    ? ["podman", "docker"]
+    ? ["podman"]
     : RUNTIMES.filter((runtime) => runtime !== "container" || platform === "darwin");
   const present = await Promise.all(candidates.map((runtime) => installed(runtime, runner, platform)));
   const available = candidates.filter((_, index) => present[index]);
@@ -398,8 +397,8 @@ export function localVmWakeAction(status: ContainerComputerStatus): "run" | "sta
 
 /** Whether Auto may attach this Local VM without a person choosing it: the
  * desktop is ready, a compatible stopped desktop can be started, or its image
- * is prepared and a missing container can be recreated. Anything else — no runtime, daemon down, image
- * never prepared, an unmanaged or unsafe container — stays the person's call. */
+ * is prepared and a missing container can be recreated. Anything else â€” no runtime, daemon down, image
+ * never prepared, an unmanaged or unsafe container â€” stays the person's call. */
 export function autoLocalVmAttachable(status: ContainerComputerStatus): boolean {
   return status.ready === true || localVmWakeAction(status) !== null;
 }
@@ -506,7 +505,7 @@ function viewerUrl(password: string | null, port: number | null): string {
   return `${base}#${fragment.toString()}`;
 }
 
-/** The one authoritative `exec … cua-driver` argv. Shared with the BYO-VPS
+/** The one authoritative `exec â€¦ cua-driver` argv. Shared with the BYO-VPS
  * backend and both MCP bridge entry points so the identity, env, and
  * telemetry knobs can never drift between the Local VM and a VPS container. */
 export function cuaExecArgs(
@@ -1194,7 +1193,7 @@ const EXEC_OUTPUT_LIMIT = 20_000;
 export function clipExecOutput(text: string, limit = EXEC_OUTPUT_LIMIT): string {
   if (text.length <= limit) return text;
   const head = Math.floor(limit / 5);
-  return `${text.slice(0, head)}\n… ${text.length - limit} characters omitted …\n${text.slice(text.length - (limit - head))}`;
+  return `${text.slice(0, head)}\nâ€¦ ${text.length - limit} characters omitted â€¦\n${text.slice(text.length - (limit - head))}`;
 }
 
 const defaultExecRunner: ContainerExecRunner = async (command, args, options) => {
@@ -1266,14 +1265,22 @@ export function containerComputerMcp(
   runtime: Runtime,
   control?: { url: string; token: string },
   target: LocalVmTarget = SHARED_LOCAL_VM_TARGET,
+  environment: NodeJS.ProcessEnv = process.env,
 ): ContainerMcpLaunch {
   return {
     command: process.execPath,
     args: [containerMcpPath, runtime, target.containerName, CUA_SOCKET],
-    // The control pair rides in env, not argv — argv is world-readable
+    // The control pair rides in env, not argv â€” argv is world-readable
     // through `ps` for the life of the bridge.
     env: {
       ELECTRON_RUN_AS_NODE: "1",
+      // MCP clients may deliberately discard the parent's environment (Hermes
+      // does). Carry the selected local machine and CLI discovery explicitly,
+      // otherwise its bridge falls back to a different/default Podman socket.
+      ...Object.fromEntries([
+        "OMB_EXTRA_PATH",
+        ...(runtime === "podman" ? ["CONTAINER_HOST", "CONTAINER_SSHKEY", "CONTAINER_CONNECTION"] : []),
+      ].flatMap(key => environment[key] ? [[key, environment[key]!]] : [])),
       ...(control ? { OMB_CONTROL_URL: control.url, OMB_CONTROL_TOKEN: control.token } : {}),
     },
   };

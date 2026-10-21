@@ -7,7 +7,7 @@ import { ExternalLink, Mic, MicOff, PhoneOff, RotateCcw, Settings, X } from "luc
 import { t } from "@/lib/i18n";
 import { isMacPlatform } from "@/lib/keyboard-shortcuts";
 import {
-  dismissLiveNotice, hangUpLiveCall, isLiveCallRunning, liveCallChord, setLiveMuted, takeLiveCallAction, useLiveMedia,
+  dismissLiveNotice, hangUpLiveCall, isLiveCallRunning, keepLiveCall, liveCallChord, setLiveMuted, takeLiveCallAction, useLiveMedia,
   type LiveCallAction, type LiveMediaState,
 } from "@/lib/live-call-media";
 import { api, liveCallFromFrame, nextLiveCallLookup, useStore, type Action, type Bot } from "@/state/store";
@@ -44,7 +44,7 @@ export function liveCallBarView({ bot, media, server, now }: {
 }): LiveCallBarView | null {
   const here = media.botId === bot.id && media.threadId === bot.threadId;
   if (here && (media.phase === "failed" || media.phase === "ended") && media.notice) {
-    return { kind: "notice", text: media.notice, action: media.phase === "failed" ? media.action : null };
+    return { kind: "notice", text: media.notice, action: media.action };
   }
   if (here && isLiveCallRunning(media.phase)) {
     // the clock runs from the moment the call went live, also while it ends
@@ -110,6 +110,7 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
   const media = useLiveMedia();
   const [now, setNow] = useState(() => Date.now());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keepError, setKeepError] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
   const gearRef = useRef<HTMLButtonElement>(null);
   const view = liveCallBarView({ bot, media, server: state.liveCall, now });
@@ -136,7 +137,7 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
   }, [settingsOpen]);
 
   if (!view) return null;
-  const button = "flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium transition-colors";
+  const button = "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   // lines up with the composer below it. The composer dock lets clicks
   // through to the transcript; the bar itself takes them.
   const frame = "pointer-events-auto mx-5 mb-2 flex items-center rounded-xl border bg-panel px-3 py-2 text-[12.5px] text-ink";
@@ -144,13 +145,13 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
   if (view.kind === "notice") {
     const action = view.action === "open-in-browser"
       ? { label: t("call.live.openInBrowser"), Icon: ExternalLink }
-      : view.action === "retry" ? { label: t("call.live.tryAgain"), Icon: RotateCcw } : null;
+      : view.action === "retry" ? { label: media.phase === "ended" ? t("call.live.reconnect") : t("call.live.tryAgain"), Icon: RotateCcw } : null;
     return (
       <div role="status" className={cn(frame, "gap-2 border-hairline/60")}>
-        <span className="min-w-0 flex-1 truncate" title={view.text}>{view.text}</span>
+        <span className="min-w-0 flex-1 text-pretty" title={view.text}>{view.text}</span>
         {action && (
           <button type="button" aria-label={action.label} className={cn(button, "bg-raised hover:bg-raised-hover")} onClick={takeLiveCallAction}>
-            <action.Icon className="size-3.5" /> <span className="hidden sm:inline">{action.label}</span>
+            <action.Icon className="size-3.5" /> <span>{action.label}</span>
           </button>
         )}
         <button type="button" aria-label={t("call.live.close")} className={cn(button, "text-ink-secondary hover:text-ink")} onClick={dismissLiveNotice}>
@@ -163,7 +164,7 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
   if (view.kind === "remote") {
     const callId = view.callId;
     return (
-      <div role="status" className={cn(frame, "gap-2 border-success/40")}>
+      <div role="status" className={cn(frame, "flex-wrap gap-2 border-success/40")}>
         <span className="size-2 shrink-0 rounded-full bg-success" aria-hidden />
         <span className="min-w-0 flex-1 truncate">{view.title}</span>
         <button
@@ -172,8 +173,9 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
           className={cn(button, "bg-danger text-white hover:brightness-110")}
           onClick={() => void hangUpRemoteCall(callId, state.liveCallVersion, dispatch)}
         >
-          <PhoneOff className="size-3.5" /> <span className="hidden sm:inline">{t("call.live.hangUp")}</span>
+          <PhoneOff className="size-3.5" /> <span>{t("call.live.hangUp")}</span>
         </button>
+        <span className="w-full text-pretty text-xs text-ink-secondary">{t("call.live.muteInOrigin")}</span>
       </div>
     );
   }
@@ -191,7 +193,11 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
       className={cn(frame, "relative flex-wrap gap-x-2 gap-y-1 border-success/40")}
     >
       <span className="size-2 shrink-0 animate-pulse rounded-full bg-success" aria-hidden />
-      <span className="shrink-0 font-medium tabular-nums">{view.title}</span>
+      <span className="min-w-0 flex-1 truncate font-medium tabular-nums">{view.title}</span>
+      <span className="text-[11px] text-ink-tertiary" title="API usage is billed separately; this timer is not a cost estimate.">
+        {media.provider === "gemini" ? "Gemini Live" : "GPT-Live"} · API billing
+        {media.usageTokens !== undefined ? ` · ${media.usageTokens.toLocaleString()} tokens reported` : ""}
+      </span>
       {/* One line that always shows the newest words: right-to-left
           overflow clips the oldest words (and puts the ellipsis) on the left,
           while the text itself stays left-to-right. */}
@@ -205,14 +211,26 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
         <bdi dir="ltr">{spoken}</bdi>
       </span>
       {view.hint && <span role="status" className="order-last w-full min-w-0 truncate text-[11.5px] text-warning" title={view.hint}>{view.hint}</span>}
-      <span className="ml-auto flex shrink-0 items-center gap-1">
+      {state.liveCall?.callId === media.callId && state.liveCall.idleWarning && (
+        <div role="status" aria-live="polite" className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-hairline bg-raised px-3 py-2 text-ink">
+          <span className="min-w-0 flex-1 text-pretty">{t("call.live.idleWarning", { seconds: Math.min(5, Math.max(0, Math.ceil(((state.liveCall.idleDeadlineAt ?? now) - now) / 1000))) })}</span>
+          <button type="button" className={cn(button, "border border-hairline bg-panel")} onClick={() => {
+            setKeepError(""); void keepLiveCall().catch(() => setKeepError(t("call.live.keepFailed")));
+          }}>{t("call.live.keepCall")}</button>
+          {keepError && <span role="alert" className="w-full text-pretty">{keepError}</span>}
+        </div>
+      )}
+      <span role="status" className={cn("w-full font-medium", view.muted ? "text-warning" : "text-ink-secondary")}>
+        {view.muted ? t("call.live.microphoneMuted") : t("call.live.microphoneOn")}
+      </span>
+      <span className="flex w-full flex-wrap items-center gap-2">
         <button
           ref={gearRef}
           type="button"
           aria-label={t("call.live.settings")}
           aria-expanded={settingsOpen}
           aria-haspopup="dialog"
-          className={cn(button, settingsOpen ? "text-ink" : "text-ink-secondary hover:text-ink")}
+          className={cn(button, "order-last ml-auto", settingsOpen ? "text-ink" : "text-ink-secondary hover:text-ink")}
           onClick={() => setSettingsOpen((open) => !open)}
         >
           <Settings className="size-3.5" />
@@ -223,11 +241,11 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
           aria-label={muteLabel}
           aria-keyshortcuts={muteChord.aria}
           title={`${muteLabel} (${muteChord.text})`}
-          className={cn(button, view.muted ? "bg-raised text-ink" : "text-ink-secondary hover:text-ink")}
+          className={cn(button, "border", view.muted ? "border-warning/60 bg-warning/10 text-warning" : "border-hairline bg-raised text-ink hover:bg-raised-hover")}
           onClick={() => setLiveMuted(!view.muted)}
         >
           {view.muted ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
-          <span className="hidden sm:inline">{muteLabel}</span>
+          <span>{muteLabel}</span>
         </button>
         <button
           type="button"
@@ -238,7 +256,7 @@ export function LiveCallBar({ bot }: { bot: Bot }) {
           className={cn(button, "bg-danger text-white hover:brightness-110 disabled:opacity-60")}
           onClick={() => void hangUpLiveCall()}
         >
-          <PhoneOff className="size-3.5" /> <span className="hidden sm:inline">{t("call.live.hangUp")}</span>
+          <PhoneOff className="size-3.5" /> <span>{t("call.live.hangUp")}</span>
         </button>
       </span>
       {settingsOpen && (

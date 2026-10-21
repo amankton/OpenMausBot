@@ -54,7 +54,8 @@ export function validateBoundaries(config, lock, meetingImages) {
     if (JSON.stringify(service.networks) !== '["backend"]') throw new Error(`Unexpected service network: ${name}`);
     if (name === 'nginx') {
       const nginxMount = meetingImages ? './nginx-meetings.conf:/etc/nginx/conf.d/default.conf:ro' : './nginx.conf:/etc/nginx/conf.d/default.conf:ro';
-      if (JSON.stringify(service.ports) !== '["127.0.0.1:18087:80"]' || JSON.stringify(service.volumes) !== JSON.stringify([nginxMount])) throw new Error('Only the loopback Chief proxy may publish a port.');
+      const nginxMounts = meetingImages ? [nginxMount, './theme:/usr/share/nginx/crewframe-theme:ro'] : [nginxMount];
+      if (JSON.stringify(service.ports) !== '["127.0.0.1:18087:80"]' || JSON.stringify(service.volumes) !== JSON.stringify(nginxMounts)) throw new Error('Only the loopback Chief proxy may publish a port.');
     } else if (name === 'livekit' && meetingImages) {
       if (JSON.stringify(service.ports) !== '["127.0.0.1:18088:18088/tcp","127.0.0.1:18089:18089/udp"]' || JSON.stringify(service.volumes) !== '["../../.chief-local/platform/livekit.json:/etc/livekit.json:ro"]') throw new Error('Unexpected media network or configuration mount.');
     } else if (service.ports?.length) throw new Error(`Unexpected published port: ${name}`);

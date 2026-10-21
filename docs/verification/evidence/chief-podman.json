@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-11T00:31:26.210Z",
+  "isolatedServer": true,
+  "machineOperations": "read-only discovery",
+  "runtime": "podman",
+  "daemonUp": true,
+  "desktopReady": false,
+  "container": "missing"
+}

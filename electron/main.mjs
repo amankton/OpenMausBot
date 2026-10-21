@@ -3194,6 +3194,7 @@ const CREDENTIAL_PATCH = {
   openaiImageApiKey: (value) => ({ imageGen: { key: value } }),
   customImageApiKey: (value) => ({ imageGen: { customApiKey: value } }),
   openaiLiveKey: (value) => ({ live: { key: value } }),
+  geminiLiveKey: (value) => ({ live: { geminiKey: value } }),
 };
 
 async function saveWorkspaceCredential(name, value) {

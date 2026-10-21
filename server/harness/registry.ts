@@ -30,6 +30,11 @@ export type RegistryEntry =
   | { instanceId: InstanceId; live: ProviderInstance; shadow?: undefined }
   | { instanceId: InstanceId; live?: undefined; shadow: ShadowInstance };
 
+const SNAPSHOT_FRESH_MS = 30_000;
+const SNAPSHOT_STALE_MS = 120_000;
+const SNAPSHOT_FAILURE_MS = 5_000;
+type SnapshotProbe = { value?: ProviderSnapshot; at: number; pending?: Promise<ProviderSnapshot> };
+
 /** The driver's install descriptor plus what this machine can do about it. */
 function withServerInstall(install: AnyProviderDriver["install"], npmPresent: boolean): AnyProviderDriver["install"] {
   const server = install ? serverInstallFor(install, npmPresent) : null;
@@ -66,10 +71,13 @@ export class ProviderRegistry {
   /** Whether npm is on this machine; injectable because the PATH scan also
    * looks in standard install locations, which tests cannot empty. */
   private readonly npmPresent: () => boolean;
+  private readonly now: () => number;
+  private readonly snapshotProbes = new WeakMap<ProviderInstance, SnapshotProbe>();
 
-  constructor(drivers: readonly AnyProviderDriver[], options: { enginesBaseDir?: string; npmAvailable?: () => boolean } = {}) {
+  constructor(drivers: readonly AnyProviderDriver[], options: { enginesBaseDir?: string; npmAvailable?: () => boolean; now?: () => number } = {}) {
     this.enginesBaseDir = options.enginesBaseDir;
     this.npmPresent = options.npmAvailable ?? npmAvailable;
+    this.now = options.now ?? Date.now;
     this.driversByKind = new Map(drivers.map((d) => [d.driverKind, d]));
   }
 
@@ -106,7 +114,8 @@ export class ProviderRegistry {
           enabled: entry.enabled ?? true,
           config,
         });
-        this.byId.set(instanceId, { instanceId, live: decorate ? decorate(live) : live });
+        const instance = this.invalidateSnapshotsOnChanges(decorate ? decorate(live) : live);
+        this.byId.set(instanceId, { instanceId, live: instance });
       } catch (e) {
         this.byId.set(instanceId, {
           instanceId,
@@ -125,6 +134,59 @@ export class ProviderRegistry {
 
   get(instanceId: InstanceId): ProviderInstance | null {
     return this.byId.get(instanceId)?.live ?? null;
+  }
+
+  /** Settings calls instance methods directly too (ProviderAuthSessions). Keep
+   * their next description fresh even when the action rejects after changing
+   * local auth. An old in-flight result belongs only to its detached cache. */
+  private invalidateSnapshotsOnChanges(instance: ProviderInstance): ProviderInstance {
+    const wrap = <A extends unknown[], R>(action: (...args: A) => Promise<R>) => async (...args: A): Promise<R> => {
+      this.snapshotProbes.delete(instance);
+      try { return await action(...args); }
+      finally { this.snapshotProbes.delete(instance); }
+    };
+    // Decorate this exact object: cloning changes `this` for private fields and
+    // separates mutable instance state from the auth methods that update it.
+    Object.assign(instance, {
+      ...(instance.startAuthentication ? { startAuthentication: wrap(instance.startAuthentication.bind(instance)) } : {}),
+      ...(instance.getAuthentication ? { getAuthentication: wrap(instance.getAuthentication.bind(instance)) } : {}),
+      ...(instance.completeAuthentication ? { completeAuthentication: wrap(instance.completeAuthentication.bind(instance)) } : {}),
+      ...(instance.cancelAuthentication ? { cancelAuthentication: wrap(instance.cancelAuthentication.bind(instance)) } : {}),
+      ...(instance.signOut ? { signOut: wrap(instance.signOut.bind(instance)) } : {}),
+      ...(instance.installRuntime ? { installRuntime: wrap(instance.installRuntime.bind(instance)) } : {}),
+      ...(instance.refreshModels ? { refreshModels: wrap(instance.refreshModels.bind(instance)) } : {}),
+    });
+    return instance;
+  }
+
+  /** Descriptions are discovery/UI hints, never authorization. CLI version and
+   * login probes can each start a process; multiple windows must share that
+   * work. Initial discovery is complete, then bounded stale data keeps ordinary
+   * refreshes responsive while one probe refreshes the hint in the background. */
+  private describeSnapshot(instance: ProviderInstance): Promise<ProviderSnapshot> {
+    let probe = this.snapshotProbes.get(instance);
+    if (!probe) {
+      probe = { at: 0 };
+      this.snapshotProbes.set(instance, probe);
+    }
+    const held = probe;
+    const age = this.now() - held.at;
+    const freshMs = held.value?.state === "available" ? SNAPSHOT_FRESH_MS : SNAPSHOT_FAILURE_MS;
+    if (held.value && age >= 0 && age < freshMs) return Promise.resolve(held.value);
+    if (!held.pending) {
+      held.pending = Promise.resolve().then(() => instance.snapshot())
+        .catch((error: unknown): ProviderSnapshot => ({ state: "unavailable", reason: error instanceof Error ? error.message : String(error) }))
+        .then(value => {
+          held.value = value;
+          held.at = this.now();
+          held.pending = undefined;
+          return value;
+        });
+    }
+    // Failed probes also refresh in the background: their short retry window
+    // may expire before a slower sibling's initial discovery even finishes.
+    if (held.value && age >= 0 && age < SNAPSHOT_STALE_MS) return Promise.resolve(held.value);
+    return held.pending;
   }
 
   /** The configured executable for instance-scoped maintenance actions.
@@ -151,7 +213,9 @@ export class ProviderRegistry {
   async refreshModels(instanceId: InstanceId): Promise<boolean> {
     const instance = this.get(instanceId);
     if (!instance) return false;
-    await instance.refreshModels?.();
+    this.snapshotProbes.delete(instance);
+    try { await instance.refreshModels?.(); }
+    finally { this.snapshotProbes.delete(instance); }
     return true;
   }
 
@@ -169,6 +233,7 @@ export class ProviderRegistry {
     const server = serverInstallFor(driver?.install, this.npmPresent());
     if (!server) return false;
     await installNpmEngine(server.package, { baseDir: this.enginesBaseDir, cli: cliDefaultOf(driver) });
+    if (entry.live) this.snapshotProbes.delete(entry.live);
     return true;
   }
 
@@ -235,7 +300,7 @@ export class ProviderRegistry {
         const inst = entry.live;
         let snapshot: ProviderSnapshot;
         try {
-          snapshot = await inst.snapshot();
+          snapshot = await this.describeSnapshot(inst);
         } catch (e) {
           snapshot = { state: "unavailable", reason: e instanceof Error ? e.message : String(e) };
         }
@@ -283,6 +348,7 @@ export class ProviderRegistry {
   }
 
   async disposeAll() {
+    for (const instance of this.instances()) this.snapshotProbes.delete(instance);
     await Promise.allSettled(this.instances().map((i) => i.dispose()));
     this.byId.clear();
     this.cliByInstance.clear();
@@ -290,6 +356,7 @@ export class ProviderRegistry {
 
   async dispose(instanceId: InstanceId) {
     const entry = this.byId.get(instanceId);
+    if (entry?.live) this.snapshotProbes.delete(entry.live);
     this.byId.delete(instanceId);
     this.cliByInstance.delete(instanceId);
     await entry?.live?.dispose();

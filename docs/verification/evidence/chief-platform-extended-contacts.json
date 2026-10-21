@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-08T00:09:49.878Z",
+  "scope": "Synthetic chiefacceptance only; no owner workspace, external email, or changes to existing members/roles",
+  "phase": "contacts",
+  "checks": [
+    "Employee/Guest creation forms validate empty input and cancel without submitting invitation-capable actions",
+    "Synthetic Owner can edit a coworker; ordinary User can edit self but another Employee name editor is disabled (UI boundary only)"
+  ],
+  "pending": [
+    "Guest phase rechecks live account MAIL_URL is absent; if configured, no sign-up is attempted",
+    "Uncertain writes are retained for reconciliation, never retried as creates or removed with broad cleanup",
+    "ReadOnlyGuest, destructive lifecycle operations, and cross-member private-calendar visibility remain separate coverage",
+    "Prepared selectors require the first scheduled browser run; source inspection is not UI acceptance"
+  ],
+  "forbiddenRequests": 0
+}

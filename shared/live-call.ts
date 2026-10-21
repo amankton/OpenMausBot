@@ -134,6 +134,13 @@ export function commentaryChunks(utterances: string[]): string[] {
   return chunks;
 }
 
+/** Complete result context, never a truncated speech script. The voice receives
+ * all facts (including late blockers) before one summary request. */
+export function liveResultContextChunks(text: string): string[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized ? splitLong(normalized) : [];
+}
+
 function splitLong(text: string): string[] {
   const out: string[] = [];
   let rest = text;
