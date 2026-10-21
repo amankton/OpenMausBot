@@ -19,8 +19,8 @@ export function createChiefPairingRoutes(options: { directory: string; origin?: 
       runtime ??= new ChiefPairingRuntime({ directory: options.directory, origin: options.origin, hasBot: id => options.bots().some(bot => bot.id === id) });
       if (path === "/api/chief-pairing" && method === "GET") return json(res, 200, { enabled: true, connections: runtime.list(), bots: options.bots() });
       if (path === "/api/chief-pairing" && method === "POST") {
-        const body = z.object({ invitation: z.unknown(), bots: z.array(z.string()) }).strict().parse(await readBody(req, 16384));
-        return json(res, 201, { connection: await runtime.pair(body.invitation, body.bots) });
+        const body = z.object({ invitation: z.unknown(), bots: z.array(z.string()), trackerWrite: z.boolean().optional() }).strict().parse(await readBody(req, 16384));
+        return json(res, 201, { connection: await runtime.pair(body.invitation, body.bots, body.trackerWrite) });
       }
       const match = /^\/api\/chief-pairing\/([a-f0-9-]{36})(\/check)?$/.exec(path);
       if (match && method === "POST" && match[2]) return json(res, 200, { connection: await runtime.check(match[1]!) });

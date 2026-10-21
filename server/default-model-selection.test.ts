@@ -152,6 +152,23 @@ describe("new bot default model selection wiring in index.ts", () => {
     expect(start).toBeGreaterThan(0); expect(end).toBeGreaterThan(start);
     return source.slice(start + 1, end + 2);
   };
+  it("reopens an existing workspace without waiting for provider discovery or reseeding", async () => {
+    const store = { bots: [{ modelSelection: { instanceId: "saved", model: "saved-model" } }], seedIfEmpty: () => { throw new Error("must not reseed"); } };
+    let probes = 0;
+    const code = ts.transpileModule(extract("async function seedNewWorkspace("), { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText;
+    const seed = new Function("store", "defaultSelection", `let bootSelection; ${code}; return seedNewWorkspace;`)(store, () => { probes++; return new Promise(() => {}); });
+    await seed(); expect(probes).toBe(0);
+    expect(store.bots[0].modelSelection).toEqual({ instanceId: "saved", model: "saved-model" });
+  });
+
+  it("keeps first-run model discovery before seeding a new workspace", async () => {
+    let seeded = false; let finish!: (selection: ModelSelection) => void;
+    const store = { bots: [], seedIfEmpty: () => { seeded = true; } };
+    const code = ts.transpileModule(extract("async function seedNewWorkspace("), { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText;
+    const seed = new Function("store", "defaultSelection", `let bootSelection; ${code}; return seedNewWorkspace;`)(store, () => new Promise<ModelSelection>(resolve => { finish = resolve; }));
+    const pending = seed(); expect(seeded).toBe(false);
+    finish({ instanceId: "fake", model: "m" }); await pending; expect(seeded).toBe(true);
+  });
   const code = ts.transpileModule(`${extract("function policyModelRefusal(")}\n${extract("async function defaultSelection(")}`,
     { compilerOptions: { target: ts.ScriptTarget.ESNext } }).outputText;
   const companyRouter = {

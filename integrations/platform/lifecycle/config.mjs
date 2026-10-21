@@ -38,5 +38,6 @@ export async function lifecycleConfig(env = process.env) {
   if (policyFile && !isAbsolute(policyFile)) throw Error('Lifecycle policy path must be absolute');
   return { mode, origin, database, port, host: env.CHIEF_LIFECYCLE_HOST ?? '127.0.0.1',
     accountsUrl: endpoint('CHIEF_LIFECYCLE_ACCOUNTS_URL'), transactorUrl: endpoint('CHIEF_LIFECYCLE_TRANSACTOR_URL'), policyFile,
+    collaboratorUrl: env.CHIEF_LIFECYCLE_COLLABORATOR_URL ? endpoint('CHIEF_LIFECYCLE_COLLABORATOR_URL') : undefined,
     encryptionKey: await encryptionKeyFile(required(env, 'CHIEF_LIFECYCLE_ENCRYPTION_KEY_FILE')) };
 }

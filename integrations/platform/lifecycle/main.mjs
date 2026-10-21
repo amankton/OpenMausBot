@@ -7,6 +7,7 @@ import { PairingService, migratePairing, transaction } from './pairing.mjs';
 import { credentialVault } from './security.mjs';
 import { verifySchema } from './migrations.mjs';
 export { verifySchema } from './migrations.mjs';
+import { TrackerClient } from './tracker.mjs';
 import { createLifecycleServer } from './http.mjs';
 
 export async function rotateCredentials(sql, oldKey, newKey) {
@@ -40,7 +41,7 @@ export async function main(command = process.argv[2] ?? 'serve') {
         for (const session of sessions) await pairing.revokeSession(tx, session.id);
       }); return;
     }
-    server = createLifecycleServer({ pairing, origin: config.origin, readiness: async () => { await sql`SELECT 1`; } });
+    server = createLifecycleServer({ pairing, origin: config.origin, tracker: config.collaboratorUrl ? new TrackerClient(config) : undefined, readiness: async () => { await sql`SELECT 1`; } });
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(config.port, config.host, resolve); });
     console.log(JSON.stringify({ event: 'chief-lifecycle-ready', mode: config.mode, port: config.port }));
     await new Promise(resolve => { process.once('SIGTERM', resolve); process.once('SIGINT', resolve); });

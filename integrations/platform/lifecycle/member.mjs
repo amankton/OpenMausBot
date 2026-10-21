@@ -54,6 +54,8 @@ export function accountsMemberVerifier({ accountsUrl, transactorUrl, fetcher = f
     const people = response?.dataType === 'TotalArray' ? response.value : response;
     if (!Array.isArray(people) || people.length !== 1 || typeof people[0]._id !== 'string') throw new AccessError(403, 'An active workspace person is required');
     return { workspace: login.workspace, account: login.account, role: login.role, person: people[0]._id,
+      ...(typeof login.socialId === 'string' ? { socialId: login.socialId } : {}),
+      ...(typeof login.workspaceUrl === 'string' ? { workspaceSlug: login.workspaceUrl } : {}),
       ...(uuid(membership.membershipEpoch) ? { membershipEpoch: membership.membershipEpoch } : {}) };
   };
 }

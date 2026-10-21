@@ -75,14 +75,14 @@ export class ChiefPairingRuntime {
     if (!response.ok) {
       await response.body?.cancel();
       throw new PairingError([400, 401, 403, 409].includes(response.status) ? response.status : 503,
-        response.status === 403 ? "This connection is pending, expired, or no longer authorized." : "The workspace could not verify this connection.");
+        response.status === 403 ? "This connection is pending, expired, or no longer authorized." : path === "/runtime/tracker" ? "Tracker result is unconfirmed or conflicted. Read the saved issue before retrying; do not automatically resend writes with a new requestId." : "The workspace could not verify this connection.");
     }
     const chunks: Uint8Array[] = []; let size = 0;
     for await (const chunk of response.body!) { size += chunk.length; if (size > 32768) throw new PairingError(503, "Invalid connection response"); chunks.push(chunk); }
     try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
     catch { throw new PairingError(503, "Invalid connection response"); }
   }
-  async pair(invitation: unknown, botIds: unknown): Promise<Connection> {
+  async pair(invitation: unknown, botIds: unknown, trackerWrite = false): Promise<Connection> {
     const parsed = invitationSchema.safeParse(invitation), bots = identifiers.safeParse(botIds);
     if (!parsed.success || !bots.success || new Set(bots.data).size !== bots.data.length || bots.data.some(id => !this.options.hasBot(id))) {
       throw new PairingError(400, "Choose existing personal agents and a valid workspace invitation.");
@@ -93,7 +93,7 @@ export class ChiefPairingRuntime {
     this.busy = true;
     try {
       const claim = { challenge: parsed.data.challenge, runtimeId: this.state.runtimeId, publicKey: this.state.publicKey,
-        bots: [...bots.data].sort(), scopes: ["workspace:read"] };
+        bots: [...bots.data].sort(), scopes: trackerWrite ? ["tracker:read", "tracker:write", "workspace:read"] : ["workspace:read"] };
       const bytes = Buffer.from(JSON.stringify(["chief-pair-v1", claim.challenge, claim.runtimeId, claim.publicKey, claim.bots, claim.scopes]));
       const result = recordSchema.parse(await this.request("/connections/complete", { ...claim, signature: sign(null, bytes, this.state.privateKey).toString("base64url") }));
       const c = result.connection;
@@ -120,6 +120,19 @@ export class ChiefPairingRuntime {
       throw new PairingError(403, "The workspace returned a different connection.");
     }
     row.connection = result.connection; this.save(); return { ...row.connection };
+  }
+  async tracker(connectionId: string, botId: string, operation: string, args: Record<string, unknown>): Promise<unknown> {
+    const row = this.state.connections.find(candidate => candidate.connection.id === connectionId);
+    const scope = ["create_issue", "update_issue"].includes(operation) ? "tracker:write" : "tracker:read";
+    if (!row || !this.options.hasBot(botId) || !row.connection.bots.includes(botId) || !row.connection.scopes.includes(scope) || row.connection.state !== "active" || Date.parse(row.connection.expiresAt) <= Date.now()) {
+      throw new PairingError(403, "No active member connection grants this agent the requested Tracker access.");
+    }
+    // Local forgetting/rebinding invalidates a warm MCP process immediately.
+    const current = stateSchema.parse(JSON.parse(readFileSync(this.file, "utf8")));
+    if (!current.connections.some(candidate => candidate.runtimeSecret === row.runtimeSecret && candidate.connection.id === connectionId)) throw new PairingError(403, "Connection was removed locally.");
+    const proof = { connectionId, generation: row.connection.generation, nonce: randomBytes(32).toString("base64url"), timestamp: Date.now(), bot: botId, scope };
+    const bytes = Buffer.from(JSON.stringify(["chief-workspace-v1", proof.connectionId, proof.generation, proof.nonce, proof.timestamp, proof.bot, proof.scope, operation, args]));
+    return this.request("/runtime/tracker", { proof: { ...proof, signature: sign(null, bytes, this.state.privateKey).toString("base64url") }, operation, arguments: args }, row.runtimeSecret);
   }
   forget(id: string): void {
     if (this.busy) throw new PairingError(409, "Another connection operation is still running.");

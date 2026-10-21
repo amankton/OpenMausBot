@@ -22,7 +22,7 @@ async function fill(selector: string, value: string) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
-const boxes = () => [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+const boxes = () => [...host.querySelectorAll<HTMLInputElement>('fieldset input[type="checkbox"]')];
 afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); vi.resetAllMocks(); });
 describe("pairing agent search", () => {
   it("filters names and retains selected agents across searches and in the request", async () => {
@@ -45,6 +45,14 @@ describe("pairing agent search", () => {
     await fill("textarea", '{"fixture":"invitation"}');
     await act(async () => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
     expect(api).toHaveBeenCalledWith("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: { fixture: "invitation" }, bots: ["bacca", "game"] }) });
+  });
+  it("requires an explicit Tracker write selection in the pairing request", async () => {
+    await mount(); await act(async () => boxes()[0].click());
+    const grant = host.querySelector<HTMLInputElement>('form > label input[type="checkbox"]')!;
+    expect(grant.checked).toBe(false); await act(async () => grant.click());
+    await fill("textarea", '{"fixture":"invitation"}');
+    await act(async () => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(api).toHaveBeenCalledWith("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: { fixture: "invitation" }, bots: ["bacca"], trackerWrite: true }) });
   });
   it("can remove a filtered-out selection; Enter in search does not submit", async () => {
     await mount();

@@ -35,6 +35,7 @@ export function resolveProxy(relative: string): string {
  * the check that would have caught the 0.1.24 breakage. */
 export const SPAWNED_PROXIES = {
   // The built-in browser and the cloud computer: argv[2] picks which.
+  huly: resolveProxy("huly-mcp"),
   harnessMcp: resolveProxy("harness-mcp-proxy"),
   localComputer: resolveProxy("local-computer-proxy"),
   permission: resolveProxy("permission-proxy"),

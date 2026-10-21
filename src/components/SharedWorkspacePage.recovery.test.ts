@@ -33,3 +33,17 @@ it('rechecks without replacing a frame; explicit reload replaces once and preser
  await act(async()=>window.dispatchEvent(new MessageEvent('message',{source:replacement.contentWindow,origin:'http://localhost:18087',data:{type:WORKSPACE_SLOT,rect:{x:10,y:10,width:120,height:40}}})));
  expect(host.querySelector('header')!.style.left).toBe('10px');expect(host.querySelector('iframe')).toBe(replacement);
 });
+
+
+it('retries an untouched blank iframe once after three seconds', async () => {
+ const child = { postMessage: vi.fn(), location: { href: 'about:blank' } };
+ vi.spyOn(HTMLIFrameElement.prototype, 'contentWindow', 'get').mockReturnValue(child as unknown as Window);
+ const writes = vi.spyOn(HTMLIFrameElement.prototype, 'src', 'set');
+ const props = { status: { enabled: true, available: true, name: 'Chief shared workspace' as const, url: 'http://localhost:18087/' }, error: '', loading: false, origin: 'http://127.0.0.1:5299', onRetry: vi.fn() };
+ root = createRoot(host); await act(async () => root!.render(createElement(SharedWorkspaceSurface, props)));
+ const before = writes.mock.calls.length;
+ await act(async () => { vi.advanceTimersByTime(3000); });
+ expect(writes.mock.calls.length).toBe(before + 1);
+ await act(async () => { vi.advanceTimersByTime(6000); });
+ expect(writes.mock.calls.length).toBe(before + 1);
+});

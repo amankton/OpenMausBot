@@ -1,4 +1,5 @@
 import { randomUUID, verify } from 'node:crypto';
+import { trackerInput } from './tracker.mjs';
 import { migrationFiles } from './migrations.mjs';
 import { AccessError, capability, credentialVault, digest, exact, identifiers, publicKey, requireProof, secret, uuid } from './security.mjs';
 
@@ -7,6 +8,7 @@ const binding = s => `${s.workspace}:${s.account}:${s.id}`;
 const denied = () => { throw new AccessError(); };
 const current = s => s && !s.revoked_at && new Date(s.expires_at).getTime() > Date.now();
 export const runtimeMessage = p => Buffer.from(JSON.stringify(['chief-runtime-v1', p.connectionId, p.generation, p.nonce, p.timestamp, p.bot, p.scope]));
+export const workspaceMessage = (proof, operation, args) => Buffer.from(JSON.stringify(['chief-workspace-v1', proof.connectionId, proof.generation, proof.nonce, proof.timestamp, proof.bot, proof.scope, operation, args]));
 export function connectionView(c) {
   return { id: c.id, workspace: c.workspace, account: c.account, runtimeId: c.runtime_id,
     keyFingerprint: digest(c.public_key), bots: c.bots, scopes: c.scopes,
@@ -210,7 +212,7 @@ export class PairingService {
       if (!records.length) denied();
     });
   }
-  async authorizeRuntime(runtimeSecret, proof) {
+  async authorizeRuntime(runtimeSecret, proof, operation, consumeNonce = true) {
     exact(proof, ['connectionId', 'generation', 'nonce', 'timestamp', 'bot', 'scope', 'signature']);
     if (!capability(runtimeSecret) || !capability(proof.nonce) || !uuid(proof.connectionId) ||
         !Number.isInteger(proof.generation) || !Number.isSafeInteger(proof.timestamp) || Math.abs(Date.now() - proof.timestamp) > 30000 ||
@@ -219,7 +221,7 @@ export class PairingService {
       WHERE id=${proof.connectionId} AND capability_hash=${digest(runtimeSecret)}`;
     if (!current(record) || record.state !== 'active' || record.generation !== proof.generation ||
         !record.bots.includes(proof.bot) || !record.scopes.includes(proof.scope) ||
-        !verify(null, runtimeMessage(proof), publicKey(record.public_key), Buffer.from(proof.signature, 'base64url'))) denied();
+        !verify(null, operation ? workspaceMessage(proof, operation.name, operation.args) : runtimeMessage(proof), publicKey(record.public_key), Buffer.from(proof.signature, 'base64url'))) denied();
     const [session] = await this.sql`SELECT * FROM chief_lifecycle.member_session WHERE id=${record.session_id}`;
     if (!current(session) || session.generation !== record.session_generation) denied();
     const member = await this.storedMember(session);
@@ -229,11 +231,51 @@ export class PairingService {
       await this.lockSession(tx, session);
       const [fresh] = await tx`SELECT * FROM chief_lifecycle.member_connection WHERE id=${record.id} FOR UPDATE`;
       if (!current(fresh) || fresh.state !== 'active' || fresh.generation !== proof.generation) denied();
-      const seen = await tx`INSERT INTO chief_lifecycle.runtime_nonce (connection_id, nonce_hash, expires_at)
+      const seen = !consumeNonce ? [true] : await tx`INSERT INTO chief_lifecycle.runtime_nonce (connection_id, nonce_hash, expires_at)
         VALUES (${record.id}, ${digest(proof.nonce)}, ${new Date(Date.now() + 60000)}) ON CONFLICT DO NOTHING RETURNING nonce_hash`;
       if (!seen.length) throw new AccessError(409, 'Runtime request already used');
       await tx`DELETE FROM chief_lifecycle.runtime_nonce WHERE connection_id=${record.id} AND expires_at < now()`;
       return { member, connection: connectionView(fresh), bot: proof.bot, scope: proof.scope };
     });
   }
+  async workspaceOperation(runtimeSecret, envelope, tracker) {
+    exact(envelope, ['proof', 'operation', 'arguments']);
+    const scope = trackerInput(envelope.operation, envelope.arguments);
+    if (envelope.proof?.scope !== scope) denied();
+    const operation = { name: envelope.operation, args: envelope.arguments };
+    const authorization = await this.authorizeRuntime(runtimeSecret, envelope.proof, operation);
+    const recheck = async () => this.authorizeRuntime(runtimeSecret, envelope.proof, operation, false);
+    const [session] = await this.sql`SELECT s.* FROM chief_lifecycle.member_session s
+      JOIN chief_lifecycle.member_connection c ON c.session_id=s.id WHERE c.id=${envelope.proof.connectionId}`;
+    if (!current(session)) denied();
+    const ctx = { member: authorization.member, token: this.vault.open(session.credential, binding(session)),
+      workspaceSlug: authorization.member.workspaceSlug ?? authorization.member.workspace, recheck };
+    const args = envelope.arguments;
+    if (scope === 'tracker:read') return tracker.run(ctx, envelope.operation, args);
+    const inputHash = digest(JSON.stringify(operation));
+    const objectId = digest(JSON.stringify([ctx.member.workspace, ctx.member.account, args.projectId, args.requestId])).slice(0, 24);
+    const [reserved] = await this.sql`INSERT INTO chief_lifecycle.tracker_action
+      (workspace,account,request_id,input_hash,object_id,state)
+      VALUES (${ctx.member.workspace},${ctx.member.account},${args.requestId},${inputHash},${objectId},'uncertain')
+      ON CONFLICT DO NOTHING RETURNING object_id`;
+    if (!reserved) {
+      const [saved] = await this.sql`SELECT * FROM chief_lifecycle.tracker_action WHERE workspace=${ctx.member.workspace}
+        AND account=${ctx.member.account} AND request_id=${args.requestId}`;
+      if (!saved || saved.input_hash !== inputHash) throw new AccessError(409, 'Write requestId was reused with different arguments');
+      await recheck();
+      // Always read current record access, never return a cached private result.
+      if (saved.state === 'done') return tracker.run(ctx, 'issue', { projectId: args.projectId, issueId: saved.result.id });
+      if (envelope.operation === 'create_issue') {
+        const found = await tracker.rawIssue(ctx, args.projectId, saved.object_id);
+        if (found && found.title === args.title) return tracker.view(ctx, found, await tracker.project(ctx, args.projectId));
+      }
+      throw new AccessError(409, 'Previous write outcome is uncertain. Inspect the project; no automatic resend is allowed');
+    }
+    const result = await tracker.run(ctx, envelope.operation, args, objectId);
+    await recheck();
+    await this.sql`UPDATE chief_lifecycle.tracker_action SET state='done',result=${this.sql.json(result)}
+      WHERE workspace=${ctx.member.workspace} AND account=${ctx.member.account} AND request_id=${args.requestId}`;
+    return result;
+  }
+
 }

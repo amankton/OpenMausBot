@@ -1,8 +1,8 @@
 {
   "sourceRevision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
-  "createdAt": "2026-10-10T19:23:45.925Z",
+  "createdAt": "2026-10-21T14:59:56.368Z",
   "patch": "0012-chief-member-pairing.patch",
-  "patchSha256": "fcc7c83d5e111cf3b86f43c6a369852f4108526b157a0860b618673f77b87a10",
+  "patchSha256": "fa24eeb442a7926f18352238803552daeac44ee9a47392654747fe2d41f2e3f4",
   "previousPatches": {
     "0001-explicit-media-consent.patch": "758fcb5feed52f73812b87a3a23f24fc09cdc744064adeb876141f28600f4487",
     "0002-member-meeting-admission.patch": "e1a1df354dbd2141630da5c78baaf2e5da13aa6b91d0d6ec609de5feb8a0fa0c",
@@ -50,7 +50,7 @@
     {
       "file": "plugins/setting-resources/src/components/integrations/ChiefPairing.svelte",
       "beforeSha256": null,
-      "sha256": "52d2eb7060ab59684c9cc2961f55007ade367f21c78485b96c6c44f21e12fc3b"
+      "sha256": "12511d886a709529c75a0d9618e81c02adbfedd9f223bda11bd2a123c3889848"
     }
   ],
   "scope": "CON-01 browser approval and logout/account-switch hooks; service remains disabled until configured; no dispatch"

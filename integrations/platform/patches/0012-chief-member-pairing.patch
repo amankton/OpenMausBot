@@ -181,7 +181,7 @@ diff --git a/plugins/setting-resources/src/components/integrations/ChiefPairing.
 new file mode 100644
 --- /dev/null
 +++ b/plugins/setting-resources/src/components/integrations/ChiefPairing.svelte
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,161 @@
 +<!--
 +Copyright © 2026 Chief contributors.
 +Licensed under the Eclipse Public License, Version 2.0.
@@ -208,6 +208,8 @@ new file mode 100644
 +  let message = ''
 +  let connections: Connection[] = []
 +  let confirmed: Record<string, boolean> = {}
++  $: current = connections.filter(connection => connection.state !== 'revoked' && new Date(connection.expiresAt).getTime() > Date.now())
++  $: history = connections.filter(connection => !current.includes(connection))
 +
 +  async function request (path: string, method = 'GET', body?: object): Promise<Response> {
 +    const token = getMetadata(presentation.metadata.Token)
@@ -284,6 +286,16 @@ new file mode 100644
 +  code { display: block; overflow-wrap: anywhere; user-select: all; }
 +  label { display: block; margin: .75rem 0; }
 +  .error { color: #ffb4ad; }
++  .primary { background: #15803d; border-color: #15803d; color: #fff; font-weight: 600; }
++  .primary:hover:not(:disabled) { background: #166534; border-color: #166534; }
++  .danger { color: #fca5a5; border-color: #b91c1c; }
++  .connected { color: #86efac; }
++  .pending { color: #fde68a; }
++  .permissions { padding: .75rem; border-radius: .4rem; background: var(--theme-bg-accent-color, #25282d); }
++  details { margin-top: 1rem; }
++  summary { cursor: pointer; padding: .5rem 0; }
++  summary:focus-visible { outline: 2px solid #80bfff; outline-offset: 3px; }
++  .manage { margin-top: 1.25rem; }
 +</style>
 +
 +<section class="chief-pairing" aria-label="Personal Chief connection">
@@ -294,31 +306,39 @@ new file mode 100644
 +  {:else if !enabled}
 +    <p>Member pairing is not enabled on this workspace yet.</p>
 +  {:else}
-+    <p>Create an invitation, then paste it into Chief → Connect personal Chief. Select your agents there and return here to compare the verification code.</p>
++    <p>1. Create an invitation. 2. Paste it in Chief and choose your agents. 3. Return here to approve their access.</p>
 +    <div class="actions">
-+      <button disabled={busy} on:click={() => perform(invite)}>Create invitation</button>
++      <button class={current.some(connection => connection.state === 'pending') ? '' : 'primary'} disabled={busy} on:click={() => perform(invite)}>Create invitation</button>
 +      <button disabled={busy} on:click={() => perform(refresh)}>Refresh connections</button>
 +    </div>
 +    {#if invitation}
 +      <label>One-time workspace invitation<textarea aria-label="One-time workspace invitation" readonly value={invitation} spellcheck="false" /></label>
 +      <p>Copy the complete invitation. Never paste your workspace password or sign-in token.</p>
 +    {/if}
-+    {#each connections as connection (connection.id)}
++    {#each current as connection (connection.id)}
 +      <article>
-+        <p><strong>{new Date(connection.expiresAt).getTime() <= Date.now() ? 'Expired' : connection.state === 'pending' ? 'Awaiting your approval' : connection.state === 'active' ? 'Connected' : 'Revoked'}</strong></p>
-+        <p>Agents: {connection.bots.join(', ')}</p>
-+        <p>Allowed scopes: {connection.scopes.join(', ')}</p>
++        <p><strong class:connected={connection.state === 'active'} class:pending={connection.state === 'pending'}>{connection.state === 'pending' ? 'Ready for your approval' : 'Connected'}</strong></p>
++        <p>{connection.bots.length} selected agents</p>
++        <p class="permissions">{connection.scopes.includes('tracker:write') ? 'Can read projects and issues, create issues, and update issue titles or status using your member access.' : connection.scopes.includes('tracker:read') ? 'Can read projects and issues using your member access. Cannot change issues.' : 'Workspace connection only. Cannot read or change Tracker issues.'}</p>
++        <details><summary>View selected agent IDs and access details</summary><p>Agents: {connection.bots.join(', ')}</p><p>Allowed scopes: {connection.scopes.join(', ')}</p></details>
 +        <p>Verification code <code>{connection.keyFingerprint}</code></p>
 +        <p>Expires {new Date(connection.expiresAt).toLocaleString()}</p>
 +        {#if connection.state === 'pending'}
 +          <label><input type="checkbox" bind:checked={confirmed[connection.id]} disabled={busy} /> This code matches the code in my personal Chief, and these are the agents I selected.</label>
-+          <button disabled={busy || !confirmed[connection.id]} on:click={() => perform(async () => await approve(connection))}>Approve connection</button>
++          <button class="primary" disabled={busy || !confirmed[connection.id]} on:click={() => perform(async () => await approve(connection))}>Approve connection</button>
 +        {/if}
 +        {#if connection.state !== 'revoked'}
-+          <button disabled={busy} on:click={() => perform(async () => await revoke(connection))}>Revoke connection</button>
++          <details class="manage"><summary>Manage connection</summary><p>Revoking removes these agents' access. You can connect them again later.</p><button class="danger" disabled={busy} on:click={() => perform(async () => await revoke(connection))}>Revoke connection</button></details>
 +        {/if}
 +      </article>
 +    {/each}
++    {#if history.length}
++      <details><summary>Previous connections ({history.length})</summary>
++        {#each history as connection (connection.id)}
++          <article><p><strong>{connection.state === 'revoked' ? 'Revoked' : 'Expired'}</strong> — no access</p><p>Agents: {connection.bots.join(', ')}</p><p>Allowed scopes: {connection.scopes.join(', ')}</p><p>Expired {new Date(connection.expiresAt).toLocaleString()}</p></article>
++        {/each}
++      </details>
++    {/if}
 +  {/if}
 +  {#if error}<p class="error" role="alert">{error}</p>{/if}
 +  {#if message}<p role="status">{message}</p>{/if}

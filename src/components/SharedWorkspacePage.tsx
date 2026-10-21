@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, RefreshCw, Users } from "lucide-react";
+import { recoverBlankFrame } from "@/lib/blank-frame-recovery";
 import { api } from "@/state/store";
 import { ChiefConnectionsHost } from "./ChiefConnectionsHost";
 import { ChiefPairingPanel } from "./ChiefPairingPanel";
@@ -93,6 +94,11 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
     window.addEventListener("blur", blur);
     return () => window.removeEventListener("blur", blur);
   }, [open]);
+  useEffect(() => {
+    if (!url) return;
+    const timer = setTimeout(() => recoverBlankFrame(frame.current), 3000);
+    return () => clearTimeout(timer);
+  }, [url, generation]);
   const invalidUrl = status?.enabled === true && status.available === true && !url;
   const explanation = error || (invalidUrl ? "The organization workspace needs a separate local hostname to keep your sign-in private." : status?.message) ||
     (status?.enabled ? "Your organization workspace is not responding. Try connecting again shortly." : "Your organization workspace has not been enabled yet.");

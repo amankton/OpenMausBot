@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { digest } from './security.mjs';
 
 export async function migrationFiles() {
-  return await Promise.all(['001-pairing.sql', '002-membership-epoch.sql'].map(async (file, index) => {
+  return await Promise.all(['001-pairing.sql', '002-membership-epoch.sql', '003-tracker-actions.sql'].map(async (file, index) => {
     const sql = await readFile(new URL(file, import.meta.url), 'utf8');
     return { version: index + 1, sql, checksum: digest(sql) };
   }));

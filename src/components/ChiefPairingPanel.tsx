@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { api } from "@/state/store";
 
-interface Connection { id: string; workspace: string; account: string; keyFingerprint: string; bots: string[]; state: string; expiresAt: string }
+interface Connection { id: string; workspace: string; account: string; keyFingerprint: string; bots: string[]; scopes?: string[]; state: string; expiresAt: string }
 interface PairingStatus { enabled: boolean; bots: Array<{ id: string; name: string }>; connections: Connection[]; error?: string }
 const button = "rounded-md border border-hairline px-3 py-2 text-xs hover:bg-control disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent";
 
@@ -10,6 +10,7 @@ export function ChiefPairingPanel() {
   const [status, setStatus] = useState<PairingStatus | null>(null);
   const [invitation, setInvitation] = useState("");
   const [bots, setBots] = useState<string[]>([]);
+  const [trackerWrite, setTrackerWrite] = useState(false);
   const [query, setQuery] = useState("");
   const searchId = useId();
   const searchInput = useRef<HTMLInputElement>(null);
@@ -30,13 +31,15 @@ export function ChiefPairingPanel() {
   };
   const matches = status?.bots.filter(bot => bot.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) ?? [];
   const selectedAgents = status?.bots.filter(bot => bots.includes(bot.id)) ?? [];
+  const currentConnections = status?.connections.filter(connection => connection.state !== "revoked" && Date.parse(connection.expiresAt) > Date.now()) ?? [];
+  const previousConnections = status?.connections.filter(connection => !currentConnections.includes(connection)) ?? [];
   return <section aria-label="Connect personal Chief" className="space-y-3 px-3 py-3 text-xs">
     <p className="text-ink-secondary">Create an invitation in the workspace’s Integrations page, then paste it here. Approve the matching verification code there to finish.</p>
     {status?.enabled === false && <p role="status">{status.error}</p>}
     {status?.enabled && <form className="space-y-3" onSubmit={event => { event.preventDefault(); void perform(async () => {
       let parsed: unknown;
       try { parsed = JSON.parse(invitation); } catch { throw new Error("Paste the complete invitation from the workspace."); }
-      await api("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: parsed, bots }) });
+      await api("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: parsed, bots, ...(trackerWrite ? { trackerWrite: true } : {}) }) });
       setInvitation(""); setMessage("Request sent. Compare the verification code and approve it in the workspace.");
     }); }}>
       <label className="block">Workspace invitation<textarea aria-label="Workspace invitation" value={invitation} onChange={event => setInvitation(event.target.value)} required maxLength={4096} disabled={busy} autoComplete="off" spellCheck={false}
@@ -60,22 +63,34 @@ export function ChiefPairingPanel() {
         {status.bots.length > 0 && !matches.length && <p>No matching agents. Try another name or clear your search.</p>}
         {!status.bots.length && <p>Create a personal agent before pairing.</p>}
       </fieldset>
-      <p className="text-ink-secondary">This step pairs the selected agents for workspace read access. It does not start work or grant connected-app access.</p>
-      <button className={button} disabled={busy || bots.length === 0} type="submit">{busy ? "Connecting…" : "Request connection"}</button>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={trackerWrite} onChange={event => setTrackerWrite(event.target.checked)} disabled={busy} />Allow selected agents to read Tracker projects/issues and create or update issues as this workspace member</label>
+      <p className="text-ink-secondary">Access still requires matching workspace approval and current membership. Existing connections are not upgraded. This does not start work.</p>
+      <button className={`${button} border-accent bg-accent font-medium text-white hover:bg-accent/90`} disabled={busy || bots.length === 0} type="submit">{busy ? "Connecting…" : "Request connection"}</button>
     </form>}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {message && <p role="status">{message}</p>}
-    {status?.connections.map(connection => <article key={connection.id} className="space-y-2 border-t border-hairline pt-3">
-      <p className="font-medium">{connection.state === "pending" ? "Awaiting workspace approval" : "Last checked: " + connection.state}</p>
+    {currentConnections.map(connection => <article key={connection.id} className="space-y-2 border-t border-hairline pt-3">
+      <p className={`font-medium ${connection.state === "active" ? "text-success" : "text-ink"}`}>{connection.state === "pending" ? "Next: approve in the workspace" : "Connected · last verified"}</p>
+      <p>{connection.scopes?.includes("tracker:write") ? "Tracker: read projects and issues, create issues, update titles/status." : connection.scopes?.includes("tracker:read") ? "Tracker: read only." : "Workspace connection only · no Tracker access."}</p>
       <p>Verification code <code className="block break-all select-all">{connection.keyFingerprint}</code></p>
       <p className="break-all text-ink-secondary">Workspace: {connection.workspace}</p>
       <p className="text-ink-secondary">Expires {new Date(connection.expiresAt).toLocaleString()}</p>
       <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} className={button} onClick={() => void perform(async () => {
         await api(`/api/chief-pairing/${connection.id}/check`, { method: "POST" }); setMessage("The workspace verified this connection now.");
       })}>Check connection</button>
-      <button type="button" disabled={busy} className={button} onClick={() => void perform(async () => {
+      </div><details><summary className="cursor-pointer py-2 text-ink-secondary focus-visible:outline-2 focus-visible:outline-accent">Manage local connection</summary><p className="mb-2 text-ink-secondary">Remove this connection from Chief. You can reconnect later.</p><button type="button" disabled={busy} className={`${button} border-danger text-danger`} onClick={() => void perform(async () => {
         await api(`/api/chief-pairing/${connection.id}`, { method: "DELETE" }); setMessage("Local connection credentials removed. You can also revoke its record in the workspace.");
-      })}>Forget locally</button></div>
+      })}>Forget locally</button></details>
     </article>)}
+    {previousConnections.length > 0 && <details><summary className="cursor-pointer py-2 text-ink-secondary focus-visible:outline-2 focus-visible:outline-accent">Previous connections ({previousConnections.length})</summary>
+      {previousConnections.map(connection => <article key={connection.id} className="my-2 space-y-2 text-ink-secondary"><p>{connection.state === "revoked" ? "Revoked" : "Expired"} · no access · {new Date(connection.expiresAt).toLocaleString()}</p>
+        <button type="button" disabled={busy} className={button} onClick={() => void perform(async () => {
+          await api(`/api/chief-pairing/${connection.id}/check`, { method: "POST" }); setMessage("The workspace verified this connection now.");
+        })}>Check connection</button>
+        <button type="button" disabled={busy} className={`${button} border-danger text-danger`} onClick={() => void perform(async () => {
+          await api(`/api/chief-pairing/${connection.id}`, { method: "DELETE" }); setMessage("Old local connection credentials removed.");
+        })}>Forget locally</button>
+      </article>)}
+    </details>}
   </section>;
 }

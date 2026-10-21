@@ -1,23 +1,56 @@
 {
-  "previousImage": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
-  "nextImage": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
+  "previousImage": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
+  "nextImage": "sha256:0dd859994dbb82ed38d80437cb031d88ea5c8facd832e8c4f9d8e198e595729b",
   "services": 17,
   "changedServices": [
     "front"
   ],
   "applied": true,
   "passed": true,
-  "checkedAt": "2026-10-10T19:36:32.592Z",
-  "backup": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\branding-rollout-1791660988410",
-  "buildReceiptSha256": "7e5c13a00f2ded12df74436a43706c225f2c22e7884057e2b1bcd27e86709792",
+  "checkedAt": "2026-10-21T15:06:27.504Z",
+  "backup": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\.chief-local\\platform\\branding-rollout-1792595183169",
+  "buildReceiptSha256": "febabf1494f582158b4fcab4db047e1e2ffe815a43358aacbbd999815ddf5a88",
   "originalMountsPreserved": true,
   "nonFrontendContainersPreserved": true,
   "before": [
     {
-      "id": "613459b46f7602f4da07aefa47c3c04571dcf7b73090a412b3c9ce3e07221933",
+      "id": "18b72b2834a3e1e91f6991b5e70a84cf5dcdf910134ba0f13623c3065fe4bc07",
+      "name": "/chief-platform-nginx-1",
+      "service": "nginx",
+      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "name": null,
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
+          "destination": "/etc/nginx/conf.d/default.conf",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\theme",
+          "destination": "/usr/share/nginx/crewframe-theme",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "a907f8d4e5662b046a6b29ab0d30fd8aeedd0affb5e17ee80d4fd44fcc99790f",
+      "name": "/chief-platform-account-1",
+      "service": "account",
+      "image": "sha256:ab29a21385208a501394eb0a91efebb467c593c39909751ec0c68d1f1abac692",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "e5121b27df4417f1437d03a2a8f5a003c2da7b0d99d748e9ee041939cbc49609",
       "name": "/chief-platform-front-1",
       "service": "front",
-      "image": "sha256:4b7b88e27c2044310e26a72618c9aa7fa2e8107150d0a7304697f5e9cfc949cf",
+      "image": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
       "running": true,
       "health": null,
       "mounts": []
@@ -75,23 +108,6 @@
       "mounts": []
     },
     {
-      "id": "d9a1f73a493df5f6833ebe7de07c483361565b8f5b33d4332c671a9a2ee2c781",
-      "name": "/chief-platform-nginx-1",
-      "service": "nginx",
-      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
-      "running": true,
-      "health": null,
-      "mounts": [
-        {
-          "type": "bind",
-          "name": null,
-          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
-          "destination": "/etc/nginx/conf.d/default.conf",
-          "rw": false
-        }
-      ]
-    },
-    {
       "id": "8bcb1702e7e67e5920a7d33a61624ca53bf72bcf7d6e0b841add203929ff7922",
       "name": "/chief-platform-kvs-1",
       "service": "kvs",
@@ -114,15 +130,6 @@
       "name": "/chief-platform-stats-1",
       "service": "stats",
       "image": "sha256:940dae1aeaebc41b3a9123cab68c630bf1e6b21bbf520ba29921bf72f4aa27c3",
-      "running": true,
-      "health": null,
-      "mounts": []
-    },
-    {
-      "id": "926e2a1ac0fb2cd12be9ea5e5f1c55146cb4ff555f7711ffdabfb2d4af5066da",
-      "name": "/chief-platform-account-1",
-      "service": "account",
-      "image": "sha256:39715cb2edd146393ce3151ad90e6e62e3a30c7937038696670145281cc4f131",
       "running": true,
       "health": null,
       "mounts": []
@@ -232,10 +239,43 @@
   ],
   "after": [
     {
-      "id": "e5121b27df4417f1437d03a2a8f5a003c2da7b0d99d748e9ee041939cbc49609",
+      "id": "d51d074449ce5620628537a7c439af0ff1e785f832e37af71d234e6a62636e1f",
       "name": "/chief-platform-front-1",
       "service": "front",
-      "image": "sha256:04e556fd9686761a27725e6eedc51e7f9dd0e243b924a38e2a3f3da8d2a665ec",
+      "image": "sha256:0dd859994dbb82ed38d80437cb031d88ea5c8facd832e8c4f9d8e198e595729b",
+      "running": true,
+      "health": null,
+      "mounts": []
+    },
+    {
+      "id": "18b72b2834a3e1e91f6991b5e70a84cf5dcdf910134ba0f13623c3065fe4bc07",
+      "name": "/chief-platform-nginx-1",
+      "service": "nginx",
+      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
+      "running": true,
+      "health": null,
+      "mounts": [
+        {
+          "type": "bind",
+          "name": null,
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
+          "destination": "/etc/nginx/conf.d/default.conf",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "name": null,
+          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\theme",
+          "destination": "/usr/share/nginx/crewframe-theme",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "id": "a907f8d4e5662b046a6b29ab0d30fd8aeedd0affb5e17ee80d4fd44fcc99790f",
+      "name": "/chief-platform-account-1",
+      "service": "account",
+      "image": "sha256:ab29a21385208a501394eb0a91efebb467c593c39909751ec0c68d1f1abac692",
       "running": true,
       "health": null,
       "mounts": []
@@ -293,23 +333,6 @@
       "mounts": []
     },
     {
-      "id": "d9a1f73a493df5f6833ebe7de07c483361565b8f5b33d4332c671a9a2ee2c781",
-      "name": "/chief-platform-nginx-1",
-      "service": "nginx",
-      "image": "sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36",
-      "running": true,
-      "health": null,
-      "mounts": [
-        {
-          "type": "bind",
-          "name": null,
-          "source": "C:\\Users\\amank\\Documents\\ChatGPT\\CHIEF SOFTWARE WORKSPACE\\chief-executive-suite\\integrations\\platform\\nginx-meetings.conf",
-          "destination": "/etc/nginx/conf.d/default.conf",
-          "rw": false
-        }
-      ]
-    },
-    {
       "id": "8bcb1702e7e67e5920a7d33a61624ca53bf72bcf7d6e0b841add203929ff7922",
       "name": "/chief-platform-kvs-1",
       "service": "kvs",
@@ -332,15 +355,6 @@
       "name": "/chief-platform-stats-1",
       "service": "stats",
       "image": "sha256:940dae1aeaebc41b3a9123cab68c630bf1e6b21bbf520ba29921bf72f4aa27c3",
-      "running": true,
-      "health": null,
-      "mounts": []
-    },
-    {
-      "id": "926e2a1ac0fb2cd12be9ea5e5f1c55146cb4ff555f7711ffdabfb2d4af5066da",
-      "name": "/chief-platform-account-1",
-      "service": "account",
-      "image": "sha256:39715cb2edd146393ce3151ad90e6e62e3a30c7937038696670145281cc4f131",
       "running": true,
       "health": null,
       "mounts": []

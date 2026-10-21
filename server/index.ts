@@ -619,6 +619,7 @@ import { ROUTES, dispatchRoutes } from "./routes/table.ts";
 import { createCrewframePhoneRoutes } from "./routes/crewframe-phone.ts";
 import { createOfficeRoutes } from "./routes/office.ts";
 import { createSharedWorkspaceRoutes } from "./routes/shared-workspace.ts";
+import { hulyIntegration } from "./huly-tools.ts";
 import { createChiefPairingRoutes } from "./routes/chief-pairing.ts";
 import { createHostedSlackRoutes } from "./routes/hosted-slack.ts";
 import { createBotPresetRoutes } from "./routes/bot-presets.ts";
@@ -3553,8 +3554,14 @@ const store = new Store(
 const teamComputers = new TeamComputers(join(DATA_DIR, "team-computers.json"), ENVIRONMENT_ID);
 let followupsReady = false;
 const sendSequencer = new SendSequencer();
-bootSelection = await defaultSelection();
-store.seedIfEmpty();
+async function seedNewWorkspace() {
+  // Existing bots already carry their selections. Provider discovery is for
+  // first-run defaults, not a prerequisite for reopening saved conversations.
+  if (store.bots.length) return;
+  bootSelection = await defaultSelection();
+  store.seedIfEmpty();
+}
+await seedNewWorkspace();
 hostedModels?.reconcile(store);
 // Skills library boot sweep (features.skillsLibrary): migrate per-bot
 // copies into the shared library and apply assignments. Flag-off boots
@@ -9714,6 +9721,8 @@ async function startTurn(
       // never pre-allowed, so every call rides the normal permission flow.
       if (instance.adapter.capabilities.customMcp === true) {
         const custom = await withMcpSignIn(engineMcpServers(bot), mcpOAuth);
+        const huly = hulyIntegration(DATA_DIR, process.env.CHIEF_LIFECYCLE_ORIGIN, bot.id);
+        if (huly) { if (custom.huly) throw new Error("The reserved Huly integration name is already configured"); custom.huly = huly; }
         if (Object.keys(custom).length) integrations.custom = custom;
       }
       // CLI engines work inside the bot's own workspace directory rather
@@ -12270,6 +12279,8 @@ async function runGroupMemberTurn(
   // user-configured MCP servers: same gating as the 1:1 site above.
   if (instance.adapter.capabilities.customMcp === true) {
     const custom = await withMcpSignIn(engineMcpServers(bot), mcpOAuth);
+    const huly = hulyIntegration(DATA_DIR, process.env.CHIEF_LIFECYCLE_ORIGIN, bot.id);
+    if (huly) { if (custom.huly) throw new Error("The reserved Huly integration name is already configured"); custom.huly = huly; }
     if (Object.keys(custom).length) integrations.custom = custom;
   }
   // Connected-app discovery is intentionally awaited before a provider owns

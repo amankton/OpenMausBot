@@ -23,7 +23,7 @@ async function readBody(request) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
   catch { throw new AccessError(400, 'Invalid JSON'); }
 }
-export function createLifecycleServer({ pairing, origin, readiness = async () => {} }) {
+export function createLifecycleServer({ pairing, origin, readiness = async () => {}, tracker }) {
   const configured = new URL(origin);
   if (!['http:', 'https:'].includes(configured.protocol) || configured.origin !== origin) throw Error('An exact lifecycle browser origin is required');
   return createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, async (request, response) => {
@@ -42,7 +42,7 @@ export function createLifecycleServer({ pairing, origin, readiness = async () =>
         const result = await pairing.memberSession(bearer(request), session(request));
         return send(200, { member: result.member, expiresAt: result.session.expires_at });
       }
-      const runtime = ['/chief/v1/connections/complete', '/chief/v1/runtime/authorize'].includes(path);
+      const runtime = ['/chief/v1/connections/complete', '/chief/v1/runtime/authorize', '/chief/v1/runtime/tracker'].includes(path);
       // Browser mutations require the exact Origin; native runtime proofs do not.
       if (!runtime && method !== 'GET' && request.headers.origin !== origin) throw new AccessError(403, 'Browser origin is required');
       if (method === 'POST' && path === '/chief/v1/sessions') {
@@ -68,6 +68,10 @@ export function createLifecycleServer({ pairing, origin, readiness = async () =>
       }
       if (connection && method === 'DELETE' && !connection[2]) {
         await pairing.revoke(bearer(request), session(request), connection[1]); return send(200, { revoked: true });
+      }
+      if (method === 'POST' && path === '/chief/v1/runtime/tracker') {
+        if (!tracker) throw new AccessError(503, 'Tracker tools are not configured');
+        return send(200, await pairing.workspaceOperation(bearer(request), await readBody(request), tracker));
       }
       if (method === 'POST' && path === '/chief/v1/runtime/authorize') {
         // Authorization probe only. No dispatch or workspace mutation exists yet.
