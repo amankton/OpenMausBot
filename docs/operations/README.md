@@ -2,6 +2,8 @@
 
 Owner standard, adopted October 11, 2026: use Tailscale for private remote phone access, and incorporate compatible official OpenMausBot updates while preserving each Chief white-label build.
 
+Latest local candidate: [Chief 0.1.97 release record, October 20](CHIEF-0.1.97-RELEASE-2026-10-20.md). Windows artifacts were built and tested; the refreshed Mac source transfer requires building, signing and native acceptance on a Mac.
+
 1. [Install and repair remote phone access](TAILSCALE-SOP.md).
 2. [Update Chief without losing its customization](WHITE-LABEL-UPDATES-SOP.md).
 3. [Give the next Codex or Claude agent this handoff](AGENT-HANDOFF.md).
