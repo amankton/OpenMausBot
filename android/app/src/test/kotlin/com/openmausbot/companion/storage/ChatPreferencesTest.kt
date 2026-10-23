@@ -31,6 +31,17 @@ class ChatPreferencesTest {
     )
 
     @Test
+    fun `folded teams persist per computer and can be reopened`() {
+        val name = "chat-folded-teams"
+        assertEquals(emptySet(), store(name).collapsedRosterTeams("desktop-a"))
+        store(name).setCollapsedRosterTeams("desktop-a", setOf("Engineering"))
+        assertEquals(setOf("Engineering"), store(name).collapsedRosterTeams("desktop-a"))
+        assertEquals(emptySet(), store(name).collapsedRosterTeams("desktop-b"))
+        assertEquals(emptySet(), store(name).collapsedRosterTeams(null))
+        store(name).setCollapsedRosterTeams("desktop-a", emptySet())
+        assertEquals(emptySet(), store(name).collapsedRosterTeams("desktop-a"))
+    }
+    @Test
     fun `activity detail survives a new preferences instance`() {
         val name = "chat-activity-detail"
         store(name).setActivityDetail(ActivityDetail.HIDDEN)

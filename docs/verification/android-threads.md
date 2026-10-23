@@ -177,3 +177,46 @@ without any task-switch POST or change to the server-selected thread.
   application ID were verified.
 - Fixtures were synthetic and confined to a loopback server. No emulator,
   device installation, pairing or live-provider test was performed.
+
+## October 23, 2026 — collapsible Android teams
+
+`RosterScreen` now renders each sidebar team's heading as a full-width button
+with a down/right chevron, a 48dp minimum touch target, and a localized
+expanded/collapsed accessibility state. Folding a team removes its chief,
+channels and agents from the lazy list in both density modes. Choices are
+saved across rotation/navigation and scoped to the connected computer.
+Search continues through the complete roster, independent of team folds.
+
+Two `RosterScreenTest` regressions use the existing synthetic fleet and
+loopback fixture to cover folding, restoring and searching a folded team in
+compact and comfortable modes. No live pairing or conversations were changed.
+
+Verification completed: `:app:testDebugUnitTest --tests '*RosterScreenTest*'
+--tests '*ChatPreferencesTest*' :app:assemblePreview` passed (35 tests, zero
+failures). The first new test attempts were corrected to scroll lazy team
+headings above the floating bar and distinguish search result text from the
+search input. The UI checks also leave and return to the roster while folded;
+a preferences test confirms persistence, reopening and computer isolation.
+
+Portable Microsoft JDK 17 and Android command-line tools were prepared under
+`C:/Users/amank/AppData/Local/ChiefBuildTools`. The owner explicitly approved
+accepting Google's Android SDK license and finishing the build on October 23.
+No global PATH or JAVA_HOME changes were made. SDK/Gradle packages are cached
+locally; the Android SDK path is set through ANDROID_HOME for each build.
+
+`apksigner verify --verbose` passed. Package identity is
+`com.openmausbot.companion.preview`, launcher label `MausBot Preview`, min SDK
+26 and target SDK 37. It installs beside the released app with separate pairing
+and preferences. No replacement signing key for the existing release is present.
+
+Artifact: `release/Chief-Android-Team-Collapse-Preview-2026-10-23.apk`.
+SHA-256: `58c4675883e41b19d15c82c29c0af6b14b8948f95c6f5324caf418e3403d1fd4`.
+`git diff --check` passed. Physical-phone installation and on-device acceptance
+remain pending; automated checks used only synthetic fixtures.
+Delivery: two Taildrop attempts to the owner's aj-s23-ultra were stopped after the receiver did not respond. Tailscale ping succeeded, but APK delivery is not confirmed. No USB Android device was attached. The APK remains available at the release path above.
+
+October 23 delivery retry: phone online and Tailscale ping successful, but Taildrop still did not respond. Started an owner-only temporary APK HTTP download listener on this host's Tailscale address port 18913, restricted to the owner's S23 and self for verification, serving only the preview APK. HEAD returned 200 with the expected APK length/type. Server expires after 30 minutes. Phone download/install remains unverified.
+
+October 23 delivery confirmed: after the owner selected a Taildrop receive folder on the S23, tailscale file cp completed successfully with a sent receipt for Chief-Android-Team-Collapse-Preview-2026-10-23.apk. Installation and physical-phone UI acceptance remain pending.
+
+October 23 upstream proposal: at the owner's explicit request, posted https://github.com/milind-soni/OpenMausBot/issues/3401 (Contribution proposal: collapsible teams in Android and iOS companions) using the owner's authenticated GitHub CLI after the connector returned 403. Owner also confirmed the installed Android preview paired successfully and the chevron is present and working. No PR submitted; iOS implementation remains pending.

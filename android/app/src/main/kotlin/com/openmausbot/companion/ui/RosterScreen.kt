@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Notifications
@@ -70,6 +72,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -139,6 +143,9 @@ fun RosterScreen(navigator: CompanionNavigator) {
     var showingNewGroup by remember { mutableStateOf(false) }
     var showingNewSection by remember { mutableStateOf(false) }
     var expandedBots by rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
+    var collapsedTeams by rememberSaveable(connection?.id, stateSaver = StringSetSaver) {
+        mutableStateOf(environment.chatPreferences.collapsedRosterTeams(connection?.id))
+    }
     var collapsedFolders by rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
     var creatingThreads by remember { mutableStateOf(emptySet<String>()) }
     // One createBot at a time: a second tap while the first is in flight
@@ -430,8 +437,21 @@ fun RosterScreen(navigator: CompanionNavigator) {
                         // the order of `rosterSections` in `ChatListView.swift`.
                         state.sidebarSections.forEach { section ->
                             item(key = "section-${section.id}") {
-                                SectionLabel(section.name, Modifier.padding(top = sectionSpacing, bottom = 4.dp))
+                                TeamDisclosure(
+                                    name = section.name,
+                                    expanded = section.id !in collapsedTeams,
+                                    modifier = Modifier.padding(top = sectionSpacing).testTag("team-${section.id}"),
+                                    onToggle = {
+                                        collapsedTeams = if (section.id in collapsedTeams) {
+                                            collapsedTeams - section.id
+                                        } else {
+                                            collapsedTeams + section.id
+                                        }
+                                        environment.chatPreferences.setCollapsedRosterTeams(connection?.id, collapsedTeams)
+                                    },
+                                )
                             }
+                            if (section.id in collapsedTeams) return@forEach
                             val sectionChiefs = section.chiefs.mapNotNull { summariesById[it.id] }
                             val sectionBots = section.bots.mapNotNull { summariesById[it.id] }
                             itemsIndexed(
@@ -700,6 +720,44 @@ private fun CompactGroupsTitle(title: String, onCreate: (() -> Unit)?, spacing: 
                 )
             }
         }
+    }
+}
+
+/** A whole-row target keeps large teams easy to fold in either list density. */
+@Composable
+private fun TeamDisclosure(
+    name: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val disclosureState = stringResource(
+        if (expanded) R.string.mobile_a11y_expanded else R.string.mobile_a11y_collapsed,
+    )
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(role = Role.Button, onClick = onToggle)
+            .semantics { stateDescription = disclosureState }
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (expanded) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = secondaryTint,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = RosterLayout.sectionLabel(name),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.4.sp,
+            color = secondaryTint,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

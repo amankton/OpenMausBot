@@ -178,6 +178,50 @@ class RosterScreenTest {
     }
 
     @Test
+    fun `compact teams hide and restore their chiefs agents and groups`() {
+        verifyTeamDisclosure(RosterDensity.COMPACT)
+    }
+
+    @Test
+    fun `comfortable teams hide and restore their chiefs agents and groups`() {
+        verifyTeamDisclosure(RosterDensity.COMFORTABLE)
+    }
+
+    private fun verifyTeamDisclosure(density: RosterDensity) {
+        val navigator = mount(density = density)
+        val section = scene.session.state.value.sidebarSections.first { it.chiefs.isNotEmpty() && it.channels.isNotEmpty() }
+        val heading = compose.onNodeWithTag("team-${section.id}")
+        fun revealHeading() {
+            val list = compose.onNodeWithTag("roster-list")
+            list.performScrollToNode(hasTestTag("team-${section.id}"))
+            val distance = with(compose.density) { (heading.getBoundsInRoot().top - 120.dp).toPx() }
+            list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, distance) }
+        }
+        revealHeading()
+        heading.assert(hasStateDescription("Expanded")).performClick()
+        heading.assert(hasStateDescription("Collapsed"))
+        section.chiefs.forEach { compose.onNodeWithText(it.name).assertDoesNotExist() }
+        section.bots.forEach { compose.onNodeWithText(it.name).assertDoesNotExist() }
+        section.channels.forEach { compose.onNodeWithText(it.name).assertDoesNotExist() }
+
+        compose.runOnIdle { navigator.push(Destination.Settings) }
+        compose.waitForIdle()
+        compose.runOnIdle { navigator.pop() }
+        revealHeading()
+        heading.assert(hasStateDescription("Collapsed"))
+
+        // Search must still find agents whose team is folded.
+        compose.onNodeWithContentDescription("Search").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput(section.chiefs.first().name)
+        compose.onNode(hasText(section.chiefs.first().name) and !hasSetTextAction()).assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        revealHeading()
+        heading.assert(hasStateDescription("Collapsed")).performClick()
+        heading.assert(hasStateDescription("Expanded"))
+        compose.onNodeWithText(section.chiefs.first().name).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun `compact is the default, one line per bot with no Threads row`() {
         val navigator = mount()
         assertEquals(RosterDensity.COMPACT, scene.environment.chatPreferences.rosterDensity.value)

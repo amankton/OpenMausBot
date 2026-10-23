@@ -56,6 +56,14 @@ class ChatPreferences(
         _activityDetail.value = detail
     }
 
+    fun collapsedRosterTeams(connectionId: String?): Set<String> =
+        if (connectionId == null) emptySet() else
+            prefs.getStringSet("roster.collapsed-teams.$connectionId", emptySet()).orEmpty().toSet()
+
+    fun setCollapsedRosterTeams(connectionId: String?, teams: Set<String>) {
+        if (connectionId == null) return
+        prefs.edit().putStringSet("roster.collapsed-teams.$connectionId", teams.toSet()).commit()
+    }
     fun setRosterDensity(density: RosterDensity) {
         if (_rosterDensity.value == density && prefs.contains(ROSTER_DENSITY)) return
         prefs.edit().putString(ROSTER_DENSITY, density.wireValue).commit()
