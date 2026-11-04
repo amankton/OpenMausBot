@@ -4,7 +4,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { closeSync, mkdirSync, mkdtempSync, openSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs, type ParseArgsOptionsConfig } from "node:util";
 
@@ -434,9 +434,11 @@ export async function launchVerificationServer(
    * supplied, must be an explicitly owned loopback development server. */
   chiefOffice?: { media?: { url: string; key: string; secret: string }; platformUrl?: string; lifecycleOrigin?: string },
   /** Explicit opt-in real Hermes smoke; app data/home remain disposable.
+   * Optional native home is used only for tools-free auxiliary command review.
    * Credentials are passed only to the backend, never fixture info/config. */
-  hermesHttp?: { baseUrl: string; apiKey: string; model: string; toolsDirectory?: string },
+  hermesHttp?: { baseUrl: string; apiKey: string; model: string; toolsDirectory?: string; home?: string },
 ): Promise<VerificationServer> {
+  if (hermesHttp?.home && !isAbsolute(hermesHttp.home)) throw new ControlOmbError("Hermes reviewer home must be an explicit absolute path");
   // Explicit programmatic grant only; never inherit a real Platform setting.
   const platformUrl = chiefOffice?.platformUrl === undefined ? undefined : verificationPlatformUrl(chiefOffice.platformUrl);
   const pairingOrigin = chiefOffice?.lifecycleOrigin === undefined ? undefined : verificationPlatformUrl(chiefOffice.lifecycleOrigin);
@@ -488,6 +490,7 @@ export async function launchVerificationServer(
   const log = openSync(logPath, "a", 0o600);
   const childEnv = verificationServerEnvironment(parentEnv, dataDir, port);
   if (hermesHttp) {
+    if (hermesHttp.home) childEnv.HERMES_HOME = hermesHttp.home;
     childEnv.HERMES_API_BASE_URL = hermesHttp.baseUrl;
     childEnv.HERMES_API_KEY = hermesHttp.apiKey;
     childEnv.HERMES_API_MODEL = hermesHttp.model;

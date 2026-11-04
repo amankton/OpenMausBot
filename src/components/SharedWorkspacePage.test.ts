@@ -64,6 +64,13 @@ describe("shared workspace origin boundary", () => {
     expect(html).toContain("Camera and microphone stay off until you turn them on.");
   });
 
+  it("places the interactive menu after the embedded drag region for Electron hit testing", () => {
+    const html = render(ready);
+    expect(html.indexOf('aria-label="Chief workspace controls"')).toBeGreaterThan(html.indexOf('</iframe>'));
+    expect(html).toContain('-webkit-app-region:no-drag');
+    expect(render(null)).toContain('order-first');
+  });
+
   it("keeps host-scoped cookies isolated when Chief is opened through localhost", () => {
     expect(sharedWorkspaceUrl("http://localhost:18087/", "http://localhost:5299")).toBeNull();
     expect(sharedWorkspaceUrl("http://127.0.0.1:18087/", "http://localhost:5299")).toBe("http://127.0.0.1:18087/");

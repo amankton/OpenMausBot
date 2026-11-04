@@ -301,3 +301,5 @@ removes only its temporary data directory. The server log remains at the
 printed path. Never kill processes by name and never delete a broad temp root.
 
 - [Hermes HTTP Local VM and tool bridge](hermes-http-vm.md)
+- [Hermes routine autonomy and consequential checkpoints](hermes-routine-approvals.md)
+- [Hermes command review and owner checkpoints](hermes-command-review.md)

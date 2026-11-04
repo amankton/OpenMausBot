@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "syntheticOnly": true,
+  "checks": [
+    "no-drag host controls follow the iframe",
+    "menu opens and shows workspace actions",
+    "Escape closes the menu"
+  ],
+  "serverLog": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1793587536471-92064.log"
+}

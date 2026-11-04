@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-31T13:06:06.545Z",
+  "passed": true,
+  "checks": [
+    "Auto native read and real built-in MCP read run without cards",
+    "human denial retained",
+    "Ask or disabled policy retains native read approval",
+    "human denial retained",
+    "Ask or disabled policy retains native read approval",
+    "human denial retained"
+  ],
+  "realChiefServer": true,
+  "realBuiltInMcp": true,
+  "scriptedProvider": true,
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1793451963303-44112.log"
+}

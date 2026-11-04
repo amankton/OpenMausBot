@@ -9,6 +9,7 @@
  * fails compilation until it is either declared here or explicitly listed
  * as server-private. */
 import type { ApprovalMode } from "./approval-mode.ts";
+import type { TaskResultSummary } from "./task-result.ts";
 import type { ToolScope } from "./tool-scope.ts";
 import type { CommandAllowlistCandidate } from "./command-allowlist.ts";
 import type { TurnDigest } from "./digest.ts";
@@ -119,6 +120,8 @@ export interface GroupThreadUsage extends TaskUsage {
  * session. Wire form: no resumeCursors or lastInstanceId — the harness's
  * own bookkeeping that no client has ever used. */
 export interface WireTask {
+  /** Derived durable result references; provider success is not delivery. */
+  resultSummary?: TaskResultSummary;
   /** Outstanding handoffs, not an active provider turn. */
   waitingForTeammates?: boolean;
   threadId: string;
@@ -387,6 +390,7 @@ export type CardAnswerer = (
 /** One transcript line. Serialized as stored — the durable delivery
  * identity (roomRequest) rides the wire unchanged. */
 export interface WireMessage {
+  taskResultIds?: string[];
   roomRequest?: { id: string; phase: "request" | "result" };
   id: string;
   role: "bot" | "user";

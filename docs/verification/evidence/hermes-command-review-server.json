@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-31T13:26:50.819Z",
+  "passed": true,
+  "checks": [
+    "real native auxiliary approves a compound command through the live Chief broker",
+    "Auto native read and real built-in MCP read run without cards",
+    "human denial retained",
+    "Ask or disabled policy retains native read approval",
+    "human denial retained",
+    "Ask or disabled policy retains native read approval",
+    "human denial retained"
+  ],
+  "realChiefServer": true,
+  "realBuiltInMcp": true,
+  "scriptedProvider": true,
+  "logPath": "C:\\Users\\amank\\AppData\\Local\\Temp\\openmausbot-verification-evidence\\server-1793453187619-4728.log"
+}

@@ -4,7 +4,8 @@ export function recoverBlankFrame(frame: HTMLIFrameElement | null): boolean {
   if (!frame || !frame.src || frame.src === 'about:blank') return false;
   try {
     if (frame.contentWindow?.location.href !== 'about:blank') return false;
-    frame.src = frame.src;
+    const source = frame.src;
+    frame.src = source;
     return true;
   } catch { return false; }
 }

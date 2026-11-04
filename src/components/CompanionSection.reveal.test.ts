@@ -53,14 +53,19 @@ it("a plain visit reveals nothing", () => {
   expect(f.revealed).toEqual([]);
 });
 
-it("keeps browser access separately off until granted, including old sidecar snapshots", () => {
-  for (const browserControlAccess of [undefined, false, true]) {
-    f.state = { enabled: true, devices: [{ id: "phone-1", name: "Ada", lastSeenAt: Date.now(), cloudDesktopAccess: true, browserControlAccess }], port: 8810 };
+it.each([undefined, false, true])("renders saved computer access as a checkbox independently of browser access (%s)", browserControlAccess => {
+  for (const cloudDesktopAccess of [undefined, false, true]) {
+    f.state = { enabled: true, devices: [{ id: "phone-1", name: "Ada", lastSeenAt: Date.now(), cloudDesktopAccess, browserControlAccess }], port: 8810 };
     const markup = renderToStaticMarkup(createElement(() => CompanionSection({})));
     const browser = markup.match(/<button[^>]*aria-label="Browser control access for Ada"[^>]*>/)?.[0];
-    const computer = markup.match(/<button[^>]*aria-label="Computer view access for Ada"[^>]*>/)?.[0];
+    const computer = markup.match(/<input[^>]*aria-label="Allow computer view for Ada"[^>]*>/)?.[0];
+    expect(browser).toContain('role="switch"');
     expect(browser).toContain(`aria-checked="${browserControlAccess === true}"`);
-    expect(computer).toContain('aria-checked="true"');
+    expect(computer).toContain('type="checkbox"');
+    expect(computer).not.toContain('disabled');
+    expect(/\schecked(?:=|\s|>)/.test(computer!)).toBe(cloudDesktopAccess === true);
+    expect(markup.indexOf(computer!)).toBeLessThan(markup.indexOf("<details"));
+    expect(markup.indexOf(browser!)).toBeGreaterThan(markup.indexOf("<details"));
   }
 });
 

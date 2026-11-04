@@ -7,6 +7,7 @@ import json
 import re
 import time
 import uuid
+import hashlib
 from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import urlsplit
@@ -80,11 +81,13 @@ def register(ctx):
         if not chat_id.startswith("chief-") or tool_name == "chief_tools":
             return None
         try:
-            result = _request(_directory(ctx), run_id, {"action": "authorize", "name": tool_name}, timeout=2)
+            result = _request(_directory(ctx), run_id, {"action": "authorize", "name": tool_name, "arguments": args or {}}, timeout=40)
             if not result.get("allowed"):
-                return {"action": "block", "message": "This Chief chat's tool selection does not permit this tool. Use chief_tools for its assigned tools."}
+                return {"action": "block", "message": result.get("message") or "This Chief chat's tool selection does not permit this tool. Use chief_tools for its assigned tools."}
             if result.get("approval"):
-                return {"action": "approve", "message": "Chief requires approval for this native Hermes tool", "rule_key": tool_name}
+                operation = json.dumps([tool_name, args or {}], sort_keys=True, ensure_ascii=False)
+                return {"action": "approve", "message": result.get("summary") or "Chief requires approval for this native Hermes tool",
+                        "rule_key": "chief-operation-" + hashlib.sha256(operation.encode()).hexdigest()}
             return None
         except (OSError, URLError, ValueError, KeyError, TypeError):
             return {"action": "block", "message": "Chief turn authorization is unavailable; no tool may execute."}
