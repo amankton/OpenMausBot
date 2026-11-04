@@ -15416,7 +15416,7 @@ const cloudMoveRoutes = createCloudMoveRoutes({
 
 // Route modules (server/routes/README.md). `workspaceAccess` is assigned at
 // boot, after this line, so the dependency reads it per request.
-ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1"));
+ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1" || process.env.CHIEF_OFFICE_ENABLED === "1", fetch, process.env.CHIEF_OFFICE_ENABLED === "1" ? 18910 : 8820));
 const chiefOfficeRoutes = createOfficeRoutes(DATA_DIR, { enabled: process.env.CHIEF_OFFICE_ENABLED === "1" && !HOSTED_WORKSPACE && !CLOUD_HOME });
 const chiefSharedWorkspaceRoutes = createSharedWorkspaceRoutes({ localOnly: !HOSTED_WORKSPACE && !CLOUD_HOME });
 ROUTES.push(createChiefPairingRoutes({ directory: DATA_DIR, origin: process.env.CHIEF_LIFECYCLE_ORIGIN,
@@ -23605,6 +23605,14 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         const instances = persistableInstanceConfigs(result.config);
         if (!result.ok || !Object.hasOwn(instances, instanceId)) return json(res, 404, { error: `unknown instance "${instanceId}"` });
         const entry = instances[instanceId];
+        if (body.routineApprovals !== undefined) {
+          if (entry.driver !== "hermesAgent") return json(res, 400, { error: "Routine approvals are available for Hermes only." });
+          entry.config = { ...entry.config as Record<string, unknown>, routineApprovals: body.routineApprovals };
+        }
+        if (body.commandReview !== undefined) {
+          if (entry.driver !== "hermesAgent") return json(res, 400, { error: "Command review is available for Hermes only." });
+          entry.config = { ...entry.config as Record<string, unknown>, commandReview: body.commandReview };
+        }
         if ((body.displayName !== undefined || body.configDir !== undefined) && entry.driver !== "claudeAgent") {
           return json(res, 400, { error: "Account settings are currently available for Claude only." });
         }

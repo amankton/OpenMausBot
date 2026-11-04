@@ -8,8 +8,8 @@ import { dispatchRoutes } from './table.ts';
 
 const servers: Server[] = [];
 afterEach(async () => { await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve)))); });
-async function serve(enabled = true, auth: RequestAuth = { kind: 'loopback', scopes: ['admin', 'client'] }, fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ port: 8820, devices: [] }))) {
-  const route = createCrewframePhoneRoutes(enabled, fetchImpl);
+async function serve(enabled = true, auth: RequestAuth = { kind: 'loopback', scopes: ['admin', 'client'] }, fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ port: 8820, devices: [] })), companionPort = 8820) {
+  const route = createCrewframePhoneRoutes(enabled, fetchImpl, companionPort);
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (!await dispatchRoutes([route], { req, res, url, path: url.pathname, method: req.method ?? 'GET', auth, json, readBody })) json(res, 404, {});
@@ -52,7 +52,27 @@ describe('Crewframe phone control', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     const token = 'synthetic_pairing_window_credential';
     expect((await fetch(`${base}/pairing`, { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expectedToken: token }) })).status).toBe(200);
-    expect(fetchImpl.mock.calls[0][0]).toBe(`http://127.0.0.1:8821/pairing?expectedToken=${token}`);
+    expect(fetchImpl.mock.calls[1][0]).toBe(`http://127.0.0.1:8821/pairing?expectedToken=${token}`);
+  });
+  it('grants and revokes desktop access on the matching companion, without requiring a pairing token', async () => {
+    const { base, fetchImpl } = await serve();
+    for (const method of ['POST', 'DELETE']) {
+      expect((await fetch(`${base}/devices/test-phone/cloud-desktop`, { method, headers: { 'content-type': 'application/json' } })).status).toBe(200);
+      expect(fetchImpl.mock.calls.at(-1)?.[0]).toBe('http://127.0.0.1:8821/devices/test-phone/cloud-desktop');
+      expect(fetchImpl.mock.calls.at(-1)?.[1]?.method).toBe(method);
+    }
+    expect((await fetch(`${base}/devices/test-phone/browser-control`, { method: 'POST' })).status).toBe(405);
+  });
+  it('checks workspace identity before making any change', async () => {
+    const { base, fetchImpl } = await serve(true, undefined, vi.fn<typeof fetch>(async () => Response.json({ port: 8810 })));
+    expect((await fetch(`${base}/devices/test-phone/cloud-desktop`, { method: 'POST', headers: { 'content-type': 'application/json' } })).status).toBe(503);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0][0]).toBe('http://127.0.0.1:8821/state');
+  });
+  it('uses the separate source-workspace companion when selected by its launcher', async () => {
+    const { base, fetchImpl } = await serve(true, undefined, vi.fn<typeof fetch>(async () => Response.json({ port: 18910, devices: [] })), 18910);
+    expect((await fetch(`${base}/state`)).status).toBe(200);
+    expect(fetchImpl.mock.calls[0][0]).toBe('http://127.0.0.1:18911/state');
   });
   it('reports offline or wrong-workspace companions without returning their state', async () => {
     const wrong = await serve(true, undefined, vi.fn<typeof fetch>(async () => Response.json({ port: 8810, pairing: 'private' })));

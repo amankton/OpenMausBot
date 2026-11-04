@@ -17,6 +17,8 @@ export const instanceSettingsSchema = z.object({
   displayName: displayName.optional(),
   configDir: configDir.optional(),
   tools: z.boolean().optional(),
+  routineApprovals: z.boolean().optional(),
+  commandReview: z.boolean().optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, "No settings supplied");
 
 function rawConfig(entry: InstanceConfig): Record<string, unknown> {

@@ -3,7 +3,8 @@
 Approval levels belong to a bot and apply to its next provider turn, including
 when that provider resumes an existing native thread. Each level is one of the
 provider's own permission modes, passed through. OpenMausBot does not judge an
-action itself: there is no app-side allowlist, classifier, or pattern rule. A
+action itself by default. The opt-in Hermes routine policy below is a bounded
+exception for engines without a native automatic reviewer. A
 native tool request that reaches you is one the provider left for you. In Full
 Access, OMB also applies its own configuration tools without another approval.
 
@@ -60,6 +61,75 @@ delegation still uses the recipient's setting. Questions and missing
 credentials still reach you.
 
 ## Answering a request
+
+### Hermes routine autonomy (opt-in)
+
+An owner/admin can enable `routineApprovals` on a Hermes HTTP instance with
+`PATCH /api/instances/:id {"routineApprovals":true}`. It defaults to off and
+applies only when the source conversation is on **Approve for me**. Existing
+Ask conversations remain Ask; changing a bot default does not change them.
+
+The policy allows native file/skill reads, four exact read-only commands, and
+document writes/replacements within the current working folder. Supported
+documents are Markdown, text, HTML, CSS, CSV and SVG. Relative paths, links
+escaping the folder, hidden paths, instructions, skill/persona/memory files,
+configuration and executable files retain approval. Multi-file patches retain
+approval. The installed `chief-http-tools` plugin must forward native tool
+arguments for document grants; an older plugin safely continues asking.
+
+Known built-in agent reads, attachments to the current chat, coordination and
+delegation also proceed, subject to their existing ownership, scope and peer
+review checks. Known VM desktop inspection tools proceed. Local-host computer
+control, clicks, custom MCP tools, external actions,
+configuration proposals and questions retain their existing gates. A matching
+display name or read-only annotation from a custom MCP server grants nothing.
+Routine grants record `component: hermes.approval, source: routine-policy` in
+the backend log without arguments or file content. Turn tool activity records
+the resulting execution. This policy is a finite grant, not an AI reviewer or
+a promise that every internal command can run unattended.
+
+### Hermes command review (opt-in)
+
+Enable `commandReview` alongside `routineApprovals` on the Hermes HTTP instance:
+`PATCH /api/instances/:id {"routineApprovals":true,"commandReview":true}`.
+Only Auto source conversations use it; Ask stays interactive. Native `terminal`
+commands and the actual built-in `agents.vm_exec` tool receive review of the
+complete command using Hermes's configured `approval` auxiliary model. It is
+a tools-free completion, never an agent run, and cannot execute the command,
+access integrations or save memory. Other engines retain their native reviewers.
+
+Known destructive, credential, security, publishing/deployment and outbound/
+financial patterns always retain human checkpoints, before the model is called.
+The model reviews the remaining complete command, including visible inline code
+and compound shell operations, for routine internal work. Unknown dynamic code,
+opaque local scripts, uncertainty and model failures retain a checkpoint. This
+is model-assisted risk assessment, not a deterministic proof of command safety.
+Native Hermes safety checks still apply after Chief's review.
+
+Host terminal review requires an absolute `workdir` inside the active Chief
+workspace. A missing/relative workdir returns an actionable tool error so the
+agent can correct it without a human card; a different folder retains a
+checkpoint. VM commands remain scoped to the existing owned-VM route. Tool
+selection, ownership, computer controls and actual questions keep their gates.
+Custom MCP tools cannot obtain review by copying a built-in name or annotation.
+
+The installed plugin must include `command_review.py` and the updated native
+authorization hook. The reviewer uses the selected native Hermes home and the
+OS account's existing model login, without copying credentials into Chief.
+It receives no app/control-plane secrets and has a 30-second local ceiling.
+Stop cancels approval delivery; no timed-out/late answer executes anything.
+No positive verdict is cached. Backend receipts contain the command hash,
+decision, fixed reason and latency, without command text or model prose.
+Checkpoint cards show a redacted command and working folder. Native remembered
+grants identify the exact tool plus arguments, rather than every terminal call.
+
+Disable only this reviewer with `{"commandReview":false}`. Full Access is not
+required. See [command review verification](verification/hermes-command-review.md).
+
+Disable it with the same endpoint and `false`. Instance settings require the
+instance to be idle; mode and scope are reasserted on each turn. Shared team
+instructions should separately tell agents to execute routine work and batch
+consequential decisions into owner checkpoints.
 
 Approve or deny requests in the conversation to let the bot continue. **Allow
 once** answers this request only. **Always allow this session** hands the
