@@ -5,8 +5,10 @@ import type { ProviderDriver, RuntimeEvent, RuntimeEventListener, SendTurnInput 
 import { newEventId } from "../contracts.ts";
 import { HermesHttpClient, HermesHttpError, hermesHttpConfig } from "./hermes-http-client.ts";
 import { createHermesToolBridge, type HermesToolBridge } from "./hermes-tool-bridge.ts";
+import { hermesCommandReviewer } from "./hermes-command-review.ts";
+import { redactSecretsInText } from "../redact.ts";
 
-type Config = { transport: "http" | "acp"; [key: string]: unknown };
+type Config = { transport: "http" | "acp"; routineApprovals?: boolean; commandReview?: boolean; [key: string]: unknown };
 const models = { default: "hermes-agent", options: [{ id: "hermes-agent", label: "Hermes API server", custom: true as const }] };
 
 /** Primary Hermes driver. ACP is retained only as an explicit migration escape
@@ -19,6 +21,8 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
   decodeConfig(raw) {
     const transport = (raw as Partial<Config> | null)?.transport ?? "http";
     if (transport !== "http" && transport !== "acp") throw new Error("Hermes transport must be http or acp");
+    if (raw && typeof raw === "object" && "routineApprovals" in raw && typeof raw.routineApprovals !== "boolean") throw new Error("Hermes routineApprovals must be a boolean");
+    if (raw && typeof raw === "object" && "commandReview" in raw && typeof raw.commandReview !== "boolean") throw new Error("Hermes commandReview must be a boolean");
     return { ...(raw && typeof raw === "object" ? raw : {}), transport };
   },
   async create(input) {
@@ -127,13 +131,15 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
           publish({ type: "turn.started" }); log("received");
           state.done = (async () => {
             try {
-              if (bridgeEnabled) state.bridge = await createHermesToolBridge(turn, state.controller.signal, bridgeDirectory, publish);
+              if (bridgeEnabled) state.bridge = await createHermesToolBridge(turn, state.controller.signal, bridgeDirectory, publish, input.config.routineApprovals === true,
+                input.config.commandReview === true && input.config.routineApprovals === true && turn.approvalMode === "auto" ? hermesCommandReviewer(env) : undefined);
               if (state.stopped) { await finish(true, "interrupted"); return; }
               sent = performance.now(); log("dispatch", { dispatchLatencyMs: Math.round(sent - received) });
               const rebuilding = typeof turn.resumeCursor === "string" && !turn.resumeCursor.startsWith("hermes-http:");
               const admitted = await requests.json("/v1/runs", { model: turn.model || config.model,
                 session_id: session, input: rebuilding ? turn.recoveryText || turn.text : turn.text,
-                instructions: [turn.system, bridgeEnabled ? "This is a Chief-managed chat. Use chief_tools with action=list to discover the tools assigned to this turn, action=describe with an exact name for its argument schema, then action=call. For the assigned VM/computer/browser, always use these tools; native host tools do not control that computer. User images are available via action=attachments. Chief owns approvals, tool selection and cancellation." : ""].filter(Boolean).join("\n\n") }, undefined, status => log("headers", { status }));
+                instructions: [turn.system, bridgeEnabled ? "This is a Chief-managed chat. Use chief_tools with action=list to discover the tools assigned to this turn, action=describe with an exact name for its argument schema, then action=call. For the assigned VM/computer/browser, always use these tools; native host tools do not control that computer. User images are available via action=attachments. Chief owns approvals, tool selection and cancellation." : "",
+                  input.config.commandReview === true ? `Routine commands receive automatic review. For native terminal, set workdir explicitly inside the active Chief working folder: ${turn.cwd || "unavailable; use assigned VM tools instead"}. Prefer complete visible inline code for small transformations and draft generation. Unknown or consequential scripts require an owner checkpoint; do not conceal their behavior or bypass a denial.` : ""].filter(Boolean).join("\n\n") }, undefined, status => log("headers", { status }));
               if (typeof admitted.run_id !== "string" || !admitted.run_id) throw new HermesHttpError("invalid_run");
               state.runId = admitted.run_id;
               await state.bridge?.bind(state.runId);
@@ -168,7 +174,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
                     const nativeTool = typeof data.command === "string"
                       ? /^<([a-zA-Z][a-zA-Z0-9_]{0,79})> \(plugin approval rule\)$/.exec(data.command)?.[1] : undefined;
                     publish({ type: "request.opened", requestId: data.request_id, requestType: "permission", tool: nativeTool || String(data.tool || "Hermes"),
-                      summary: nativeTool ? `Hermes requests permission to use ${nativeTool}` : "Hermes requests permission for an action", choices, requiresExplicitApproval: true });
+                      summary: nativeTool && typeof data.description === "string" ? redactSecretsInText(data.description).slice(0, 1400) : nativeTool ? `Hermes requests permission to use ${nativeTool}` : "Hermes requests permission for an action", choices, requiresExplicitApproval: true });
                 } else if (name === "run.completed") {
                   if (!text && typeof data.output === "string") delta(data.output);
                   await finish(true, "end_turn"); break;

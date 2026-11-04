@@ -47,6 +47,21 @@ class PluginTests(unittest.TestCase):
         self.assertTrue(result["_multimodal"])
         self.assertEqual(result["content"][1]["type"], "image_url")
 
+    def test_authorization_includes_actual_arguments_and_honors_routine_result(self):
+        with patch.object(plugin, "_identity", return_value=("run_owned", "chief-owned")), patch.object(plugin, "_directory", return_value=Path(".")), patch.object(plugin, "_request", return_value={"allowed": True, "approval": False}) as request:
+            args = {"path": "/workspace/draft.md", "content": "draft"}
+            self.assertIsNone(self.ctx.hook(tool_name="write_file", args=args))
+            self.assertEqual(request.call_args.args[2], {"action": "authorize", "name": "write_file", "arguments": args})
+
+    def test_checkpoint_grants_belong_to_one_exact_operation(self):
+        with patch.object(plugin, "_identity", return_value=("run_owned", "chief-owned")), patch.object(plugin, "_directory", return_value=Path(".")), patch.object(plugin, "_request", return_value={"allowed": True, "approval": True, "summary": "Command checkpoint"}):
+            first = self.ctx.hook(tool_name="terminal", args={"command": "git push origin one"})
+            same = self.ctx.hook(tool_name="terminal", args={"command": "git push origin one"})
+            other = self.ctx.hook(tool_name="terminal", args={"command": "git push origin two"})
+            self.assertEqual(first["message"], "Command checkpoint")
+            self.assertEqual(first["rule_key"], same["rule_key"])
+            self.assertNotEqual(first["rule_key"], other["rule_key"])
+
     def test_manifest_traversal_and_remote_redirect_targets_rejected(self):
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaises(ValueError):

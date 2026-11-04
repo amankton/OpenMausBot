@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { phonePairingLink } from '../../shared/pairing-link';
 import { companionPairingAddressText, companionPairingRoute, type CompanionPairingRoute } from '../lib/companion-pairing';
-import type { CompanionState } from './PhoneSetupFlow';
+import type { CompanionState, PhoneDevice } from './PhoneSetupFlow';
 import { PhoneAppDialog } from './PhoneAppDialog';
 import { Card } from './SettingsPrimitives';
 
@@ -16,8 +16,23 @@ async function phoneApi(action: string, method = 'GET', body?: unknown): Promise
   return state;
 }
 
+export function CrewframePhoneDevices({ devices, busy, onToggle }: { devices: PhoneDevice[]; busy: boolean; onToggle: (device: PhoneDevice) => void }) {
+  return <section aria-label="Paired phone remote control" className="flex flex-col gap-3">
+    <h3 className="font-medium">Paired phones and remote control</h3>
+    <p>Allow computer view to see and control a bot's Local VM or cloud desktop from your paired phone.</p>
+    {devices.map(device => <label key={device.id} className="flex items-start gap-3 rounded-xl border border-hairline/40 p-3">
+      <input type="checkbox" className="mt-1" checked={device.cloudDesktopAccess === true} disabled={busy}
+        aria-label={`Allow computer view for ${device.name}`}
+        onChange={() => onToggle(device)} />
+      <span><strong className="block">{device.name}</strong><span className="block">Allow computer view and control</span>
+        <span className="block text-ink-secondary">Last connected: {new Date(device.lastSeenAt).toLocaleString()}</span></span>
+    </label>)}
+    {devices.length === 0 && <p>No phones paired yet.</p>}
+  </section>;
+}
+
 export function CrewframePhoneSetup({ focusRequest = 0 }: { focusRequest?: number }) {
-  const [appOpen, setAppOpen] = useState(true);
+  const [appOpen, setAppOpen] = useState(false);
   const [state, setState] = useState<CompanionState | null>(null);
   const [offer, setOffer] = useState<{ pairing: NonNullable<CompanionState['pairing']>; route: CompanionPairingRoute; mode: 'local' | 'tailscale' } | null>(null);
   const [error, setError] = useState('');
@@ -26,7 +41,9 @@ export function CrewframePhoneSetup({ focusRequest = 0 }: { focusRequest?: numbe
   const [connected, setConnected] = useState('');
   const baseline = useRef<string[]>([]);
   const root = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (focusRequest) setAppOpen(true); }, [focusRequest]);
+  useEffect(() => {
+    if (focusRequest) { root.current?.scrollIntoView?.({ block: 'start' }); root.current?.focus(); }
+  }, [focusRequest]);
   useEffect(() => {
     let disposed = false;
     let timeout: ReturnType<typeof setTimeout>;
@@ -74,6 +91,13 @@ export function CrewframePhoneSetup({ focusRequest = 0 }: { focusRequest?: numbe
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not cancel pairing.'); }
     finally { setBusy(false); }
   }
+  async function toggleDesktop(device: PhoneDevice) {
+    if (busy) return;
+    setBusy(true); setError('');
+    try { setState(await phoneApi(`devices/${encodeURIComponent(device.id)}/cloud-desktop`, device.cloudDesktopAccess ? 'DELETE' : 'POST')); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save computer access.'); }
+    finally { setBusy(false); }
+  }
   const expired = offer ? offer.pairing.expiresAt <= Date.now() : false;
   const valid = offer && !expired && state?.pairing?.token === offer.pairing.token;
   const link = valid ? phonePairingLink({ ...offer.route, ...offer.pairing, name: 'Chief Executive Suite', secretPublicKey: state?.secretPublicKey }) : null;
@@ -85,6 +109,7 @@ export function CrewframePhoneSetup({ focusRequest = 0 }: { focusRequest?: numbe
     <Card title="Connect your phone to Chief Executive Suite" subtitle="Get the phone app, choose how to connect, then scan the pairing code inside Chief Executive Suite.">
       <div className="flex flex-col gap-3 text-[13px]">
         <button className="ui-button self-start" onClick={() => setAppOpen(true)}>Get the phone app</button>
+        {state && <CrewframePhoneDevices devices={state.devices} busy={busy} onToggle={device => void toggleDesktop(device)} />}
         <p>On the same Wi-Fi: keep this computer running and allow local network access on your phone.</p>
         <button className="ui-button self-start" disabled={busy || !state || Boolean(offer)} onClick={() => void pair('local')}>Pair over Wi-Fi</button>
         <p>From another network: connect this computer and your phone to the same Tailscale account.</p>
