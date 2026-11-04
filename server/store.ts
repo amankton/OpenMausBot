@@ -103,7 +103,7 @@ export interface TaskRecord extends Omit<WireTask, TaskWireDerivedKeys> {
  * so a new server field forces a decision — wire-visible or private here. */
 export type TaskWirePrivateKeys = "resumeCursors" | "lastInstanceId" | "handedMessages" | "appliedCompactionId" | "contextFloor" | "lastContextModel" | "surfaceSource";
 /** WireTask fields computed by toWireTask and never stored on a TaskRecord. */
-export type TaskWireDerivedKeys = "surfaceAuto";
+export type TaskWireDerivedKeys = "surfaceAuto" | "resultSummary";
 export type TaskWireProjection = Pick<TaskRecord, Exclude<keyof TaskRecord, TaskWirePrivateKeys>> & Pick<WireTask, TaskWireDerivedKeys>;
 type AssertExact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 type AssertSameKeys<A, B> = [keyof A] extends [keyof B] ? ([keyof B] extends [keyof A] ? true : never) : never;

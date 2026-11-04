@@ -10,6 +10,8 @@ const nodeSchema = z.object({
   requestBatchKey: z.string().optional(),
   status: z.enum(["source", "queued", "running", "waiting", "resume", "completed", "failed", "cancelled"]),
   result: z.string().default(""), reported: z.boolean().default(false),
+  resultIds: z.array(z.string()).max(20).optional(),
+  rework: z.boolean().optional(),
   executions: z.number().int().nonnegative().default(0), startedAt: z.number().optional(),
   lastProgressAt: z.number().optional(),
   approvalGranted: z.boolean().default(false),
@@ -26,7 +28,7 @@ export interface RoomHandoffHooks {
   /** Recheck addresses and route permission immediately before every dispatch. */
   validate(node: RoomHandoff, parent?: RoomHandoff): string | undefined;
   busy(node: RoomHandoff): boolean;
-  run(node: RoomHandoff, resumed: boolean, signal: AbortSignal): Promise<{ ok: boolean; text: string }>;
+  run(node: RoomHandoff, resumed: boolean, signal: AbortSignal): Promise<{ ok: boolean; text: string; resultIds?: string[] }>;
   report(child: RoomHandoff, parent: RoomHandoff): void;
   changed(groupIds: ReadonlySet<string>, directThreadIds: ReadonlySet<string>): void;
 }
@@ -263,7 +265,7 @@ export class RoomHandoffs {
     }
     const node: RoomHandoff = { ...target, id: randomUUID(), rootId: parent.rootId, parentId: parent.id,
       key, text, createdAt: this.now(), status: "queued", result: "", reported: false, executions: 0, approvalGranted,
-      kind, ...(target.groupId && requestBatchKey ? { requestBatchKey } : {}) };
+      kind, ...(rework ? { rework: true } : {}), ...(target.groupId && requestBatchKey ? { requestBatchKey } : {}) };
     const problem = this.hooks.validate(node, parent);
     if (problem) throw new Error(problem);
     if (fresh) this.nodes.set(parent.id, parent);
@@ -410,6 +412,7 @@ export class RoomHandoffs {
       void this.hooks.run(n, resumed, controller.signal).then(result => {
         if (terminal(n)) return;
         n.result = result.text.slice(0, 12_000);
+        if (result.resultIds?.length) n.resultIds = result.resultIds.slice(0, 20);
         if (this.children(n.id).length > childCount) n.status = "waiting";
         else if (!result.ok) this.cancelTree(n, n.result || "Room agent failed", "failed");
         else { n.status = "completed"; this.stampProgress(root); }

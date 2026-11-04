@@ -417,6 +417,15 @@ export async function callTool(name: string, args: Json, context: ToolCallContex
     if (!stdout && !stderr && !body.timedOut) lines.push("(no output)");
     return { text: lines.join("\n"), ...(exitCode !== 0 || body.timedOut ? { isError: true } : {}) };
   }
+  if (name === "register_task_result" || name === "task_results") {
+    const query = name === "task_results" ? new URLSearchParams({
+      ...(typeof args.target_thread_id === "string" ? { target_thread_id: args.target_thread_id } : {}),
+      ...(typeof args.result_id === "string" ? { result_id: args.result_id } : {}),
+    }).toString() : "";
+    const response = await apiResponse(`/api/internal/task-results${query ? `?${query}` : ""}`,
+      name === "task_results" ? {} : { method: "POST", body: JSON.stringify(args) });
+    return { text: JSON.stringify(response.body), ...(!response.ok ? { isError: true } : {}) };
+  }
   if (name === "attach_file") {
     const { ok, body } = await apiResponse("/api/internal/attach-file", {
       method: "POST",
@@ -723,7 +732,9 @@ export async function callTool(name: string, args: Json, context: ToolCallContex
       const state = stateWord[String(thread.state)] ?? String(thread.state);
       const unread = thread.unread === true ? ", unread for the person" : "";
       const handoff = typeof thread.delegationId === "string" && thread.delegationId ? ` [delegation id: ${thread.delegationId}]` : "";
-      return `- #${String(thread.title)} (${where}, ${state}${unread}) [thread id: ${String(thread.threadId)}]${handoff}`;
+      const summary = jsonRecord(thread.resultSummary) ? thread.resultSummary : undefined;
+      const result = summary ? ` [result: ${String(summary.latestResultId)}, ${String(summary.executionOutcome)}/${String(summary.deliveryOutcome)}${summary.lastDeliveredResultId ? `; usable: ${String(summary.lastDeliveredResultId)}` : ""}]` : "";
+      return `- #${String(thread.title)} (${where}, ${state}${unread}) [thread id: ${String(thread.threadId)}]${handoff}${result}`;
     });
     return { text: `Threads, newest first:\n${lines.join("\n")}` };
   }
