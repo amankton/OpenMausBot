@@ -21,6 +21,7 @@ export interface ChatToolResult { text: string; ok: boolean; images?: ChatImageP
 export class ChatToolSessionError extends Error {}
 export interface ChatToolSession {
   definitions: ChatToolDefinition[];
+  identity(name: string): { server: string; name: string; builtIn: boolean } | undefined;
   validate(name: string, args: unknown): void;
   execute(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<ChatToolResult>;
   close(): Promise<void>;
@@ -287,7 +288,7 @@ export async function mountChatTools(integrations: SendTurnInput["integrations"]
   const cancel = () => { void close().catch(() => {}); };
   signal.addEventListener("abort", cancel, { once: true });
   const definitions: ChatToolDefinition[] = [];
-  const registered = new Map<string, { client: ChatMcpClient; server: string; builtInBrowser: boolean; name: string; schema: ValidateFunction }>();
+  const registered = new Map<string, { client: ChatMcpClient; server: string; builtIn: boolean; builtInBrowser: boolean; name: string; schema: ValidateFunction }>();
   try {
     if (signal.aborted) throw aborted();
     // Start independent servers concurrently; consume results in config order
@@ -300,11 +301,12 @@ export async function mountChatTools(integrations: SendTurnInput["integrations"]
       clients.push(client);
       const include = (tool: unknown) => scope === undefined || (object(tool) && typeof tool.name === "string" && allowsTool(scope, { kind: "mcp", server: name, name: tool.name }));
       const tools = await client.tools(signal, include);
-      return { name, client, builtInBrowser: descriptor === integrations?.browser, tools };
+      const builtIn = descriptor === integrations?.browser || descriptor === integrations?.agents || descriptor === integrations?.localComputer;
+      return { name, client, builtIn, builtInBrowser: descriptor === integrations?.browser, tools };
     }));
     for (const mount of mounts) {
       if (mount.status === "rejected") throw mount.reason;
-      const { name: server, client, builtInBrowser, tools } = mount.value;
+      const { name: server, client, builtIn, builtInBrowser, tools } = mount.value;
       const originalNames = new Set<string>();
       for (const tool of tools) {
         if (!object(tool) || typeof tool.name !== "string" || !tool.name.trim() || originalNames.has(tool.name)) throw new Error("MCP server advertised an invalid or duplicate tool name");
@@ -325,7 +327,7 @@ export async function mountChatTools(integrations: SendTurnInput["integrations"]
         const base = `${server}_${tool.name}`.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 64) || "mcp_tool";
         let name = base;
         for (let index = 2; registered.has(name); index += 1) { const suffix = `_${index}`; name = base.slice(0, 64 - suffix.length) + suffix; }
-        registered.set(name, { client, server, builtInBrowser, name: tool.name, schema });
+        registered.set(name, { client, server, builtIn, builtInBrowser, name: tool.name, schema });
         definitions.push({ type: "function", function: { name, description, parameters } });
         if (Buffer.byteLength(JSON.stringify(definitions)) > CATALOG_BYTES) throw new Error("MCP tool catalog exceeds the 1MB limit");
       }
@@ -342,6 +344,10 @@ export async function mountChatTools(integrations: SendTurnInput["integrations"]
   };
   return {
     definitions, validate, close,
+    identity(name) {
+      const tool = registered.get(name);
+      return tool ? { server: tool.server, name: tool.name, builtIn: tool.builtIn } : undefined;
+    },
     async execute(name, args, callSignal) {
       validate(name, args);
       if (callSignal.aborted) { await close(); throw aborted(); }

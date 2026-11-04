@@ -16,6 +16,7 @@ Object.assign(env, {
   HOME: evidence, USERPROFILE: evidence, APPDATA: join(evidence, "roaming"), LOCALAPPDATA: join(evidence, "local"),
   TEMP: join(evidence, "tmp"), TMP: join(evidence, "tmp"), PATH: join(process.env.SystemRoot || "C:\\Windows", "System32"),
   CHIEF_PROFILE_DIR: join(evidence, "profile"), OMB_DATA_DIR: join(evidence, "workspace"),
+  OMB_COMPANION_DIR: join(evidence, "companion"),
   HERMES_HOME: join(evidence, ".hermes"), OMB_TEST_SEALED_PATH: "1",
 });
 for (const key of ["APPDATA", "LOCALAPPDATA", "TEMP", "CHIEF_PROFILE_DIR", "OMB_DATA_DIR"]) mkdirSync(env[key], { recursive: true });
@@ -68,6 +69,39 @@ try {
   assert.doesNotMatch(await page.locator("body").innerText(), /OpenMaus|MausBot/);
   await page.screenshot({ path: join(evidence, "settings.png") });
   checks.push("settings and profile menu have no upstream product offers");
+  // Exercise the real native companion bridge only inside this disposable profile.
+  const pairing = await page.evaluate(async () => {
+    await window.ogb.companion.start();
+    return window.ogb.companion.pairing(true);
+  });
+  assert(pairing.pairing?.token, "Fixture companion did not offer pairing");
+  const pairResponse = await fetch(`http://127.0.0.1:${pairing.port}/api/pair`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ credential: pairing.pairing.token, deviceName: "Chief Release Fixture Phone" }),
+  });
+  assert.equal(pairResponse.status, 201);
+  const paired = await pairResponse.json();
+  await page.getByRole("button", { name: "Computers", exact: true }).click();
+  const phoneControl = page.getByRole("checkbox", { name: "Allow computer view for Chief Release Fixture Phone", exact: true });
+  await phoneControl.waitFor({ timeout: 20_000 });
+  assert.equal(await phoneControl.isChecked(), false);
+  assert.equal(await phoneControl.evaluate(element => element.closest("details") === null), true);
+  async function waitForGrant(allowed) {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const granted = await page.evaluate(async id => (await window.ogb.companion.state()).devices.find(device => device.id === id)?.cloudDesktopAccess, paired.device.id);
+      if (granted === allowed) return;
+      await delay(100);
+    }
+    throw new Error("Packaged phone permission did not persist");
+  }
+  await phoneControl.click();
+  await waitForGrant(true);
+  await phoneControl.click();
+  await waitForGrant(false);
+  await page.screenshot({ path: join(evidence, "phone-control.png") });
+  checks.push("visible native phone control grants and revokes through the real isolated companion");
+  await page.evaluate(() => window.ogb.companion.stop());
   await app.close(); app = undefined;
   app = await electron.launch({ executablePath, env, timeout: 90_000 });
   const restartDeadline = Date.now() + 60_000;

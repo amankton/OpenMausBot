@@ -76,6 +76,17 @@ function open(): DatabaseSync {
       result TEXT NOT NULL,
       PRIMARY KEY (kind, key)
     );
+    CREATE TABLE IF NOT EXISTS task_results (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL,
+      execution_id TEXT NOT NULL UNIQUE,
+      payload TEXT NOT NULL,
+      registration_hash TEXT,
+      sequence INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS task_results_thread ON task_results(thread_id, sequence);
+    CREATE INDEX IF NOT EXISTS task_results_execution_state ON task_results(json_extract(payload, '$.executionOutcome'));
+    CREATE INDEX IF NOT EXISTS task_results_notification ON task_results(json_extract(payload, '$.notification.state'));
   `);
   ensureRecallIndex(db);
   ensureMemoryIndex(db);
@@ -514,10 +525,47 @@ export function latestMessageAts(threadIds: readonly string[]): Map<string, numb
 
 export function deleteThread(threadId: string): void {
   writeFollowups((connection) => {
+    connection.prepare("DELETE FROM task_results WHERE thread_id = ?").run(threadId);
     connection.prepare("DELETE FROM chat_followups WHERE thread_id = ?").run(threadId);
     connection.prepare("DELETE FROM messages WHERE thread_id = ?").run(threadId);
     connection.prepare("DELETE FROM thread_state WHERE thread_id = ?").run(threadId);
   });
+}
+
+/** Task result writes participate in runCommand's existing receipt transaction. */
+export function taskResultRows(threadId?: string): Array<{ payload: string; registration_hash: string | null }> {
+  return (threadId === undefined
+    ? db().prepare("SELECT payload, registration_hash FROM task_results ORDER BY sequence DESC").all()
+    : db().prepare(`SELECT payload, registration_hash FROM task_results WHERE thread_id = ? AND
+      (id IN (SELECT id FROM task_results WHERE thread_id = ? ORDER BY sequence DESC LIMIT 50)
+       OR id = (SELECT id FROM task_results WHERE thread_id = ? AND json_extract(payload, '$.executionOutcome') = 'succeeded'
+         AND json_extract(payload, '$.deliveryOutcome') = 'delivered' ORDER BY sequence DESC LIMIT 1)) ORDER BY sequence DESC`)
+      .all(threadId, threadId, threadId)) as Array<{ payload: string; registration_hash: string | null }>;
+}
+
+export function taskResultById(threadId: string, id: string): { payload: string } | null {
+  return db().prepare("SELECT payload FROM task_results WHERE thread_id = ? AND id = ?").get(threadId, id) as { payload: string } | undefined ?? null;
+}
+
+export function taskResultWorkRows(kind: "running" | "pending"): Array<{ payload: string }> {
+  return (kind === "running"
+    ? db().prepare("SELECT payload FROM task_results WHERE json_extract(payload, '$.executionOutcome') = 'running'")
+    : db().prepare(`SELECT payload FROM task_results WHERE json_extract(payload, '$.notification.state') = 'pending'
+        OR (json_extract(payload, '$.executionOutcome') != 'running' AND json_array_length(payload, '$.artifacts') > 0
+          AND json_extract(payload, '$.artifactPublication.state') IS NULL)`))
+    .all() as Array<{ payload: string }>;
+}
+
+export function taskResultRow(executionId: string): { payload: string; registration_hash: string | null } | null {
+  return db().prepare("SELECT payload, registration_hash FROM task_results WHERE execution_id = ?").get(executionId) as { payload: string; registration_hash: string | null } | undefined ?? null;
+}
+
+export function writeTaskResult(input: { id: string; threadId: string; executionId: string }, payload: string, registrationHash?: string): void {
+  db().prepare(`INSERT INTO task_results(id, thread_id, execution_id, payload, registration_hash, sequence)
+    VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sequence), 0) + 1 FROM task_results))
+    ON CONFLICT(id) DO UPDATE SET payload = excluded.payload,
+      registration_hash = COALESCE(excluded.registration_hash, task_results.registration_hash)`)
+    .run(input.id, input.threadId, input.executionId, payload, registrationHash ?? null);
 }
 
 /** Every thread whose stored messages mention `fragment` anywhere (an

@@ -27,7 +27,7 @@ import {
   isCloudDesktopAccess,
   isMessageFileDownload,
 } from "./routes.ts";
-import { CompanionViewerRelay } from "./viewer-relay.ts";
+import { CompanionViewerRelay, requestTarget } from "./viewer-relay.ts";
 import { createSseScrubber, isJson, scrub } from "./wire.ts";
 
 /** What the forwarding handler needs from the process around it. */
@@ -125,16 +125,9 @@ const readJson = (req: IncomingMessage, limit = 64 * 1024): Promise<Record<strin
     });
   });
 
-/** Answer with JSON the sidecar wrote itself — a refusal, or a pairing
- * result. Anything from the harness goes out through the proxy path instead.
- *
- * Unless the response has already begun. Once a byte is on the wire the
- * status line is spent and `writeHead` throws ERR_HTTP_HEADERS_SENT, which
- * on the failure paths — an upstream dying long after SSE headers were
- * flushed — would be a second, fatal error raised inside an error handler
- * with nothing to catch it. Dropping the socket is the only honest ending
- * left there: the device sees a truncated response and reconnects, which is
- * what it already does for any dropped connection. */
+const isPlainValue = (value: unknown): value is string | number | null | undefined =>
+  value == null || typeof value === "string" || typeof value === "number";
+
 const PRIVATE_RESPONSE_HEADERS = {
   "cache-control": "private, no-store",
   "cdn-cache-control": "no-store",
@@ -333,6 +326,8 @@ export function createProxyHandler(options: ProxyOptions) {
    * keyed by device, so revoking the capability can close them. */
   const capabilityStreams = new Map<string, Set<() => void>>();
   const handle = function handle(req: IncomingMessage, res: ServerResponse): void {
+    const target = requestTarget(req.url);
+    if (!target) return sendJson(res, 400, { error: "invalid request target" });
     const path = (req.url ?? "/").split("?")[0];
     const method = req.method ?? "GET";
 
@@ -402,8 +397,12 @@ export function createProxyHandler(options: ProxyOptions) {
         (body) => {
           // New clients redeem the high-entropy credential carried by the QR.
           // `code` remains accepted for manual entry and older mobile builds.
+          const credential = body.credential ?? body.code;
+          if (!isPlainValue(credential) || !isPlainValue(body.deviceName)) {
+            return sendJson(res, 400, { error: "invalid pairing request" });
+          }
           const result = options.redeem(
-            String(body.credential ?? body.code ?? ""),
+            String(credential ?? ""),
             body.deviceName,
             body.pairRequestId,
           );
@@ -428,7 +427,7 @@ export function createProxyHandler(options: ProxyOptions) {
           return sendJson(res, 201, response);
         },
         (error: Error) => sendJson(res, 400, { error: error.message }),
-      );
+      ).catch(() => sendJson(res, 500, { error: "could not complete the pairing" }));
       return;
     }
 
@@ -689,7 +688,7 @@ export function createProxyHandler(options: ProxyOptions) {
               path,
               parsed,
               device?.id,
-              new URL(req.url ?? "/", "http://companion.invalid").searchParams.get("controlLeaseId"),
+              target.searchParams.get("controlLeaseId"),
             );
             text = JSON.stringify(scrub(parsed));
           } catch {
@@ -772,6 +771,7 @@ export function createProxyHandler(options: ProxyOptions) {
     const device = options.authenticate(token);
     viewers.handleUpgrade(req, socket, head, device);
   };
+  handle.closeViewers = (): void => viewers.closeAll();
   handle.disconnectDevice = (deviceId: string): void => {
     viewers.closeDevice(deviceId);
     // Revoking a capability has to reach the streams it already granted.

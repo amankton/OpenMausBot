@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { ArrowUpRight, ChevronDown, RefreshCw, Users } from "lucide-react";
 import { recoverBlankFrame } from "@/lib/blank-frame-recovery";
 import { api } from "@/state/store";
@@ -105,29 +105,6 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
 
   return <main className="relative flex h-dvh min-h-0 flex-col overflow-hidden bg-app text-ink">
     <h1 className="sr-only">Chief shared workspace</h1>
-    <header aria-label="Chief workspace controls" className={slot ? "absolute z-50" : "relative z-50 flex h-11 shrink-0 items-center border-b border-hairline/50 bg-panel px-4"}
-      style={slot ? { left: slot.x, top: slot.y, width: slot.width, height: slot.height } : undefined}>
-      <div ref={menu} className="relative h-full">
-        <button ref={trigger} type="button" aria-label="Chief workspace menu" aria-expanded={open} aria-controls={menuId}
-          onClick={() => setOpen(value => !value)} className="flex h-full min-h-8 w-full items-center gap-2 rounded-md bg-panel px-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent">
-          <img src="/brand/chief-avatar-ink.svg" alt="" className="size-6" />Chief<ChevronDown size={13} aria-hidden="true" />
-        </button>
-        <nav id={menuId} aria-label="Workspace actions" hidden={!open} className="absolute left-0 top-full mt-1 max-h-[calc(100dvh-4rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-hairline bg-panel p-2 shadow-lg">
-          <div className="px-3 py-2"><p className="text-sm font-semibold">Chief Executive Suite</p><p className="text-xs text-ink-secondary">Shared workspace</p></div>
-          <a className={menuLinkClass} href="/" onClick={() => setOpen(false)}>Open personal workspace<ArrowUpRight size={14} /></a>
-          {onConnections && <button type="button" className={menuLinkClass} onClick={() => { setOpen(false); onConnections(); }}>Apps / Connections</button>}
-          <button type="button" className={menuLinkClass} aria-expanded={pairingOpen} onClick={() => setPairingOpen(value => !value)}>Connect personal Chief<ChevronDown size={14} /></button>
-          {pairingOpen && <ChiefPairingPanel />}
-          {url && <a className={menuLinkClass} href={url} rel="noreferrer" onClick={() => setOpen(false)}>Open shared workspace directly<ArrowUpRight size={14} /></a>}
-          <button className={`${linkClass} w-full justify-start border-0`} type="button" disabled={loading} onClick={onRetry}><RefreshCw size={14} />{loading ? "Checking connection…" : "Retry connection"}</button>
-          {url && <button type="button" className={menuLinkClass} onClick={() => {
-            setSlot(null); setGeneration(value => value + 1); setOpen(false);
-          }}>Reload workspace<RefreshCw size={14} /></button>}
-          {url && <p className="px-3 py-2 text-xs text-ink-secondary">Reloading may discard unsaved workspace edits.</p>}
-          <p className="mt-2 border-t border-hairline/50 px-3 py-3 text-xs leading-relaxed text-ink-secondary">Your shared workspace has its own sign-in. Camera and microphone stay off until you turn them on. Screen sharing requires your action and browser permission.</p>
-        </nav>
-      </div>
-    </header>
     {url ? <iframe
         ref={frame}
         key={`${url}:${generation}`}
@@ -149,6 +126,30 @@ export function SharedWorkspaceSurface({ status, error, loading, origin, onRetry
         <div className="mt-5 flex flex-wrap gap-2"><button className={linkClass} type="button" onClick={onRetry} disabled={loading}><RefreshCw size={14} />Retry</button></div>
       </div>
     </section>}
+    {/* Electron resolves drag regions in DOM order; place this no-drag control after the embedded header. */}
+    <header aria-label="Chief workspace controls" className={slot ? "absolute z-50" : "relative order-first z-50 flex h-11 shrink-0 items-center border-b border-hairline/50 bg-panel px-4"}
+      style={{ ...(slot ? { left: slot.x, top: slot.y, width: slot.width, height: slot.height } : {}), WebkitAppRegion: "no-drag" } as CSSProperties}>
+      <div ref={menu} className="relative h-full">
+        <button ref={trigger} type="button" aria-label="Chief workspace menu" aria-expanded={open} aria-controls={menuId}
+          onClick={() => setOpen(value => !value)} className="flex h-full min-h-8 w-full items-center gap-2 rounded-md bg-panel px-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent">
+          <img src="/brand/chief-avatar-ink.svg" alt="" className="size-6" />Chief<ChevronDown size={13} aria-hidden="true" />
+        </button>
+        <nav id={menuId} aria-label="Workspace actions" hidden={!open} className="absolute left-0 top-full mt-1 max-h-[calc(100dvh-4rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-hairline bg-panel p-2 shadow-lg">
+          <div className="px-3 py-2"><p className="text-sm font-semibold">Chief Executive Suite</p><p className="text-xs text-ink-secondary">Shared workspace</p></div>
+          <a className={menuLinkClass} href="/" onClick={() => setOpen(false)}>Open personal workspace<ArrowUpRight size={14} /></a>
+          {onConnections && <button type="button" className={menuLinkClass} onClick={() => { setOpen(false); onConnections(); }}>Apps / Connections</button>}
+          <button type="button" className={menuLinkClass} aria-expanded={pairingOpen} onClick={() => setPairingOpen(value => !value)}>Connect personal Chief<ChevronDown size={14} /></button>
+          {pairingOpen && <ChiefPairingPanel />}
+          {url && <a className={menuLinkClass} href={url} rel="noreferrer" onClick={() => setOpen(false)}>Open shared workspace directly<ArrowUpRight size={14} /></a>}
+          <button className={`${linkClass} w-full justify-start border-0`} type="button" disabled={loading} onClick={onRetry}><RefreshCw size={14} />{loading ? "Checking connection…" : "Retry connection"}</button>
+          {url && <button type="button" className={menuLinkClass} onClick={() => {
+            setSlot(null); setGeneration(value => value + 1); setOpen(false);
+          }}>Reload workspace<RefreshCw size={14} /></button>}
+          {url && <p className="px-3 py-2 text-xs text-ink-secondary">Reloading may discard unsaved workspace edits.</p>}
+          <p className="mt-2 border-t border-hairline/50 px-3 py-3 text-xs leading-relaxed text-ink-secondary">Your shared workspace has its own sign-in. Camera and microphone stay off until you turn them on. Screen sharing requires your action and browser permission.</p>
+        </nav>
+      </div>
+    </header>
   </main>;
 }
 

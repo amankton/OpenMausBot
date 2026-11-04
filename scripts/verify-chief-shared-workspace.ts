@@ -82,6 +82,21 @@ try {
   });
   const personal = await context.newPage();
   await personal.goto(`${origin}/`);
+  if (process.argv.includes("--menu-only")) {
+    await personal.goto(hostUrl);
+    await expect(personal.locator('iframe[title="Chief organization workspace"]')).toBeVisible();
+    const menu = personal.getByRole("button", { name: "Chief workspace menu", exact: true });
+    expect(await menu.evaluate(element => getComputedStyle(element.parentElement!.parentElement!).getPropertyValue("-webkit-app-region"))).toBe("no-drag");
+    expect(await menu.evaluate(element => Boolean(document.querySelector('iframe')!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    await menu.click();
+    await expect(personal.getByRole("navigation", { name: "Workspace actions" })).toBeVisible();
+    await expect(personal.getByRole("link", { name: "Open personal workspace" })).toBeVisible();
+    await personal.keyboard.press("Escape");
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    const receipt = { passed: true, syntheticOnly: true, checks: ["no-drag host controls follow the iframe", "menu opens and shows workspace actions", "Escape closes the menu"], serverLog: fixture.info.logPath };
+    writeFileSync(join(evidenceDir, "chief-workspace-menu.json"), JSON.stringify(receipt, null, 2));
+    console.log(JSON.stringify(receipt));
+  } else {
   const launch = personal.getByRole("link", { name: "Shared workspace", exact: true });
   await expect(launch).toBeVisible({ timeout: 30000 });
   const popupPromise = context.waitForEvent("page");
@@ -179,6 +194,7 @@ try {
     checks: ["trusted local owner API and cross-site denial", "real server availability probe", "sidebar opens separate host window and personal Team map remains", "retired Shared Office navigation is absent and Team map opens Shared Workspace", "legacy office URL redirects to workspace without forwarding old credentials", "interactive iframe on distinct hostname", "no cookies/authorization/referrer forwarded", "no parent access or private storage", "sandbox blocks top navigation", "media and local-network policy delegated only to exact iframe origin; clipboard/geolocation remain denied", "no initial media acquisition; explicit fake camera/microphone start succeeds and Stop ends all tracks", "successful availability retry retains frame and unsaved draft", "390px layout", "unavailable state unmounts iframe", "retry recovers"], fakeDevicesOnly: true, screenCaptureInvoked: false, mediaStarted, isolation, requests };
   writeFileSync(join(evidenceDir, "chief-branded-workspace-host.json"), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify(evidence, null, 2));
+  }
 } finally {
   await browser?.close();
   await ui?.close();
