@@ -15416,7 +15416,7 @@ const cloudMoveRoutes = createCloudMoveRoutes({
 
 // Route modules (server/routes/README.md). `workspaceAccess` is assigned at
 // boot, after this line, so the dependency reads it per request.
-ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1"));
+ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1" || process.env.CHIEF_OFFICE_ENABLED === "1", fetch, process.env.CHIEF_OFFICE_ENABLED === "1" ? 18910 : 8820));
 const chiefOfficeRoutes = createOfficeRoutes(DATA_DIR, { enabled: process.env.CHIEF_OFFICE_ENABLED === "1" && !HOSTED_WORKSPACE && !CLOUD_HOME });
 const chiefSharedWorkspaceRoutes = createSharedWorkspaceRoutes({ localOnly: !HOSTED_WORKSPACE && !CLOUD_HOME });
 ROUTES.push(createChiefPairingRoutes({ directory: DATA_DIR, origin: process.env.CHIEF_LIFECYCLE_ORIGIN,
