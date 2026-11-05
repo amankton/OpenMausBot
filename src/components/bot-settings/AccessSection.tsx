@@ -702,6 +702,11 @@ export function AccessSection({
             <Plus size={14} /> {t("botAccess.connectApp")}
           </button>
         )}
+        {!draft && <div className="mt-3 space-y-2 border-t border-hairline/40 pt-3">
+          <p className="text-[13px] font-medium text-ink">Account-scoped email trust</p>
+          <p className="text-[11.5px] text-ink-secondary">Review the exact agent, verified mailboxes and email operations in Chief work. Existing app and tool restrictions remain in force; mailbox writes still ask each time.</p>
+          <button type="button" className="rounded-lg bg-control px-3 py-2 text-[13px] text-ink hover:bg-raised-hover" onClick={() => { dispatch({ type: "toggleSettings", open: false }); dispatch({ type: "showExecutiveWork" }); }}>Review bounded email trust</button>
+        </div>}
       </div>
 
       <McpServersCard bot={bot} patch={patch} />

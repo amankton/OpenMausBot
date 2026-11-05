@@ -23,7 +23,7 @@ function AlwaysOn() {
  * itself or read the other workspaces saved on this computer. Outside the
  * desktop app there is nothing to switch; a Cloud home still says what it is,
  * and whose it is when this browser signed in from the Cloud page (`owner`). */
-export function DesktopWorkspaceSwitcher({ compact = false, inline = false, cloudHome = false, owner = null }: { compact?: boolean; inline?: boolean; cloudHome?: boolean; owner?: string | null }) {
+export function DesktopWorkspaceSwitcher({ compact = false, inline = false, menuItem = false, cloudHome = false, owner = null }: { compact?: boolean; inline?: boolean; menuItem?: boolean; cloudHome?: boolean; owner?: string | null }) {
   const bridge = window.ogb?.workspaces;
   const [current, setCurrent] = useState<{ local: boolean; name: string; origin?: string } | null>(null);
   const [open, setOpen] = useState(false);
@@ -61,6 +61,19 @@ export function DesktopWorkspaceSwitcher({ compact = false, inline = false, clou
     setError(""); setOpen(true);
     void bridge.menu().catch(() => setError("Could not open the server list. Try the Server menu.")).finally(() => setOpen(false));
   };
+  if (menuItem) return <div className="border-t border-hairline/50 mt-1.5 pt-1.5">
+    <button type="button" role="menuitem" aria-label={`Switch server: ${shown}`} aria-haspopup="menu" aria-expanded={open}
+      title={title} onClick={openMenu}
+      className="flex w-full items-center gap-3 px-3.5 py-2 text-left text-[14px] text-ink hover:bg-raised/70">
+      <Icon size={16} aria-hidden="true" className="shrink-0 text-ink-secondary" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span>Switch server</span>
+        <span className="truncate text-[12px] text-ink-secondary">{shown}</span>
+      </span>
+      <ChevronDown size={13} aria-hidden="true" className="shrink-0 text-ink-secondary" />
+    </button>
+    {error && <p role="alert" className="px-3.5 pb-2 text-[11px] text-danger">{error}</p>}
+  </div>;
   if (inline) return <div data-workspace-switcher="inline" className="flex min-w-0">
     <button type="button" aria-label={`Switch server: ${shown}`} aria-haspopup="menu" aria-expanded={open} data-cloud-home-indicator={cloudHome || undefined}
       title={title} onClick={openMenu}

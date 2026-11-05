@@ -2247,23 +2247,14 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
           spans the sidebar's full height. */}
       <GlassScrollFrame className="flex-1">
       <GlassBar edge="top">
-      {/* One top row: [traffic lights] [drag space] [server] [buttons].
-          macOS owns inset traffic lights; Linux/Windows use native chrome.
-          On macOS the row is twice the lights' centre line tall, so
-          items-center puts every control on that line. The server switcher
-          sits at the right, just left of the buttons, so the left stays an
-          empty drag region clear of the lights; where the row is too tight
-          for its name and a visible gap, it shows icon + chevron only, and
-          the buttons never wrap. The row is `relative` so the switcher's
-          error note hangs inside the sidebar.
-          The icons rail is too narrow for a row and stacks instead, server
-          switcher underneath. */}
+      {/* Keep the native window drag space clear of the sidebar controls.
+          Server switching lives in the chat header's More menu. */}
       <div
         data-sidebar-top-row
         className={cn(
           "flex items-center",
           density === "icons" ? "flex-col gap-1 px-2 pt-3.5 pb-1" : "relative pl-4 pr-2",
-          density !== "icons" && !macInset && "h-12",
+          density !== "icons" && !macInset && (capabilities.windowChrome === "win-caption" ? "h-8" : "h-12"),
         )}
         style={density !== "icons" && macInset ? { ...windowDragStyle, height: MAC_TRAFFIC_LIGHT_CENTER_Y * 2 } : windowDragStyle}
       >
@@ -2278,30 +2269,14 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
             <span className="size-3 rounded-full bg-[#28c840]" />
           </div>
         ) : null}
-        {density !== "icons" && (
-          // Everything between the lights and the buttons; the switcher's
-          // pill reads this slot's width (container `sidebar-top`). Below
-          // 164px, its 140px cap plus a 24px drag gap, the pill drops its name
-          // for icon + chevron rather than fill the slot up to the lights. On
-          // macOS at 320px the slot is 121px in Advanced, 189px in Simple.
-          <div data-sidebar-top-slot className="@container/sidebar-top flex min-w-0 flex-1 items-center">
-            {/* Empty, so it stays a drag region; it takes the slack, which
-                keeps the switcher beside the buttons. */}
-            <div data-sidebar-top-spacer className="min-w-0 flex-1" />
-            {/* Gives way first when the row is tight; only the switcher's own
-                button opts out of the drag region. */}
-            <div data-sidebar-top-switcher className="flex min-w-0 max-w-[140px] items-center">
-              <DesktopWorkspaceSwitcher inline cloudHome={state.config?.cloudHome === true} owner={cloudOwner} />
-            </div>
-          </div>
-        )}
+        {density !== "icons" && <div data-sidebar-top-spacer className="min-w-0 flex-1" />}
         <div
           data-sidebar-top-buttons
           className={cn("relative flex shrink-0 items-center", density === "icons" ? "flex-col gap-1" : "ml-0.5 gap-0.5")}
           style={windowNoDragStyle}
         >
-          {/* Simple mode keeps only "+". Expand stays so an icons rail is never a dead end. */}
-          {!collapseToIcons && (advanced || density === "icons") && <button
+          {/* Sidebar collapse and expand stay available in both interface modes. */}
+          {!collapseToIcons && <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={density === "icons" ? t("sidebar.density.expand") : t("sidebar.density.collapseAria")}
@@ -2429,8 +2404,11 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
         </div>
       </div>
 
-      {density === "icons" && <DesktopWorkspaceSwitcher compact cloudHome={state.config?.cloudHome === true} owner={cloudOwner} />}
+      {!window.ogb?.workspaces && <DesktopWorkspaceSwitcher compact={density === "icons"} cloudHome={state.config?.cloudHome === true} owner={cloudOwner} />}
       <OrganizationIdentity compact={density === "icons"} />
+      <div className="flex shrink-0 items-center justify-center px-4 py-3" aria-label="Chief Executive Suite">
+        <ChiefBrand compact={density === "icons"} className={density === "icons" ? "size-8" : "h-7 w-40"} />
+      </div>
       {/* Search */}
       <div className={cn("pt-1 pb-3", density === "icons" ? "hidden" : "px-3")}>
         <div className="flex items-center gap-2 rounded-md border border-hairline/40 bg-inset/40 px-2.5 py-1.5 focus-within:border-focus">
@@ -2451,7 +2429,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
           data-sidebar-universal-pins=""
           // vh, not %: inside the glass head a percentage has no height to
           // resolve against and would stop capping the list.
-          className="max-h-[min(40vh,280px)] shrink-0 overflow-y-auto border-b border-hairline/40 px-2 pb-2"
+          className={cn("max-h-[min(40vh,280px)] shrink-0 overflow-y-auto border-b border-hairline/40 pb-2", density === "icons" ? "px-2" : "px-3")}
         >
           {density !== "icons" && !pinnedCircles && (
             <div className="px-2 pb-1 pt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-secondary">
@@ -2489,9 +2467,6 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
           onToggle={layoutInteractive ? () => toggleSection(PINNED_THREADS_SECTION_ID) : undefined}
         />
       )}
-      <div className="flex shrink-0 items-center justify-center px-4 py-3" aria-label="Chief Executive Suite">
-        <ChiefBrand compact={density === "icons"} className={density === "icons" ? "size-8" : "h-7 w-40"} />
-      </div>
       </GlassBar>
 
       {density !== "icons" && <div
@@ -2532,7 +2507,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
       />}
 
       {/* Bot list */}
-      <GlassScroller className="px-2">
+      <GlassScroller className={density === "icons" ? "px-2" : "px-3"}>
         <div className="flex flex-col gap-0.5">
           {matchingBots.length === 0 && visibleGroups.length === 0 && q && q.length < MIN_QUERY && (
             <div className="px-3 py-6 text-center text-[13px] text-ink-secondary">{t("sidebar.noMatch", { query })}</div>
@@ -2580,7 +2555,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
                 onDrop={dropSection}
                 className={cn(
                   "flex flex-col gap-0.5",
-                  density !== "icons" && index > 0 && "pt-3",
+                  density !== "icons" && index > 0 && (collapsed ? "pt-1" : "pt-3"),
                 )}
               >
                 {dropTarget?.id === id && dropTarget.place === "before" && draggingSectionId !== id && (

@@ -1,0 +1,13 @@
+{
+  "id": "scan-mail",
+  "name": "Scan Mail",
+  "version": "1.0.0",
+  "description": "Discover correspondence through identity-verified read-only mailbox scans.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "scan mail",
+    "triage",
+    "inbox"
+  ],
+  "requiredCapabilities": []
+}

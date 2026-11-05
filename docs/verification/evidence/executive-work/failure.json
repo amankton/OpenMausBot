@@ -1,0 +1,74 @@
+{
+  "error": "no element is named \"Review this item\"",
+  "info": {
+    "ok": true,
+    "ui": "local-evidence:ui.json",
+    "url": "http://127.0.0.1:22058",
+    "previewUrl": "http://127.0.0.1:5173/__threads.html",
+    "botId": "synthetic-fixture-id",
+    "dataDir": "local-evidence:openmausbot-verify-data-2HsTMd",
+    "logPath": "local-evidence:server-1793864058454-64636.log"
+  },
+  "commands": [
+    {
+      "command": "ui viewport",
+      "width": "1440",
+      "height": "1000"
+    },
+    {
+      "command": "ui viewport",
+      "width": "239",
+      "height": "844"
+    },
+    {
+      "command": "ui click",
+      "name": "Chief work"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Save settings"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "executive-work",
+      "operation": "create"
+    },
+    {
+      "command": "ui click",
+      "name": "Refresh"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Review this item"
+    }
+  ],
+  "diagnostics": ""
+}

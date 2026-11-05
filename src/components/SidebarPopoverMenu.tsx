@@ -53,12 +53,14 @@ export function SidebarPopoverMenu({
   openOnHover = false,
   placement = "above",
   renderTrigger,
+  footer,
 }: {
   /** "above" stretches over the trigger's width and opens upward (the
    * sidebar's profile menu); "below" hangs a fixed-width sheet under the
    * trigger's right edge (a header icon). */
   placement?: "above" | "below";
   items: SidebarMenuItem[];
+  footer?: React.ReactNode;
   ariaLabel: string;
   openOnHover?: boolean;
   renderTrigger: (state: { open: boolean }) => React.ReactNode;
@@ -190,6 +192,7 @@ export function SidebarPopoverMenu({
               </button>
             </div>
           ))}
+          {footer}
         </div>
       )}
     </div>

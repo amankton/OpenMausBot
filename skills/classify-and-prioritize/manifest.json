@@ -1,0 +1,13 @@
+{
+  "id": "classify-and-prioritize",
+  "name": "Classify And Prioritize",
+  "version": "1.0.0",
+  "description": "Review source threads and publish concise actionable correspondence into the shared queue.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "triage",
+    "classify mail",
+    "prioritize email"
+  ],
+  "requiredCapabilities": []
+}

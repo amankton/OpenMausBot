@@ -1,0 +1,248 @@
+{
+  "passed": true,
+  "attemptId": "2026-11-05T07:37:41.713Z",
+  "syntheticOnly": true,
+  "realApp": true,
+  "fixtureUrl": "http://127.0.0.1:20698",
+  "previewUrl": "http://127.0.0.1:5173/__threads.html",
+  "dataDir": "local-evidence:openmausbot-verify-data-3bGfli",
+  "serverLog": "local-evidence:server-1793864261727-70660.log",
+  "checks": [
+    "real Chief work navigation",
+    "unavailable mailbox scan disabled",
+    "settings revision and preferred reviewer save and reload",
+    "proposed cadence creates no routine",
+    "canonical queue create and owner-confirmed completion",
+    "date-only deadline preserved",
+    "390px viewport without horizontal overflow and with vertical scrolling"
+  ],
+  "settingsRevision": 1,
+  "workItemId": "synthetic-fixture-id",
+  "completionRevision": 2,
+  "commands": [
+    {
+      "command": "ui viewport",
+      "width": "1440",
+      "height": "1000"
+    },
+    {
+      "command": "ui viewport",
+      "width": "239",
+      "height": "844"
+    },
+    {
+      "command": "ui click",
+      "name": "Chief work"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Save settings"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "executive-work",
+      "operation": "create"
+    },
+    {
+      "command": "ui click",
+      "name": "Refresh"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui type",
+      "name": "Decision reason"
+    },
+    {
+      "command": "ui click",
+      "name": "Record decision"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "executive-work",
+      "operation": "read"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Chief work"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui viewport",
+      "width": "390",
+      "height": "844"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui console"
+    }
+  ],
+  "console": {
+    "ok": true,
+    "lifecycle": {
+      "effectiveLaunch": {
+        "browserLaunched": true,
+        "engine": "chrome",
+        "launchHash": 18094814307121914000
+      },
+      "launched": false,
+      "relaunchedBrowser": false,
+      "restartedBackground": false,
+      "restoreStatus": "not_configured",
+      "reused": true,
+      "saveStatus": "not_attempted"
+    },
+    "messages": [
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "[vite] connecting..."
+          }
+        ],
+        "text": "[vite] connecting...",
+        "type": "debug"
+      },
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "[vite] connected."
+          }
+        ],
+        "text": "[vite] connected.",
+        "type": "debug"
+      },
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools"
+          },
+          {
+            "type": "string",
+            "value": "font-weight:bold"
+          }
+        ],
+        "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+        "type": "info"
+      },
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "[vite] connecting..."
+          }
+        ],
+        "text": "[vite] connecting...",
+        "type": "debug"
+      },
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "[vite] connected."
+          }
+        ],
+        "text": "[vite] connected.",
+        "type": "debug"
+      },
+      {
+        "args": [
+          {
+            "type": "string",
+            "value": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools"
+          },
+          {
+            "type": "string",
+            "value": "font-weight:bold"
+          }
+        ],
+        "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+        "type": "info"
+      }
+    ]
+  },
+  "fixtureDataRemoved": true
+}

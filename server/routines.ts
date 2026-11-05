@@ -1749,6 +1749,21 @@ export class RoutineManager {
     return cloneRun(run);
   }
 
+  /** Completion of a harness-owned read-only operation; no provider turn ran. */
+  finishReadOnlyRun(threadId: string, output: string): RoutineRun | null {
+    const run = this.runs.find(r => r.threadId === threadId && r.target === "bot" && ["running", "waiting"].includes(r.status));
+    if (!run) return null;
+    run.status = "completed";
+    run.finishedAt = this.now();
+    run.output = redactSecretsInText(output).slice(0, 2_000);
+    run.error = undefined;
+    run.attention = undefined;
+    this.save();
+    this.emitRun(run);
+    queueMicrotask(() => void this.tick());
+    return cloneRun(run);
+  }
+
   failThread(threadId: string, message: string) {
     const run = this.runs.find((r) => r.threadId === threadId && ["running", "waiting"].includes(r.status));
     if (!run) return;

@@ -1,0 +1,110 @@
+{
+  "passed": true,
+  "version": "0.1.103",
+  "artifact": "win-unpacked/Chief Executive Suite.exe",
+  "artifactSource": "customized baseline plus reviewed feature; clean feature checkout alone is not asserted to reproduce this binary",
+  "generatedAt": "2026-11-05T10:19:25.906Z",
+  "disposableHome": true,
+  "cwdOutsideCheckout": true,
+  "actualBackendSetupAuthorizationTested": true,
+  "resourcesUnchangedDuringVerification": true,
+  "fixtureDataRemoved": false,
+  "fixtureRetention": "Synthetic native evidence retained locally; application closed by the verifier",
+  "checks": [
+    "isolated packaged Electron profile",
+    "fresh onboarding loads with Chief branding",
+    "profile saved, OSS edition, standalone navigation",
+    "settings and profile menu have no upstream product offers",
+    "visible native phone control grants and revokes through the real isolated companion",
+    "profile and onboarding persist after full application restart",
+    "Simple-mode sidebar collapse and expand work and remain available after reload",
+    "Windows sidebar: 32px top row, 34px collapsed groups, 12px gutters, aligned footer labels and no duplicate server selector",
+    "packaged Chief work routes, saved reviewer and disabled unconfigured mail scans",
+    "packaged enhancement catalog loads all8 exact bundled skills outside checkout; same-agent selection, complete review,390px layout and cancellation preserve state",
+    "packaged owner UI applies exact reviewed profiles/skills and separately verifies readback",
+    "packaged setup/trust reads and revoke require desktop owner proof; owner trust reads work and revoke safely refuses an absent policy without provider access",
+    "full restart preserves exact setup and receipt; identical reviewed retry is idempotent; all existing models, manual settings, account scope, notifications and routine count remain unchanged"
+  ],
+  "setupEvidence": {
+    "providerCredentialsProvided": false,
+    "modelGenerationRequestedByVerifier": false,
+    "ownerCredentialsProvided": false,
+    "bundledSkills": 8,
+    "outsideCheckout": true,
+    "sameAgentBothRoles": true,
+    "layout390": {
+      "width": 350,
+      "clientWidth": 348,
+      "scrollWidth": 348
+    },
+    "applyReadbackVerified": true,
+    "restartAndIdempotentRetryVerified": true,
+    "modelSelectionsPreserved": true,
+    "manualDefaultsPreserved": true,
+    "ownerProofVerified": true,
+    "positiveMailboxGrantTested": false,
+    "positiveRevokeTested": false,
+    "noProviderReason": "The sealed fresh profile has no provider credentials or verified mailbox. Positive grants/revocation remain covered by separate route/store and synthetic UI fixtures."
+  },
+  "packagePolicy": {
+    "product": "Chief Executive Suite",
+    "enterprise": false,
+    "sharedWorkspace": false,
+    "upstreamUpdateFeed": false,
+    "notices": true,
+    "reviewedSkills": 8,
+    "enhancementRuntime": true
+  },
+  "resourceHashes": [
+    {
+      "file": "Chief Executive Suite.exe",
+      "sha256": "1fb02f8a77923c2ec43c1e8b20419e32162e5f915555e8293214cec0aa258467"
+    },
+    {
+      "file": "resources/server/index.js",
+      "sha256": "a133c5104bff420da7e195ec9cc9b55154565945526f5bfa552f1f6c417b0078"
+    },
+    {
+      "file": "resources/ui/index.html",
+      "sha256": "d62275502116e2f4e53e78789bb8fa29b0285e55478c51e2de39ea0603ae110f"
+    },
+    {
+      "file": "resources/skills/executive-check-in/SKILL.md",
+      "sha256": "f9f21ac4c736cbb58e2ca219be4b7c6544d24f0c00cfd35aa99c73f3e3e1efbc"
+    },
+    {
+      "file": "resources/skills/execute-and-verify/SKILL.md",
+      "sha256": "cbce3a83b59642312f0feac9b6eafe1830c13a9b7ded6d483741b766fa111643"
+    },
+    {
+      "file": "resources/skills/coordinate-and-review/SKILL.md",
+      "sha256": "6194d01697e2fa52cc9aeba91d5e4723633ef70b2a87af58dfa5ec59e943a8f2"
+    },
+    {
+      "file": "resources/skills/decision-brief/SKILL.md",
+      "sha256": "0e810681415a339fbb5312f80d1074536e0bab5b1d2178786ebf688cd3df1a19"
+    },
+    {
+      "file": "resources/skills/scan-mail/SKILL.md",
+      "sha256": "2e25014a9340e4b262ba05c2c4357cf92c122ea04c7eb26d5a921ada2d7d03a4"
+    },
+    {
+      "file": "resources/skills/classify-and-prioritize/SKILL.md",
+      "sha256": "a8b91bf0a9467b3ba78e8c94f929d472b710b213939d1e6b4abe3496f9126914"
+    },
+    {
+      "file": "resources/skills/prepare-reply/SKILL.md",
+      "sha256": "3f3495fda2853283eeeb90ad03d14d3d3157ef6257273f79ee7c2caebc971445"
+    },
+    {
+      "file": "resources/skills/reconcile-follow-ups/SKILL.md",
+      "sha256": "84fda19b10ed6ca97635df9da2a8af784f0263923c012df3e68865ce4d006ba8"
+    }
+  ],
+  "limitations": [
+    "Synthetic local workspace; no owner data or credentials provided",
+    "Positive live mailbox identity/grant/revoke and real model quality are not established",
+    "Final NSIS installer assembly and installed-owner readback require separate evidence",
+    "Full source runtime activation is a separate gate"
+  ]
+}

@@ -429,6 +429,10 @@ const DESKTOP_OWNER_HEADER = "x-openmausbot-desktop-owner";
 
 function mutatingPublicRoute(method: string, path: string): boolean {
   const upper = method.toUpperCase();
+  // Mailbox identities and exact-action journal are private owner metadata.
+  // Packaged reads require the same desktop proof as a configuration write.
+  if ((upper === "GET" || upper === "HEAD") && /^\/api\/bots\/[\w-]+\/connector-trust(?:\/|$)/.test(path)) return true;
+  if ((upper === "GET" || upper === "HEAD") && /^\/api\/chief-enhancement-setup(?:\/|$)/.test(path)) return true;
   // This legacy polling endpoint is spelled GET but synchronizes upstream
   // state into the transcript and can resume a paused turn. Classify by
   // effect, not verb, until clients migrate to a POST refresh route.

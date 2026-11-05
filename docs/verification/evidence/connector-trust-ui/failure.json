@@ -1,0 +1,7 @@
+{
+  "attemptId": "2026-11-05T09:26:50.112Z",
+  "error": "agent-browser open failed: Operation timed out. The page may still be loading or the element may not exist.",
+  "commands": [],
+  "httpCalls": [],
+  "diagnostics": ""
+}

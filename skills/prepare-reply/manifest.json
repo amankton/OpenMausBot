@@ -1,0 +1,12 @@
+{
+  "id": "prepare-reply",
+  "name": "Prepare Reply",
+  "version": "1.0.0",
+  "description": "Prepare reviewable reply text tied to the exact mailbox and source revision.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "reply",
+    "draft email"
+  ],
+  "requiredCapabilities": []
+}

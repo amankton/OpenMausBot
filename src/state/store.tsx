@@ -928,7 +928,7 @@ export interface AppState {
   liveCallLookupSeq: number;
   /** selected chat — a bot id OR a group id */
   selectedId: string;
-  activeView: "chat" | "team-map" | "routines";
+  activeView: "chat" | "team-map" | "routines" | "executive-work";
   routines: Routine[];
   routineRuns: RoutineRun[];
   routinesLoadState: "loading" | "ready" | "error";
@@ -1102,6 +1102,7 @@ export type Action =
   | { type: "sections"; sections: string[] }
   | { type: "sectionDeleted"; section: string; sections: string[] }
   | { type: "showRoutines"; section?: "schedule" | "logs"; view?: "calendar" | "list"; botId?: string; routineId?: string; runStatus?: RoutineRunStatusFilter }
+  | { type: "showExecutiveWork" }
   | { type: "showTeamMap" }
   | { type: "showChat" }
   | { type: "routinesHydrated"; routines: Routine[]; runs: RoutineRun[] }
@@ -1549,6 +1550,8 @@ export function reducer(state: AppState, action: Action): AppState {
       };
     case "showChat":
       return state.activeView === "chat" ? state : { ...state, activeView: "chat" };
+    case "showExecutiveWork":
+      return { ...state, activeView: "executive-work", settingsOpen: false, computerOpen: false, inspectorOpen: false, activityOpen: false, appSettingsOpen: false, pluginsOpen: false, triggersOpen: false };
     case "showTeamMap":
       return {
         ...state,

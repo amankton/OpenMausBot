@@ -1,3 +1,4 @@
+import { readConnectorResponseBounded } from "./connector-response.ts";
 // A project API key (ak_…) creates/reuses one Composio Session. That
 // Session owns connection state, auth links and the MCP endpoint.
 import { saveConfig, type AppConfig } from "./config.ts";
@@ -646,7 +647,8 @@ export async function relayMcp(
   cfg: AppConfig,
   payload: JsonValue,
   transportSessionId?: string,
-  beforeSend?: () => void,
+  beforeSend?: () => void | Promise<void>,
+  finalBeforeSend?: () => void,
 ): Promise<{ status: number; bytes: Uint8Array; contentType: string; transportSessionId?: string }> {
   const apiKey = projectApiKey(cfg);
   let url: string;
@@ -679,7 +681,9 @@ export async function relayMcp(
   }
   // Session discovery can await network I/O. Turn authority and mutable
   // permissions must be checked after it, immediately before dispatch.
-  beforeSend?.();
+  const preparation = beforeSend?.();
+  if (preparation) await preparation;
+  finalBeforeSend?.();
   const response = await fetch(url, {
     method: "POST",
     headers,
@@ -688,7 +692,7 @@ export async function relayMcp(
   });
   const declared = Number(response.headers.get("content-length") ?? "0");
   if (declared > 20 * 1024 * 1024) throw new Error("Connected-app response exceeded 20 MB");
-  const bytes = new Uint8Array(await response.arrayBuffer());
+  const bytes = await readConnectorResponseBounded(response, 20 * 1024 * 1024);
   if (bytes.byteLength > 20 * 1024 * 1024) throw new Error("Connected-app response exceeded 20 MB");
   if (forwardedTransportSessionId) rememberTransportSession(forwardedTransportSessionId, identity);
   const nextTransportSessionId = response.headers.get("mcp-session-id") ?? undefined;
@@ -961,6 +965,9 @@ let connectorToolsCache: { at: number; identity: string; services: Record<string
  * credential fingerprint: a project key or the managed broker. Cached
  * inventories are keyed by it, so a config switch can never serve the
  * previous backend's tools for another cache window. */
+/** Opaque identity of the effective credential/backend; never a credential. */
+export function connectorBackendIdentity(cfg: AppConfig): string { return connectorToolsIdentity(cfg); }
+
 function connectorToolsIdentity(cfg: AppConfig): string {
   const apiKey = projectApiKey(cfg);
   if (apiKey) return backendFingerprint("project-tools", apiBase(), apiKey);

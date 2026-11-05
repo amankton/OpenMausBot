@@ -1,0 +1,227 @@
+{
+  "passed": true,
+  "attemptId": "2026-11-05T09:28:36.188Z",
+  "syntheticTrustHttpStub": true,
+  "realAppAndDisposableServer": true,
+  "actualBackendTrustAuthorizationTestedHere": false,
+  "checks": [
+    "explicit existing agent selection",
+    "unverified account disabled",
+    "complete exact review before mutation",
+    "Cancel default focus and no write",
+    "stale revision stops and requires refresh",
+    "grant readback",
+    "revocation during provider outage",
+    "revoked tombstone persists without legacy fallback",
+    "390px review layout",
+    "profiles models generic grants and routines unchanged"
+  ],
+  "fixtureUrl": "http://127.0.0.1:19954",
+  "previewUrl": "http://127.0.0.1:5173/__threads.html",
+  "serverLog": "local-evidence:server-1793870916204-82820.log",
+  "commands": [
+    {
+      "command": "ui viewport"
+    },
+    {
+      "command": "ui click",
+      "name": "Chief work"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Select mailbox reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Read mailbox identity for reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Search mail for reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Review bounded access"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Cancel trust review"
+    },
+    {
+      "command": "ui click",
+      "name": "Review bounded access"
+    },
+    {
+      "command": "ui click",
+      "name": "Save reviewed bounded access"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui click",
+      "name": "Refresh trust and identities"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Select mailbox reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Read mailbox identity for reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Search mail for reader@example.test"
+    },
+    {
+      "command": "ui click",
+      "name": "Review bounded access"
+    },
+    {
+      "command": "ui click",
+      "name": "Save reviewed bounded access"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Refresh trust and identities"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Review revocation"
+    },
+    {
+      "command": "ui viewport"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Revoke reviewed bounded access"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui click",
+      "name": "Refresh trust and identities"
+    },
+    {
+      "command": "ui snapshot"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui eval"
+    },
+    {
+      "command": "ui screenshot"
+    }
+  ],
+  "httpCalls": [
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    },
+    {
+      "method": "PUT",
+      "botId": "synthetic-fixture-id",
+      "expectedRevision": 0,
+      "catalogFingerprint": "796c3034d1b689b12aa19d8d36643e77b4cc7e40c082638f8b4e43b537cb6d88",
+      "grants": [
+        {
+          "accountId": "synthetic-mailbox-one",
+          "identity": "reader@example.test",
+          "operations": [
+            "read-profile",
+            "search-mail"
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    },
+    {
+      "method": "PUT",
+      "botId": "synthetic-fixture-id",
+      "expectedRevision": 1,
+      "catalogFingerprint": "796c3034d1b689b12aa19d8d36643e77b4cc7e40c082638f8b4e43b537cb6d88",
+      "grants": [
+        {
+          "accountId": "synthetic-mailbox-one",
+          "identity": "reader@example.test",
+          "operations": [
+            "read-profile",
+            "search-mail"
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    },
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    },
+    {
+      "method": "POST",
+      "botId": "synthetic-fixture-id",
+      "action": "revoke",
+      "expectedRevision": 2
+    },
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    },
+    {
+      "method": "GET",
+      "botId": "synthetic-fixture-id"
+    }
+  ],
+  "fixtureDataRemoved": true
+}

@@ -1,0 +1,13 @@
+{
+  "id": "reconcile-follow-ups",
+  "name": "Reconcile Follow Ups",
+  "version": "1.0.0",
+  "description": "Reconcile unresolved source-linked obligations without duplicate tasks or alerts.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "follow up",
+    "follow-up",
+    "unanswered"
+  ],
+  "requiredCapabilities": []
+}

@@ -61,6 +61,10 @@ extraResources:
     to: licenses/models-dev-LICENSE.txt
   - from: third_party/opencode/LICENSE
     to: licenses/opencode-LICENSE.txt
+  - from: third_party/parse5/LICENSE
+    to: licenses/parse5-LICENSE.txt
+  - from: third_party/parse5/entities-LICENSE
+    to: licenses/entities-LICENSE.txt
   - from: dist
     to: ui
   - from: dist-server
@@ -71,6 +75,9 @@ extraResources:
     to: companion
   - from: skills
     to: skills
+  - from: docs/chief-install-handoff
+    to: chief-install-handoff
+    filter: ["*.md"]
   - from: dist-native/android-platform-tools
     to: android-platform-tools
 

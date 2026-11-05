@@ -398,6 +398,12 @@ function recallWhen(at: unknown, dateOnly: boolean): string {
 }
 
 export async function callTool(name: string, args: Json, context: ToolCallContext): Promise<ToolCallResult> {
+  if (["work_items","record_work_item","scan_mail","review_mail"].includes(name)) {
+    const { action, id, ...payload } = args;
+    const path = name === "work_items" ? "" : name === "scan_mail" ? "/scan" : name === "review_mail" ? "/review" : action === "create" ? "/items" : "/items/" + encodeURIComponent(String(id ?? ""));
+    const result = await context.client.api("/api/internal/executive-work" + path, name === "work_items" ? {} : {method:name === "record_work_item" && action === "update" ? "PATCH" : "POST",body:JSON.stringify(payload)});
+    return {text:JSON.stringify(result)};
+  }
   // The names this body has always used, so it reads (and diffs) as it did
   // when these were the proxy's module-level constants.
   const { botId: BOT_ID, threadId: THREAD_ID, depth: DEPTH, externalRuntime: EXTERNAL_RUNTIME, coordinating: COORDINATING } = context;

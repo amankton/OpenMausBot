@@ -37,6 +37,8 @@ export function restoredWorkspaceConfig(portable: unknown, destination: unknown)
 
 /** Exact app-owned authentication paths, not a scan of user document text. */
 export function excludedWorkspaceAuthPath(path: string): boolean {
+  // Reviewed account grants and one-use action capabilities stay on this machine.
+  if (/^connector-trust\.db(?:$|-(?:wal|shm|journal)$)/.test(path)) return true;
   if (/^\.chief-pairing-private(?:\/|$)/.test(path)) return true;
   if (/^workspace-pairing\.private\.json(?:$|\.\d+\.[0-9a-f-]+\.tmp$)/.test(path)) return true;
   // Machine/provider-specific execution grants are not portable template data.
