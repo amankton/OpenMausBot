@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ShieldAlert } from "lucide-react";
 
 export const FULL_ACCESS_WARNING =
@@ -53,7 +54,7 @@ export function FullAccessWarning({
 
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-6"
       onMouseDown={(event) => event.target === event.currentTarget && onCancel()}
@@ -106,4 +107,6 @@ export function FullAccessWarning({
       </div>
     </div>
   );
+  // Keep consent above scrolling settings sheets, like ConfirmDialog.
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }

@@ -64,7 +64,7 @@ describe("approval mode selector", () => {
     ]);
   });
 
-  it.each(["cursorAgent", "opencodeGo"])("offers Full access for %s, and no Edits level it cannot map", (kind) => {
+  it.each(["cursorAgent", "opencodeGo", "hermesAgent"])("offers Full access for %s, and no Edits level it cannot map", (kind) => {
     expect(approvalModeOptionsFor(kind).map((option) => option.mode)).toEqual(["ask", "auto", "full"]);
     expect(approvalModeOptionsFor(kind, false).map((option) => option.mode)).toEqual(["ask", "auto"]);
   });
