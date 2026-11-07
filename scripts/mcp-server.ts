@@ -2,6 +2,8 @@
 // Model Context Protocol (MCP) Server for OpenMausBot
 // Standard JSON-RPC 2.0 stdio transport for external agent orchestration (Hermes, Claude Desktop, Cursor, etc.).
 import readline from "node:readline";
+import { z } from "zod";
+import { executiveAccountSchema, executiveSettingsSchema, workItemCreateSchema, workItemPatchSchema, workMutationSchema } from "../shared/executive-work.ts";
 
 export function validateBaseUrl(url: string): string {
   const trimmed = url.replace(/\/+$/, "");
@@ -142,6 +144,18 @@ const DESTRUCTIVE = { readOnlyHint: false, destructiveHint: true, idempotentHint
 const AGENT_ACTION = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true } as const;
 
 export const TOOLS: McpToolDefinition[] = [
+  {
+    name: "executive_work",
+    description: "Read or maintain the shared Chief work queue and read-only mail discovery setup. Mutations require an explicitly configured instance; this tool does not send mail or create schedules. Use exact revisions and event IDs.",
+    inputSchema: {
+      type: "object", properties: {
+        operation: { type: "string", enum: ["read", "create", "update", "settings", "scan"] },
+        body: { type: "object", description: "Operation body, strictly validated against its work-item, settings or scan contract." },
+        id: { type: "string", description: "Work item ID, required only for update." },
+      }, required: ["operation"], additionalProperties: false,
+    },
+    annotations: ADDITIVE,
+  },
   {
     name: "get_system_health",
     description: "Check whether the OpenMausBot server is reachable.",
@@ -521,6 +535,33 @@ function schemaError(schema: Record<string, any>, value: unknown, path: string):
 
 export class ToolInputError extends Error {}
 
+const executiveId = z.string().trim().min(1).max(240);
+const executiveRevision = z.number().int().nonnegative();
+const executiveSettingsBody = z.object({
+  expectedRevision: executiveRevision,
+  scansEnabled: z.boolean().optional(), checkInEnabled: z.boolean().optional(),
+  analysisBudget: executiveSettingsSchema.shape.analysisBudget.optional(), timezone: executiveSettingsSchema.shape.timezone.optional(),
+  accounts: z.array(executiveAccountSchema).max(20).optional(), notifications: executiveSettingsSchema.shape.notifications.optional(),
+  retention: executiveSettingsSchema.shape.retention.optional(), cadenceProposal: executiveSettingsSchema.shape.cadenceProposal.optional(),
+  routineBindings: z.array(z.object({ routineId: executiveId, kind: z.enum(["check-in", "mail-scan"]) }).strict()).max(30).optional(),
+}).strict();
+const executiveOperationSchema = z.discriminatedUnion("operation", [
+  z.object({ operation: z.literal("read"), body: z.object({}).strict().optional() }).strict(),
+  z.object({ operation: z.literal("create"), body: z.object({ item: workItemCreateSchema, mutation: workMutationSchema }).strict() }).strict(),
+  z.object({ operation: z.literal("update"), id: executiveId.regex(/^[\w-]+$/), body: z.object({
+    accountScope: executiveId, expectedRevision: executiveRevision.positive(), patch: workItemPatchSchema, eventId: executiveId,
+    reopenReason: z.string().trim().min(1).max(500).optional(), resolutionActor: executiveId.optional(), resolutionReason: z.string().trim().min(1).max(500).optional(),
+  }).strict() }).strict(),
+  z.object({ operation: z.literal("settings"), body: executiveSettingsBody }).strict(),
+  z.object({ operation: z.literal("scan"), body: z.object({ accountScopes: z.array(executiveId).min(1).max(20).refine(values => new Set(values).size === values.length, "Account scopes must be unique"), eventId: z.string().trim().min(1).max(120) }).strict() }).strict(),
+]);
+export function parseExecutiveWorkOperation(args: unknown) {
+  if (Buffer.byteLength(JSON.stringify(args) ?? "", "utf8") > 64_000) throw new ToolInputError("Executive work arguments exceed 64000 bytes");
+  const parsed = executiveOperationSchema.safeParse(args);
+  if (!parsed.success) throw new ToolInputError(parsed.error.message);
+  return parsed.data;
+}
+
 export function validateToolArguments(name: unknown, args: unknown): asserts args is Record<string, unknown> {
   if (typeof name !== "string" || !name) throw new ToolInputError("tool name must be a non-empty string");
   const tool = TOOLS.find((candidate) => candidate.name === name);
@@ -795,6 +836,13 @@ export async function handleToolCall(
     : baseFetcher;
   validateToolArguments(name, args);
   switch (name) {
+    case "executive_work": {
+      const input = parseExecutiveWorkOperation(args);
+      if (input.operation === "read") return fetcher("/api/executive-work");
+      if (baseFetcher === request && !configuredUrl) throw new ToolInputError("Executive work mutations require OPENMAUSBOT_URL or OMB_PORT; discovery is read-only");
+      const path = input.operation === "create" ? "/items" : input.operation === "update" ? `/items/${encodeURIComponent(input.id)}` : input.operation === "settings" ? "/settings" : "/scan";
+      return fetcher(`/api/executive-work${path}`, { method: input.operation === "update" || input.operation === "settings" ? "PATCH" : "POST", body: JSON.stringify(input.body) });
+    }
     case "get_system_health": {
       const res = await fetcher("/api/health");
       if (res?.app !== "openmausbot") throw new Error("The configured endpoint is not an OpenMausBot server");

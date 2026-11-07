@@ -37,6 +37,7 @@ import { engineReady } from "@/components/EngineLibrary";
 import { CommandPalette } from "@/components/CommandPalette";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { LocalVmWorkspace } from "@/components/LocalVmWorkspace";
+import { ExecutiveWorkPanel } from "@/components/ExecutiveWorkPanel";
 import { TeamMapPage } from "@/components/TeamMapPage";
 import { setLocale } from "@/lib/i18n";
 import { shouldOpenKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
@@ -195,7 +196,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
 
   useEffect(() => {
     if (state.activeView === "routines" && previousViewRef.current !== "routines") {
-      calendarOriginRef.current = previousViewRef.current;
+      calendarOriginRef.current = previousViewRef.current === "executive-work" ? "chat" : previousViewRef.current;
     }
     previousViewRef.current = state.activeView;
   }, [state.activeView]);
@@ -313,7 +314,9 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
           menuButtonRef.current?.focus();
         }}
       />}
-      {state.activeView === "team-map" ? (
+      {state.activeView === "executive-work" ? (
+        <ExecutiveWorkPanel onClose={() => dispatch({type:"showChat"})} onOpenRoutines={() => dispatch({type:"showRoutines"})} onOpenTask={({botId,threadId}) => dispatch({type:"switchTask",botId,threadId})} />
+      ) : state.activeView === "team-map" ? (
         <TeamMapPage />
       ) : state.activeView === "routines" ? (
         <RoutinesPage onBack={closeCalendar} onOpenRoom={openCalendarRoom} />

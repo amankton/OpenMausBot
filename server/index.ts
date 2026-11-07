@@ -1,3 +1,15 @@
+import type { ConnectorTrustAccountFact } from "../shared/connector-trust.ts";
+import { ConnectorTrustStore, ConnectorTrustError } from "./connector-trust.ts";
+import { prepareTrustDispatch } from "./connector-trust-dispatch.ts";
+import { createComposioTrustAccess } from "./connector-trust-composio.ts";
+import { createConnectorTrustRoutes } from "./routes/connector-trust.ts";
+import { createChiefEnhancementSetupApp } from "./chief-enhancement-setup-app.ts";
+import { ChiefEnhancementSetupError } from "./chief-enhancement-setup.ts";
+import { createChiefEnhancementSetupRoutes } from "./routes/chief-enhancement-setup.ts";
+import { executiveNotificationPresentation } from "./executive-notifications.ts";
+import { createExecutiveWorkRoutes, handleExecutiveInternal } from "./routes/executive-work.ts";
+import { ExecutiveService } from "./executive-service.ts";
+import { createComposioMailProvider } from "./email-triage/provider.ts";
 import { crewframePageHeaders } from './crewframe-embedding.ts';
 // OpenMausBot server — the harness host. Clients hold no transports
 // (upstream rule): the React app dispatches typed commands over HTTP and
@@ -113,7 +125,7 @@ import { cloudComputerRpc } from "./cloud-computer-tools.ts";
 import { TeamComputers, teamComputerAssignment, teamComputerCreate, teamComputerOwner, type TeamComputerRecord } from "./team-computers.ts";
 import { isEffortLevel, type BotVisibility, type CardAnswerer, type ResolvedSender, type SteerQueueReason, type WireBot, type WireGroup, type WireTask } from "../shared/wire.ts";
 import { isPersistentQuestionCard, QUESTION_DISMISS_MESSAGE, shouldSettleRequestCard } from "../shared/ask-question.ts";
-import { parseToolScope, toolScopeWidens } from "../shared/tool-scope.ts";
+import { allowsTool, parseToolScope, toolScopeWidens } from "../shared/tool-scope.ts";
 import type { TeamComputersPayload } from "../shared/team-computer.ts";
 import { boatCreateRecoverySnapshot, retireDeletedBoatCreate } from "./boat-create-idempotency.ts";
 import { boatDeletionSnapshot } from "./boat-delete-journal.ts";
@@ -2564,7 +2576,13 @@ function settleDirectCoordination(generation: string | undefined, outcome: Direc
   if (!generation) return;
   try {
     const result = taskResults.seal(generation, outcome.cancelled ? "cancelled" : outcome.ok ? "succeeded" : "failed", outcome.providerTurnId);
-    if (result) outcome = { ...outcome, resultIds: [result.id] };
+    if (result) {
+      outcome = { ...outcome, resultIds: [result.id] };
+      const item = result.requestId ? executive.work.list({limit:1000}).find(i=>i.source.kind==="coordination" && i.source.id===result.requestId && i.source.version===result.requestId) : undefined;
+      if (item && !["done","dismissed"].includes(item.status)) executive.work.update(item.accountScope,item.id,item.revision,
+        {status:outcome.ok?"ready-for-review":"blocked",executionStatus:outcome.cancelled?"cancelled":outcome.ok?"succeeded":"failed",nextAction:outcome.ok?"Review returned task-result evidence "+result.id:"Inspect the failed result and choose a bounded next step"},
+        {eventId:"result:"+result.executionId});
+    }
   } catch (error) { console.error("[task-results] settlement failed; recovery will retain uncertainty", error); }
   reconcileTaskResults();
   roomHandoffs.sourceSettled(generation, outcome.ok);
@@ -3558,6 +3576,56 @@ const store = new Store(
   () => bootSelection,
   (selection) => withNewBotEffort(selection, cfg.newBots?.effort, registry.get(selection.instanceId)?.adapter.capabilities.effortLevels),
 );
+const executiveRuntimeStartedAt=Date.now();
+const connectorTrust = new ConnectorTrustStore(DATA_DIR);
+function connectorTrustToolAllowed(botId: string, tool: string): boolean {
+  const bot = store.bot(botId);
+  if (!bot || bot.hidden || bot.composio === false || !composio.configured(cfg)) return false;
+  return evaluateConnectorTools([tool], bot.connectorTools, ["gmail"]).allowed
+    && connectorAccessDecision(bot.connectorScopes, [{slug: tool}], ["gmail"]).ok
+    && allowsTool(toolScopeForTurn(botId), {kind: "mcp", server: "composio", name: tool});
+}
+const connectorTrustAccess = createComposioTrustAccess(cfg, connectorTrustToolAllowed);
+const connectorTrustDependencies = {store: connectorTrust, facts: connectorTrustAccess.facts, toolAllowed: connectorTrustToolAllowed, transport: connectorTrustAccess.transport};
+const executive = new ExecutiveService(DATA_DIR, {
+  bots: () => store.bots,
+  verifyEvidence: (botId,item,references) => {
+    const node=item.source.kind==="coordination" && item.source.version===item.source.id ? roomHandoffs.nodes.get(item.source.id) : undefined;
+    if(!node||node.status!=="completed"||!references.length)return false;
+    return references.every(ref=>{
+      const result=taskResults.lookup(botId,node.threadId,ref)[0];
+      return result?.id===taskResults.latest(node.threadId)?.id && result.requestId===item.source.id && result.source?.botId===item.coordinatorBotId && result.source.threadId===item.sourceThreadId && result.executionOutcome === "succeeded" && result.deliveryOutcome === "delivered" && result.verifications.some(v=>v.authority === "harness_observation" && v.outcome === "passed");
+    });
+  },
+  threadOwned: (botId, threadId) => Boolean(store.taskByThread(botId, threadId)),
+  routines: () => routines?.listRoutines().map(r => ({id:r.id,name:r.name,enabled:r.enabled,botId:r.botId,target:r.target})) ?? [],
+  connections: async () => (await composio.connectedServices(cfg)).gmail?.accounts ?? [],
+  provider: async () => {
+    const pending = new Map<string, {botId: string; revision: number; facts: ConnectorTrustAccountFact[]}>();
+    const selection = (accountId: string, tool: string) => {
+      const settings = executive.work.settings();
+      const account = settings.accounts.find(a => a.accountScope === accountId && a.enabled);
+      const botId = account?.ownerBotId ?? (tool === "GMAIL_GET_PROFILE" ? settings.preferredMailReviewerBotId : undefined);
+      if (!botId || !connectorTrustToolAllowed(botId, tool)) throw new ConnectorTrustError("Connected mail access is outside the configured reviewer's current grants");
+      return botId;
+    };
+    return createComposioMailProvider(cfg, async (accountId, tool) => {
+      const active = (await composio.connectedServices(cfg)).gmail?.accounts.some(a => a.id === accountId && a.status === "ACTIVE");
+      if (!active) throw new ConnectorTrustError("The connected mailbox is not active");
+      const botId = selection(accountId, tool);
+      const revision = connectorTrust.get(botId)?.revision ?? 0;
+      const facts = revision ? await connectorTrustAccess.facts(botId) : [];
+      if (selection(accountId, tool) !== botId || (connectorTrust.get(botId)?.revision ?? 0) !== revision) throw new ConnectorTrustError("Mailbox access changed during verification");
+      pending.set(`${accountId}:${tool}`, {botId, revision, facts});
+    }, (accountId, tool) => {
+      const checked = pending.get(`${accountId}:${tool}`);
+      if (!checked || selection(accountId, tool) !== checked.botId || (connectorTrust.get(checked.botId)?.revision ?? 0) !== checked.revision) throw new ConnectorTrustError("Mailbox access changed before dispatch");
+      connectorTrust.authorizeDispatch(checked.botId, "mail-read", {jsonrpc:"2.0",method:"tools/call",params:{name:tool,arguments:{connected_account_id:accountId,user_id:"me"}}}, checked.facts, name => connectorTrustToolAllowed(checked.botId,name), checked.revision);
+    });
+  },
+});
+executive.work.recoverUnacknowledgedDispatches();
+executive.work.pruneRunDetails();
 const teamComputers = new TeamComputers(join(DATA_DIR, "team-computers.json"), ENVIRONMENT_ID);
 let followupsReady = false;
 const sendSequencer = new SendSequencer();
@@ -4723,6 +4791,7 @@ const roomHandoffs = new RoomHandoffs(join(DATA_DIR, "room-handoffs.json"), {
     return n.status === "resume" ? slot : slot || recipientAwaitingPerson(n.botId, n.threadId);
   },
   changed: (groupIds, directThreadIds) => {
+    queueMicrotask(reconcileExecutiveCoordination);
     for (const id of groupIds) {
       const group = store.group(id);
       if (group) broadcast({ kind: "group", group: publicGroupState(group) });
@@ -4813,7 +4882,9 @@ const roomHandoffs = new RoomHandoffs(join(DATA_DIR, "room-handoffs.json"), {
         role: "bot", kind: "activity",
         tool: { name: `Resumed with ${who} results, reviewing`, ok: true },
       });
-      notify(buildNotification("delegation-settled", bot, node.threadId, `Results in from ${who}`, { avatarUrl: bot.avatarUrl }));
+      const children=new Set(roomHandoffs.children(node.id).map(child=>child.id));
+      const tracked=executive.work.list({coordinatorBotId:bot.id,limit:1000}).some(item=>item.source.kind==="coordination"&&children.has(item.source.id));
+      if (!tracked) notify(buildNotification("delegation-settled", bot, node.threadId, `Results in from ${who}`, { avatarUrl: bot.avatarUrl }));
     }
     if (sender && parent && isUnattended(sender.id, parent.threadId)) markUnattended(bot.id, node.threadId);
     if (!group) return new Promise<{ ok: boolean; text: string }>(resolve => {
@@ -5861,6 +5932,42 @@ const providerLabel = (provider: string): string => {
 
 /** Put a notification on the wire. Clients decide what to do with it — a
  * desktop notification now, a push to a paired phone later. */
+function reconcileExecutiveCoordination() {
+  for (const node of roomHandoffs.nodes.values()) {
+    const parent=node.parentId ? roomHandoffs.nodes.get(node.parentId) : undefined;
+    if(!parent)continue;
+    try{
+      const scope="local:"+parent.botId;
+      let item=executive.work.list({accountScope:scope,limit:1000}).find(i=>i.source.kind==="coordination"&&i.source.id===node.id);
+      // New queue records cover current assignments; historical terminal work
+      // must not be reopened merely because the feature was installed.
+      if(!item && node.createdAt<executiveRuntimeStartedAt)continue;
+      if(!item)item=executive.work.create({accountScope:scope,ownerBotId:node.botId,coordinatorBotId:parent.botId,sourceThreadId:parent.threadId,
+        source:{kind:"coordination",id:node.id,version:node.id,botId:parent.botId,threadId:parent.threadId},title:"Assigned work for "+(store.bot(node.botId)?.name??"teammate"),desiredOutcome:"Review the accepted assignment and returned artifacts in the source task",nextAction:"Await the specialist result, then check acceptance criteria",status:"working",executionStatus:"working"}, {eventId:"handoff:"+node.id});
+      if(item.source.version!==node.id||["done","dismissed"].includes(item.status))continue;
+      if(["completed","failed","cancelled"].includes(node.status)){
+        const status=node.status==="completed"?"ready-for-review":"blocked";
+        const executionStatus=node.status==="completed"?"succeeded":node.status==="cancelled"?"cancelled":node.result.includes("restart")?"outcome-unknown":"failed";
+        if(item.status===status&&item.executionStatus===executionStatus)continue;
+        executive.work.update(scope,item.id,item.revision,{status,executionStatus,nextAction:node.status==="completed"?"Inspect the specialist result and acceptance evidence in the source task":"Review the interrupted or failed coordination receipt before retrying"},{eventId:"coordination-result:"+node.id+":"+node.executions});
+      }
+    }catch(error){console.error("[executive-work] Coordination record remains provisional; preserve the source receipt",error);}
+  }
+}
+function drainExecutiveNotifications() {
+  for (const entry of executive.work.pendingNotifications()) {
+    const bot = store.bot(entry.botId);
+    if (!bot || bot.notifications === false || !store.taskByThread(bot.id,entry.threadId) && !store.groupByThread(entry.threadId)?.memberIds.includes(bot.id)) continue;
+    const claim=executive.work.claimNotification(entry.id,"server");if(!claim)continue;
+    const item=executive.work.get(entry.accountScope,entry.workItemId);
+    const presentation=item&&executiveNotificationPresentation(item);
+    if(!presentation){executive.work.ackNotification(entry.id,"server","outcome-unknown");continue;}
+    try{notify({...presentation,botId:bot.id,botName:bot.name,threadId:entry.threadId});executive.work.ackNotification(entry.id,"server","delivered");}
+    catch{executive.work.ackNotification(entry.id,"server","outcome-unknown");}
+  }
+}
+queueMicrotask(reconcileExecutiveCoordination);
+const executiveNotificationTimer=setInterval(drainExecutiveNotifications,30_000);executiveNotificationTimer.unref();
 function notify(notification: Notification | null) {
   // nested rather than spread — the frame's own `kind` names the frame,
   // exactly like {kind:"message", message} and {kind:"bot", bot}
@@ -11055,6 +11162,16 @@ routines = new RoutineManager({
     }
   },
   startTurn: async (botId, threadId, prompt, runOn, triggerSource, onDispatchError) => {
+    const run = routines?.listRuns().find(r => r.threadId === threadId && ["running","waiting"].includes(r.status));
+    const binding = run && executive.work.settings().routineBindings.find(b => b.routineId === run.routineId);
+    if (binding && run) {
+      const result = binding.kind === "check-in" ? executive.checkIn(botId,threadId,run.id) :
+        await executive.scan(executive.work.settings().accounts.filter(a => a.enabled && a.ownerBotId === botId).map(a=>a.accountScope),run.id);
+      const report = binding.kind === "check-in" ? "Chief check-in recorded; review meaningful changes in Chief work." : "Mail discovery recorded; review remaining coverage and classification backlog in Chief work.";
+      void result;
+      routines!.finishReadOnlyRun(threadId,report);
+      return;
+    }
     await startTurn(botId, prompt, { threadId, runOn, automationSource: triggerSource, onDispatchError });
   },
   startGoal: async (groupId, threadId, prompt, coordinatorBotId, runId, _onDispatchError) => {
@@ -11581,7 +11698,7 @@ function resolveAndSendTrust(res: ServerResponse, threadId: string, requestId: s
     });
     appendDecision(DATA_DIR, {
       threadId, requestId, botId: outboundBot?.id, botName: outboundBot?.name,
-      tool: outboundCard.card.tool, summary: outboundCard.card.subtitle,
+      tool: outboundCard.card.tool, summary: `Outbound action decision ${requestId}: ${outboundCard.card.outboundRequest.calls?.map(call => call.label).join(", ") ?? outboundCard.card.outboundRequest.tool}`,
       decision: result.state === "allowed" ? "user-approved" : "user-denied", source: "user",
     });
     json(res, 200, { ok: true, outcome: result.state === "allowed" ? "allowed-once" : "rejected" });
@@ -15466,6 +15583,25 @@ const cloudMoveRoutes = createCloudMoveRoutes({
 
 // Route modules (server/routes/README.md). `workspaceAccess` is assigned at
 // boot, after this line, so the dependency reads it per request.
+ROUTES.push(createExecutiveWorkRoutes(executive));
+const chiefEnhancementSetup = createChiefEnhancementSetupApp({
+  dataDir:DATA_DIR,bots:()=>store.bots,bot:id=>store.bot(id),libraryEnabled:()=>skillsLibraryEnabled(cfg),
+  patchSoul(id,soul){const before=store.bot(id);if(!before)throw new ChiefEnhancementSetupError("This existing agent is unavailable",404);const previous=profileSnapshot(before);const updated=store.patchBotProfile(id,{soul});if(!updated)throw new ChiefEnhancementSetupError("This existing agent is unavailable",404);recordProfileChange(id,"user","api",previous,profileSnapshot(updated));broadcast({kind:"bot",bot:wireBot(updated)});},
+  setAssignments(id,names){if(!store.patchBot(id,{assignedSkills:names}))throw new ChiefEnhancementSetupError("This existing agent is unavailable",404);},
+});
+const assertChiefSetupOwner=(auth:RequestAuth)=>{if(!auth.scopes.includes("admin")||auth.kind==="loopback"&&auth.trust==="service"||auth.kind==="session"&&!sessions.isLive(auth.session.id)||CLOUD_HOME&&!cloudOwnerSession(auth))throw new ChiefEnhancementSetupError("Enhancement setup requires the current workspace owner",403);};
+ROUTES.push(createChiefEnhancementSetupRoutes({assertAccess:assertChiefSetupOwner,service:auth=>chiefEnhancementSetup.service(()=>assertChiefSetupOwner(auth))}));
+ROUTES.push(createConnectorTrustRoutes({
+  store: connectorTrust,
+  assertAccess: (auth, botId) => {
+    if (!auth.scopes.includes("admin") || auth.kind === "loopback" && auth.trust === "service" || auth.kind === "session" && !sessions.isLive(auth.session.id)) throw new ConnectorTrustError("Connected-app trust is owner-only");
+    if (!store.bot(botId) || store.bot(botId)?.hidden) throw new ConnectorTrustError("This agent is unavailable", 404);
+  },
+  accountFacts: connectorTrustAccess.facts,
+  toolAllowed: connectorTrustToolAllowed,
+  reviewerId: auth => auth.kind === "session" ? auth.session.id : "local-owner",
+}));
+
 ROUTES.push(createCrewframePhoneRoutes(process.env.OMB_CREWFRAME_PHONE === "1" || process.env.CHIEF_OFFICE_ENABLED === "1", fetch, process.env.CHIEF_OFFICE_ENABLED === "1" ? 18910 : 8820));
 const chiefOfficeRoutes = createOfficeRoutes(DATA_DIR, { enabled: process.env.CHIEF_OFFICE_ENABLED === "1" && !HOSTED_WORKSPACE && !CLOUD_HOME });
 const chiefSharedWorkspaceRoutes = createSharedWorkspaceRoutes({ localOnly: !HOSTED_WORKSPACE && !CLOUD_HOME });
@@ -15863,6 +15999,8 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
     }
     beginAdminAudit(req, res, method, path, auth);
 
+
+
     if (method === "POST" && path === "/api/workspace-backup/restore" && teamComputers.list().some(computer => computer.section !== null)) {
       return json(res, 409, { error: "Unassign team computers before restoring a workspace; restored team names must not gain access to existing desktops" });
     }
@@ -16199,6 +16337,12 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
             ...(vm ? { guest: { root: VM_WORKSPACE_GUEST, host: vm.workspaceDir } } : {}) };
         },
       })) return;
+
+      if (await handleExecutiveInternal({path,method,res,json,readBody:readInternalBody}, {
+        service:executive, actor:{botId:internalSender.id,threadId:internalCapability.threadId,isLive:()=>internalCapabilityIsActive(internalCapability)},
+        toolAllowed:name=>allowsTool(toolScopeForTurn(internalSender.id),{kind:"mcp",server:"agents",name}),
+      })) return;
+
       const delegatedThisTurn = (taskId: string) => {
         (internalCapability.delegatedThisTurn ??= new Set()).add(taskId);
       };
@@ -17673,6 +17817,11 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
               const { node, duplicate } = roomHandoffs.enqueue(address, internalCapability.generation, internalCapability.roomHandoffId,
                 target, target.botId, parsed.data.message, approvalGranted, parsed.data.rework, [...store.messagesFor(address.threadId)].reverse().find(m => m.role === "user" && m.kind === "text")?.text ?? "",
                 requestBatchKey);
+              if (!duplicate) try { executive.work.create({accountScope:"local:"+internalSender.id,ownerBotId:target.botId,
+                coordinatorBotId:internalSender.id,sourceThreadId:address.threadId,
+                source:{kind:"coordination",id:node.id,version:node.id,botId:internalSender.id,threadId:address.threadId},
+                title:"Assigned work for "+store.bot(target.botId)!.name,desiredOutcome:"Review the accepted assignment and its returned artifacts in the source task",nextAction:"Await the specialist result, then check acceptance criteria",status:"working",executionStatus:"working"},
+                {eventId:"handoff:"+node.id}); } catch(error) { console.error("[executive-work] Accepted handoff tracking is provisional; the durable coordination receipt remains authoritative",error); }
               // A repeat lands on the request already made, possibly in a
               // thread the person archived meanwhile; a thread opened for it
               // is never used.
@@ -18440,10 +18589,10 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         // The app tools this call would actually run, seen through Composio's
         // meta tools (a multi-execute list, workbench code), and the ones
         // among them that send.
-        const outboundCalls = rpc?.method === "tools/call" && typeof rpcParams?.name === "string"
+        let outboundCalls = rpc?.method === "tools/call" && typeof rpcParams?.name === "string"
           ? outboundCallsIn(rpcParams.name, rpcParams.arguments)
           : [];
-        const outboundTool = outboundCalls.length ? outboundCalls[0].slug : null;
+        let outboundTool = outboundCalls.length ? outboundCalls[0].slug : null;
         const refuseOutbound = (text: string) => {
           res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
           return res.end(JSON.stringify({ jsonrpc: "2.0", id: rpc?.id ?? null, result: { content: [{ type: "text", text }], isError: true } }));
@@ -18470,6 +18619,35 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
         }
         const opaque = connectorCalls.some(call => call.slug === "COMPOSIO_PROXY_EXECUTE");
         if (opaque && currentSender.connectorTools !== undefined) return refuseOutbound("Chief Executive Suite cannot verify this code against this bot's tool grants. Use a direct app tool.");
+        let outboundReserved = false;
+        const checkLegacyDispatch = () => {
+          requireActiveInternalCapability();
+          const fresh = store.bot(internalCapability.botId);
+          if (!fresh || fresh.composio === false || !composio.configured(cfg)) throw new ConnectorTrustError("Connected apps were disabled while this call waited");
+          if (!connectorAccessDecision(fresh.connectorScopes, connectorCalls, serviceSlugs).ok ||
+              (call.kind === "tools" && !evaluateConnectorTools(call.names, fresh.connectorTools, serviceSlugs).allowed) ||
+              (opaque && fresh.connectorTools !== undefined)) throw new ConnectorTrustError("The agent's connected-app permissions changed; nothing further was run");
+          if (outboundTool) {
+            const policy = fresh.outbound ?? DEFAULT_OUTBOUND_POLICY;
+            if (!outboundApproved && (bounded.verdict.requiresApproval || policy.policy !== "allow" || opaque)) throw new ConnectorTrustError("This action needs a fresh owner approval");
+            if (policy.policy === "allow" && !outboundReserved) {
+              const reserved = outboundCounts.reserve(fresh.id, outboundCalls.length, policy.dailyCap);
+              if (reserved === null) throw new ConnectorTrustError("The agent's daily outbound limit was reached; nothing further was run");
+              outboundReserved = true;
+            }
+          }
+        };
+        let bounded: Awaited<ReturnType<typeof prepareTrustDispatch>>;
+        try {
+          bounded = await prepareTrustDispatch(currentSender.id, internalCapability.threadId, body, connectorTrustDependencies, requireActiveInternalCapability, checkLegacyDispatch);
+        } catch (error) {
+          if (error instanceof ConnectorTrustError) return refuseOutbound(error.message);
+          throw error;
+        }
+        if (bounded.verdict.requiresApproval) {
+          outboundCalls = bounded.verdict.calls.filter(call => call.effect !== "read").map(call => ({slug: call.tool, arguments: call.arguments}));
+          outboundTool = outboundCalls[0]?.slug ?? null;
+        }
         let outboundApproved = false;
         if (outboundTool) {
           const policy = currentSender.outbound ?? DEFAULT_OUTBOUND_POLICY;
@@ -18484,17 +18662,20 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
           });
           const summary = outboundCalls.map((call, index) => {
             const described = calls[index];
-            const argsText = call.arguments === undefined ? "" : JSON.stringify(call.arguments);
-            return `${described.app ? `${described.app} · ` : ""}${described.label}${argsText ? `\n${argsText.slice(0, 400)}${argsText.length > 400 ? "… [arguments truncated]" : ""}` : ""}`;
+            const argsText = call.arguments === undefined ? "" : JSON.stringify(call.arguments, null, bounded.verdict.requiresApproval ? 2 : undefined);
+            return `${described.app ? `${described.app} · ` : ""}${described.label}${argsText ? `\n${bounded.verdict.requiresApproval ? argsText : argsText.slice(0, 400)}${!bounded.verdict.requiresApproval && argsText.length > 400 ? "… [arguments truncated]" : ""}` : ""}`;
           }).join("\n\n");
+          const auditSummary = bounded.verdict.requiresApproval
+            ? `Bounded mailbox action ${bounded.verdict.actionDigest}; tools: ${bounded.verdict.calls.map(call => call.tool).join(", ")}; accounts: ${[...new Set(bounded.verdict.calls.map(call => call.accountId))].join(", ")}`
+            : summary;
           const capNote = (count: number) =>
             `Chief Executive Suite did not send this. ${currentSender.name} has reached its daily limit of ${count} outbound action${count === 1 ? "" : "s"}. Ask the user to raise the limit under the bot's Permissions before trying again.`;
-          if (policy.policy === "allow" && !opaque) {
+          if (policy.policy === "allow" && !opaque && !bounded.verdict.requiresApproval) {
             const today = outboundCounts.today(currentSender.id);
             if (today + outboundCalls.length > policy.dailyCap) {
               appendDecision(DATA_DIR, {
                 threadId, botId: currentSender.id, botName: currentSender.name,
-                tool: outboundTool, summary, decision: "auto-denied", source: "outbound", rule: `daily-cap:${policy.dailyCap}`,
+                tool: outboundTool, summary: auditSummary, decision: "auto-denied", source: "outbound", rule: `daily-cap:${policy.dailyCap}`,
               });
               return refuseOutbound(capNote(policy.dailyCap));
             }
@@ -18506,8 +18687,8 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
               kind: "options",
               ...(owner?.group ? { from: { botId: currentSender.id, name: currentSender.name, color: currentSender.color } } : {}),
               card: {
-                title: "Send on your behalf?",
-                subtitle: summary,
+                title: bounded.verdict.requiresApproval ? "Approve this exact mailbox action?" : "Send on your behalf?",
+                subtitle: bounded.verdict.requiresApproval ? `Agent: ${currentSender.name}\nPolicy revision: ${bounded.verdict.revision}\n${bounded.facts.filter(fact => bounded.verdict.calls.some(call => call.accountId === fact.accountId)).map(fact => `Mailbox: ${fact.identity} (${fact.accountId})`).join("\n")}\n\n${summary}` : summary,
                 options: ["Allow", "Deny"],
                 requestId: held.requestId,
                 tool: outboundTool,
@@ -18518,14 +18699,14 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
             });
             appendDecision(DATA_DIR, {
               threadId, requestId: held.requestId, botId: currentSender.id, botName: currentSender.name,
-              tool: outboundTool, summary, decision: "card-shown", source: "outbound",
+              tool: outboundTool, summary: auditSummary, decision: "card-shown", source: "outbound",
             });
             if (owner?.group) {
               if (activeGroupTurnForBot(currentSender.id)?.threadId === threadId) store.setActivity(currentSender.id, "waiting-on-you");
             } else if (store.taskByThread(currentSender.id, threadId)?.busy) {
               store.setTaskActivity(currentSender.id, threadId, "waiting-on-you");
             }
-            notify(buildNotification("approval", currentSender, threadId, summary, { avatarUrl: currentSender.avatarUrl }));
+            notify(buildNotification("approval", currentSender, threadId, bounded.verdict.requiresApproval ? "Review the exact mailbox action in Chief." : summary, { avatarUrl: currentSender.avatarUrl }));
             const answer = await held.answer;
             outboundRequests.forget(held.requestId);
             if (internalCapabilityIsActive(internalCapability)) {
@@ -18553,6 +18734,16 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
             requireActiveInternalCapability();
           }
         }
+        if (bounded.verdict.bounded && bounded.verdict.calls.length) {
+          try {
+            if (bounded.verdict.requiresApproval) await bounded.approve();
+            const result = await bounded.dispatch();
+            res.writeHead(result.status, {"content-type": result.contentType, "cache-control": "no-store"});
+            return res.end(Buffer.from(result.bytes));
+          } catch (error) {
+            return refuseOutbound(error instanceof ConnectorTrustError ? error.message : "The mailbox action outcome could not be confirmed. Review its evidence before retrying.");
+          }
+        }
         let dispatchRefusal: string | undefined;
         const refuseDispatch: (text: string) => never = (text) => {
           dispatchRefusal = text;
@@ -18566,6 +18757,7 @@ const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
             ? req.headers["mcp-session-id"][0]
             : req.headers["mcp-session-id"],
           () => {
+            bounded.checkCurrent();
             requireActiveInternalCapability();
             const fresh = store.bot(internalCapability.botId);
             if (!fresh || fresh.composio === false || !composio.configured(cfg)) refuseDispatch("Connected apps were disabled while this call waited.");
@@ -25190,6 +25382,8 @@ const gracefulShutdown = createGracefulShutdown({
       code = 1;
     }
     closeMessageDb();
+    connectorTrust.close();
+    chiefEnhancementSetup.runtime.close();
     mcpOAuth.dispose();
     releaseDataDirLeaseAtExit();
     // Every launcher in this repo starts the server again on this code (server/restart.ts).

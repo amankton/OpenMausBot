@@ -176,39 +176,15 @@ it("coordinates a lead and its specialist from ordinary chat, returns to Clive, 
   expect(turn.system).toContain("only an actual coordinate_bots result proves that teammate participated");
 }), 45_000);
 
-it("announces a settled delegation and its resume in the parent thread", () => fixture(async f => {
+it("records settled delegation resumes without bypassing disabled work notifications", () => fixture(async f => {
   const stream = await openSse(`${f.session.info.url}/api/events`);
   try {
     await f.start();
     expect((await f.wait()).status).toBe("settled");
-    // f.wait() resolves through the control CLI poll, an independent path
-    // from the SSE reader loop; until() (which also resolves on frames
-    // already seen) is what proves both settles are stored before the
-    // assertions below count them
-    await Promise.all([
-      stream.until(frame => frame.kind === "notify"
-        && frame.notification?.kind === "delegation-settled"
-        && frame.notification.botId === f.chief.id),
-      stream.until(frame => frame.kind === "notify"
-        && frame.notification?.kind === "delegation-settled"
-        && frame.notification.botId === f.lead.id),
-    ]);
+    // Tracked work uses the authoritative outbox, whose alerts start disabled.
+    // Existing resume chips still record the real automatic continuation.
     const settles = () => stream.frames.filter(frame => frame.kind === "notify" && frame.notification?.kind === "delegation-settled");
-    // the chief's resume is announced exactly once, pointing at the
-    // conversation the notification opens
-    const chiefFrames = settles().filter(frame => frame.notification.botId === f.chief.id);
-    expect(chiefFrames).toHaveLength(1);
-    expect(chiefFrames[0].notification).toMatchObject({
-      threadId: f.chief.activeTaskId,
-      title: "Clive resumed with results",
-      body: "Results in from Engineering lead",
-    });
-    // the nested lead resume is announced too, on its delegated thread
-    const leadFrames = settles().filter(frame => frame.notification.botId === f.lead.id);
-    expect(leadFrames).toHaveLength(1);
-    expect(leadFrames[0].notification.threadId).not.toBe(f.lead.activeTaskId);
-    // the specialist ran the work and never resumed, so it earns no frame
-    expect(settles().some(frame => frame.notification.botId === f.specialist.id)).toBe(false);
+    expect(settles()).toHaveLength(0);
     // suppression of the delegated turns themselves is unchanged: neither
     // child earns a done frame. The chief's own asked-for outer turn still
     // may, exactly as before.

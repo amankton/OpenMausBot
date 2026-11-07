@@ -1,0 +1,13 @@
+{
+  "id": "execute-and-verify",
+  "name": "Execute And Verify",
+  "version": "1.0.0",
+  "description": "Carry an authorized assignment through evidence-backed completion.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "execute",
+    "implement",
+    "verify"
+  ],
+  "requiredCapabilities": []
+}

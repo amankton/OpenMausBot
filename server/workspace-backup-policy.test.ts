@@ -71,3 +71,9 @@ describe("workspace backup data boundary", () => {
     expect(excludedWorkspaceAuthPath(path)).toBe(false);
   });
 });
+
+
+it("keeps bounded account trust and action capabilities out of portable backups", () => {
+  for (const path of ["connector-trust.db", "connector-trust.db-wal", "connector-trust.db-shm", "connector-trust.db-journal"]) expect(excludedWorkspaceAuthPath(path)).toBe(true);
+  expect(excludedWorkspaceAuthPath("documents/connector-trust.db")).toBe(false);
+});

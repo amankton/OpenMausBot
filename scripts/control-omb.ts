@@ -8,7 +8,7 @@ import { delimiter, dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs, type ParseArgsOptionsConfig } from "node:util";
 
-import { handleToolCall, request, validateBaseUrl } from "./mcp-server.ts";
+import { handleToolCall, parseExecutiveWorkOperation, request, validateBaseUrl } from "./mcp-server.ts";
 import { launchUi, runControlOmbUi } from "./testing/control-omb-ui.ts";
 import { removeTempDir, waitForExit } from "../server/testing/cleanup.ts";
 import { freePortBlock } from "../server/testing/ports.ts";
@@ -22,7 +22,7 @@ const FAKE_CLI = join(ROOT, "server", "testing", "fake-claude-cli.ts");
 // `ui` verbs never discover anything: each takes the handle its launch printed.
 const MUTATING = new Set([
   "new-bot", "new-channel", "send", "send-channel", "interrupt", "set-model", "edit",
-  "ui click", "ui type", "ui press", "ui flag", "ui eval",
+  "ui click", "ui type", "ui press", "ui flag", "ui eval", "ui viewport",
 ]);
 
 export class ControlOmbError extends Error {
@@ -50,6 +50,7 @@ export const HELP_UI = `renderer (needs a ui launch handle; every verb takes --u
   ui type --ui HANDLE (--ref @eN | --name NAME) --text TEXT
   ui press --ui HANDLE --keys KEYS
   ui screenshot --ui HANDLE --out PATH.png
+  ui viewport --ui HANDLE --width WIDTH --height HEIGHT
   ui console --ui HANDLE
   ui eval --ui HANDLE --js CODE
   ui flag --ui HANDLE --set features.NAME=VALUE [--dry-run]
@@ -67,6 +68,7 @@ read-only:
   messages --channel ID [--task ID] [--limit 30] [--url URL]
   wait --bot ID [--task ID] [--timeout 30] [--url URL]
   wait --channel ID [--task ID] [--timeout 30] [--url URL]
+  executive-work --operation read [--url URL]
 
 mutating (an explicit --url or OPENMAUSBOT_URL/OMB_PORT is required):
   new-bot --name NAME [--url URL]
@@ -77,6 +79,8 @@ mutating (an explicit --url or OPENMAUSBOT_URL/OMB_PORT is required):
   interrupt --channel ID [--task ID] [--dry-run] [--url URL]
   edit --bot ID --message ID --text TEXT [--task ID] [--dry-run] [--url URL]
   set-model --bot ID --instance ID --model ID [--task ID] [--effort LEVEL] [--dry-run] [--url URL]
+  executive-work --operation create|update|settings|scan --json JSON [--id ID] --url URL
+    executive-work mutations require the literal --url flag, never implicit discovery.
 
 ${HELP_UI}
 
@@ -175,6 +179,20 @@ export async function runControlOmb(
       : requester;
     return callTool(tool, input, fetcher);
   };
+
+  if (command === "executive-work") {
+    const values = parse(command, args, { operation: { type: "string" }, json: { type: "string" }, id: { type: "string" } });
+    const operation = required(values.operation, "--operation");
+    if (operation !== "read" && (typeof values.url !== "string" || !values.url.trim())) throw new ControlOmbError("executive-work mutations require an explicit --url", "start control-omb launch, then pass that fixture URL");
+    let body: unknown;
+    if (values.json !== undefined) {
+      const raw = required(values.json, "--json");
+      if (Buffer.byteLength(raw, "utf8") > 64_000) throw new ControlOmbError("--json exceeds 64000 bytes");
+      try { body = JSON.parse(raw); } catch { throw new ControlOmbError("--json must be valid JSON"); }
+    }
+    const input = parseExecutiveWorkOperation({ operation, ...(body !== undefined ? { body } : {}), ...(values.id !== undefined ? { id: required(values.id, "--id") } : {}) });
+    return call("executive_work", input, values.url);
+  }
 
   if (command === "doctor") {
     const values = parse(command, args);
@@ -437,7 +455,13 @@ export async function launchVerificationServer(
    * Optional native home is used only for tools-free auxiliary command review.
    * Credentials are passed only to the backend, never fixture info/config. */
   hermesHttp?: { baseUrl: string; apiKey: string; model: string; toolsDirectory?: string; home?: string },
+  /** Programmatic tests only: an owned loopback Composio API, never a live service. */
+  composioFixtureApi?: string,
 ): Promise<VerificationServer> {
+  if (composioFixtureApi) {
+    if (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}\/api\/v3\.1$/.test(composioFixtureApi)) throw new ControlOmbError("The Composio fixture must be an explicit owned loopback API");
+    try { new URL(composioFixtureApi); } catch { throw new ControlOmbError("Invalid Composio fixture URL"); }
+  }
   if (hermesHttp?.home && !isAbsolute(hermesHttp.home)) throw new ControlOmbError("Hermes reviewer home must be an explicit absolute path");
   // Explicit programmatic grant only; never inherit a real Platform setting.
   const platformUrl = chiefOffice?.platformUrl === undefined ? undefined : verificationPlatformUrl(chiefOffice.platformUrl);
@@ -523,6 +547,7 @@ export async function launchVerificationServer(
     AGENT_BROWSER_EXECUTABLE_PATH: browser.executablePath,
   });
   if (boatFixtureApi) childEnv.OMB_BOX_API = boatFixtureApi;
+  if (composioFixtureApi) childEnv.OMB_COMPOSIO_API = composioFixtureApi;
   const serverArgs = ["--experimental-strip-types"];
   if (childEnv.OMB_TEST_FAIL_AUDIO_APPEND_ONCE === "1") {
     serverArgs.push("--import", pathToFileURL(join(ROOT, "server", "testing", "fail-audio-append-once.mjs")).href);

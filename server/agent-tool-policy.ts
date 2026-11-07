@@ -5,6 +5,7 @@
  * disclosure in a room; it does not edit recalled messages or launch work.
  */
 export const READ_ONLY_AGENT_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "work_items",
   "list_bots",
   "list_team_setup",
   "list_shared_computers",

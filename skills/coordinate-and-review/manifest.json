@@ -1,0 +1,13 @@
+{
+  "id": "coordinate-and-review",
+  "name": "Coordinate And Review",
+  "version": "1.0.0",
+  "description": "Assign useful bounded specialist work and review returned evidence.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "delegate",
+    "coordinate",
+    "specialist"
+  ],
+  "requiredCapabilities": []
+}

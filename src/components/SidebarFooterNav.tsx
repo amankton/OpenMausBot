@@ -3,7 +3,7 @@
 // hide behind a hover "Tools" menu; three rows cost little and each is one
 // click instead of a hover and a click. Shared workspace is available in both
 // interface modes alongside the original agent Team map.
-import { Building2, CalendarDays, Network, Puzzle, Zap } from "lucide-react";
+import { Building2, CalendarDays, ClipboardCheck, Network, Puzzle, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
@@ -48,7 +48,7 @@ function NavRow({
         active ? "bg-raised text-ink" : "text-ink hover:bg-raised/50",
       )}
     >
-      {icon(active)}
+      <span className={cn("flex shrink-0 items-center justify-center", !iconsOnly && "w-7")}>{icon(active)}</span>
       {!iconsOnly && <span className="flex-1 truncate text-[14px]">{label}</span>}
       {attention && (
         <span
@@ -80,9 +80,10 @@ export function SidebarFooterNav({ density }: { density: SidebarDensity }) {
           iconsOnly ? "min-h-10 justify-center px-2 py-2" : "min-h-9 gap-3 px-3 py-1.5",
         )}
       >
-        <Building2 size={iconSize} className="text-ink-secondary" />
+        <span className={cn("flex shrink-0 items-center justify-center", !iconsOnly && "w-7")}><Building2 size={iconSize} className="text-ink-secondary" /></span>
         {!iconsOnly && <span className="flex-1 truncate text-[14px]">Shared workspace</span>}
       </a>}
+      <NavRow id="executive-work" label="Chief work" iconsOnly={iconsOnly} active={state.activeView === "executive-work"} icon={active => <ClipboardCheck size={iconSize} className={tone(active)} />} onClick={() => dispatch({ type: "showExecutiveWork" })} />
       <NavRow
         id="routines"
         label={t("sidebar.nav.routines")}

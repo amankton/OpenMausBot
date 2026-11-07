@@ -1,0 +1,13 @@
+{
+  "id": "decision-brief",
+  "name": "Decision Brief",
+  "version": "1.0.0",
+  "description": "Prepare a concise grounded decision for the owner.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "decision",
+    "brief",
+    "recommendation"
+  ],
+  "requiredCapabilities": []
+}

@@ -27,13 +27,13 @@ import {
   installAgentBrowserBinary,
   resolveAgentBrowserBinary,
 } from "../../server/browser-engine.ts";
-import { fixtureApi, mountPreview, type MountedPreview } from "./preview-fixture.ts";
+import { fixtureApi, mountPreview, type MountedPreview, type PreviewRoute } from "./preview-fixture.ts";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 /** Gitignored, persistent: the binary and its Chrome download once per checkout. */
 export const UI_TOOLS_DIR = join(ROOT, ".omb-scratch", "verify-tools");
 /** Verbs that change the fixture or the page; they take the explicit handle, never discovery. */
-export const UI_MUTATING = new Set(["click", "type", "press", "flag", "eval"]);
+export const UI_MUTATING = new Set(["click", "type", "press", "flag", "eval", "viewport"]);
 
 const ENTRIES = {
   threads: { entry: "/scripts/testing/threads-preview.tsx", route: "/__threads.html", title: "Isolated OpenMaus Chat" },
@@ -356,6 +356,18 @@ export async function runControlOmbUi(args: string[]): Promise<unknown> {
     return { ok: true, ...(await agentBrowser(handle.binary, sessionEnv(handle), ["press", values.keys.trim()])) };
   }
 
+  if (verb === "viewport") {
+    const values = parse(command, rest, { ...ui, width: { type: "string" }, height: { type: "string" } });
+    const handle = loadHandle(values.ui, verb);
+    const width = Number(values.width);
+    const height = Number(values.height);
+    if (![width, height].every(value => Number.isInteger(value) && value >= 240 && value <= 4096)) {
+      throw new ControlOmbError("ui viewport requires --width and --height between 240 and 4096 pixels");
+    }
+    await requireLiveSession(handle);
+    return { ok: true, width, height, ...(await agentBrowser(handle.binary, sessionEnv(handle), ["set", "viewport", String(width), String(height)])) };
+  }
+
   if (verb === "screenshot") {
     const values = parse(command, rest, { ...ui, out: { type: "string" } });
     const handle = loadHandle(values.ui, verb);
@@ -430,7 +442,7 @@ export async function launchUi(
   args: string[],
   parentEnv: NodeJS.ProcessEnv = process.env,
   io: { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream } = process,
-  fixtureOptions: { boatFixtureApi?: string } = {},
+  fixtureOptions: { boatFixtureApi?: string; previewRoutes?: PreviewRoute[] } = {},
 ): Promise<void> {
   const values = parse("ui launch", args, { entry: { type: "string" }, "tool-calls": { type: "string" }, mode: { type: "string" } });
   const entryName = typeof values.entry === "string" ? values.entry : "threads";
@@ -477,7 +489,7 @@ export async function launchUi(
     checkpoint();
     // stdout carries the handle and nothing else; Vite's port and dependency
     // notes would otherwise land there first.
-    preview = await mountPreview(fixture, { ...entry, logLevel: "warn" });
+    preview = await mountPreview(fixture, { ...entry, logLevel: "warn", extraRoutes: fixtureOptions.previewRoutes });
     checkpoint();
     const session: SessionEnv = { home: fixture.info.dataDir, session: `omb-ui-${new URL(fixture.info.url).port}`, chrome };
     const env = sessionEnv(session, parentEnv);

@@ -293,6 +293,13 @@ describe("resolveRequestAuth", () => {
       request({ host: "127.0.0.1:8799" }, "GET"),
       options("/api/bots"),
     ).auth?.kind).toBe("loopback");
+    for (const method of ["GET", "HEAD"]) {
+      expect(resolveRequestAuth(request({host:"127.0.0.1:8799",origin:"http://127.0.0.1:8799",authorization:"Bearer synthetic-agent-token"},method),options("/api/chief-enhancement-setup")).auth).toBeNull();
+      expect(resolveRequestAuth(request({host:"127.0.0.1:8799","x-openmausbot-desktop-owner":"owner-token-123"},method),options("/api/chief-enhancement-setup")).auth?.kind).toBe("loopback");
+      const workOverview = options("/api/executive-work");
+      expect(resolveRequestAuth(request({host:"127.0.0.1:8799",authorization:"Bearer synthetic-agent-token"},method),workOverview).status).toBe(403);
+      expect(resolveRequestAuth(request({host:"127.0.0.1:8799","x-openmausbot-desktop-owner":"owner-token-123"},method),workOverview).auth?.kind).toBe("loopback");
+    }
     const connectorRefresh = resolveRequestAuth(
       request({ host: "127.0.0.1:8799" }, "GET"),
       options("/api/bots/bot-1/connector-cards/card-1/status?threadId=thread-1"),

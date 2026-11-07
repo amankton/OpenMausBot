@@ -1,0 +1,13 @@
+{
+  "id": "executive-check-in",
+  "name": "Executive Check In",
+  "version": "1.0.0",
+  "description": "Review meaningful changes in authorized open work, deadlines and dependencies.",
+  "defaultEnabled": true,
+  "triggerTerms": [
+    "check-in",
+    "check in",
+    "open commitments"
+  ],
+  "requiredCapabilities": []
+}
