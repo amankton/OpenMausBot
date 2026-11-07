@@ -41,12 +41,10 @@ function fixture(options = {}) {
     nativeImage: { createFromPath: () => ({ resize: () => ({}) }) }, iconPath,
     getWindow: () => active, onQuit: () => calls.push("quit") });
   const splash = createStartupScreen({ BrowserWindow: Window, iconPath, platform: "win32",
-    isQuitting: () => false, onQuit: () => calls.push("quit"), onHide: win => tray.hide(win),
-    isHidden: () => tray.isHidden(), onShow: win => tray.windowShown(win),
+    isQuitting: () => false, onQuit: () => calls.push("quit"), minimizeOnClose: true,
     onFinished: () => calls.push("finished"), ...options });
   active = splash.window;
   const win = new Window();
-  win.on("show", () => tray.windowShown(win));
   return { tray, trayInstance, splash, win, calls, setActive: value => { active = value; } };
 }
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
@@ -100,7 +98,8 @@ test("a loaded page shows without ready-to-show, as on COSMIC Wayland", async t 
 test("ready-to-show and a loaded page show the splash once", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   let shows = 0;
-  const { splash } = fixture({ onShow: () => { shows += 1; } });
+  const { splash } = fixture();
+  splash.window.on("show", () => { shows += 1; });
   await splash.ready;
   splash.window.webContents.emit("did-finish-load");
   t.mock.timers.tick(500); await flush();
@@ -122,25 +121,27 @@ test("loading screen waits for mounted content before revealing the restored wor
   assert.deepEqual(calls, ["finished"]);
 });
 
-test("closing during startup keeps the eventual workspace hidden until tray restore", async () => {
+test("closing during startup keeps the eventual workspace minimized and accessible", async () => {
   const { splash, win, tray, calls, setActive } = fixture();
   await splash.ready;
   let prevented = false;
   splash.window.emit("close", { preventDefault() { prevented = true; } });
-  assert.equal(prevented, true); assert.equal(tray.isHidden(), true);
+  assert.equal(prevented, true);
+  assert.equal(splash.window.isMinimized(), true);
   splash.attach(win, { maximized: true });
   win.webContents.emit("did-finish-load"); await flush();
-  assert.equal(win.visible, false); assert.equal(win.skipTaskbar, true);
+  assert.equal(win.isMinimized(), true);
+  assert.notEqual(win.skipTaskbar, true);
   setActive(win); assert.equal(tray.show(), true);
   assert.equal(win.visible, true); assert.equal(win.skipTaskbar, false);
-  assert.equal(win.maximized, true); assert.equal(tray.isHidden(), false);
+  assert.equal(win.isMinimized(), false); assert.equal(win.maximized, true);
   assert.deepEqual(calls, ["finished"]);
 });
 
 test("tray restores minimized windows, supports explicit quit, and disposes once", async () => {
   const { splash, win, tray, trayInstance, setActive, calls } = fixture();
   await splash.ready; splash.dispose(); setActive(win);
-  win.minimize(); tray.hide(win); trayInstance.emit("click");
+  win.minimize(); trayInstance.emit("click");
   assert.equal(win.minimized, false); assert.equal(win.focused, true);
   assert.equal(win.skipTaskbar, false);
   trayInstance.menu[2].click();
@@ -172,7 +173,7 @@ test("quit never reveals a waiting workspace", async () => {
 });
 
 test("without a Windows tray or on another platform splash close quits", async () => {
-  for (const options of [{ platform: "darwin" }, { onHide: undefined }]) {
+  for (const options of [{ platform: "darwin" }, { minimizeOnClose: false }]) {
     const { splash, calls } = fixture(options); await splash.ready;
     splash.window.emit("close", { preventDefault() {} });
     assert.deepEqual(calls, ["quit"]); splash.dispose();

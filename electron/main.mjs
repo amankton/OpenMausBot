@@ -2199,11 +2199,10 @@ function createWindow({ deferNavigation = false } = {}) {
     },
   });
   mainWindow = win;
-  win.on("show", () => desktopTray?.windowShown(win));
   win.on("close", (event) => {
     if (process.platform === "win32" && !desktopShutdownStarted && desktopTray) {
       event.preventDefault();
-      desktopTray.hide(win);
+      win.minimize();
     }
   });
   win.setTitle(workspaceWindowTitle(environmentsState, desktopRemoteAccess));
@@ -3303,9 +3302,7 @@ app.whenReady().then(async () => {
   startupScreen = createStartupScreen({
     BrowserWindow, iconPath: APP_ICON, isQuitting: () => desktopShutdownStarted,
     onQuit: () => app.quit(),
-    onHide: desktopTray ? (win) => desktopTray.hide(win) : undefined,
-    isHidden: () => desktopTray?.isHidden() ?? false,
-    onShow: (win) => desktopTray?.windowShown(win),
+    minimizeOnClose: Boolean(desktopTray),
     onFinished: () => { startupScreen = null; },
   });
   await startupScreen.ready;

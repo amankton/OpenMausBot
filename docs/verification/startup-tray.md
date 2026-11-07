@@ -9,7 +9,7 @@ node scripts/verify-startup-tray.mjs
 
 The fixture creates a temporary Electron profile and blocks network access.
 It opens the actual loading screen, captures `startup-screen.png`, clicks its
-real close button, mounts a disposable workspace, verifies it stays hidden,
+real close button, mounts a disposable workspace, verifies it stays minimized,
 then restores it through the production tray controller. It selects the real
 Quit menu item programmatically. The printed evidence directory contains a
 receipt, progress log, screenshot, and disposable profile. No user workspace,
@@ -27,6 +27,6 @@ fallback, and the existing server shutdown and updater instance-lock paths.
 These checks do not exercise physical clicks on the Windows notification-area
 menu, the full packaged app, update downloads, or helper-console suppression.
 For package acceptance, start a packaged Windows build in an isolated profile,
-close during startup and after loading, reopen from the tray and a second
-launch, and use **Quit OpenMaus Bot**. Verify owned helpers exit and the tray
+close during startup and after loading, restore from the taskbar, tray and a
+second launch, and use **Quit Chief Executive Suite**. Verify owned helpers exit and the tray
 icon disappears. Repeat with an update-driven restart.

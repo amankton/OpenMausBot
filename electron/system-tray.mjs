@@ -2,11 +2,9 @@
 export function createSystemTray({ Tray, Menu, nativeImage, iconPath, getWindow, onQuit }) {
   const tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: 20, height: 20 }),
     "eb6b638b-e927-41c6-b944-7a220c6c8582");
-  let hidden = false;
   const show = () => {
     const win = getWindow();
     if (!win || win.isDestroyed()) return false;
-    hidden = false;
     win.setSkipTaskbar(false);
     if (win.isMinimized()) win.restore();
     win.show();
@@ -23,9 +21,6 @@ export function createSystemTray({ Tray, Menu, nativeImage, iconPath, getWindow,
   tray.on("double-click", show);
   return {
     show,
-    hide(win) { hidden = true; win.setSkipTaskbar(true); win.hide(); },
-    isHidden() { return hidden; },
-    windowShown(win) { hidden = false; win.setSkipTaskbar(false); },
     destroy() { if (!tray.isDestroyed()) tray.destroy(); },
   };
 }

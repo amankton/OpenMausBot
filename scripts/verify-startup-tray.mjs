@@ -50,8 +50,7 @@ if (!process.versions.electron) {
       Menu: { buildFromTemplate: template => (trayMenu = Menu.buildFromTemplate(template)) },
       nativeImage, iconPath, getWindow: () => active, onQuit: requestQuit });
     splash = createStartupScreen({ BrowserWindow, iconPath, platform: "win32",
-      isQuitting: () => quitting, onQuit: requestQuit, onHide: win => tray.hide(win),
-      isHidden: () => tray.isHidden(), onShow: win => tray.windowShown(win),
+      isQuitting: () => quitting, onQuit: requestQuit, minimizeOnClose: true,
       onFinished: () => record("splash disposed") });
     active = splash.window;
     active.on("close", event => record(`close prevented=${event.defaultPrevented}`));
@@ -67,11 +66,9 @@ if (!process.versions.electron) {
     await active.webContents.executeJavaScript("document.querySelector('button').click()");
     record("clicked close");
     await delay(100);
-    assert.equal(active.isVisible(), false);
-    assert.equal(tray.isHidden(), true);
+    assert.equal(active.isMinimized(), true);
     const win = new BrowserWindow({ show: false, width: 500, height: 360,
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
-    win.on("show", () => tray.windowShown(win));
     win.on("show", () => record(`workspace show visible=${win.isVisible()}`));
     win.on("hide", () => record("workspace hide"));
     splash.attach(win);
@@ -81,13 +78,13 @@ if (!process.versions.electron) {
     await win.webContents.executeJavaScript("document.getElementById('root').innerHTML='<p>Workspace ready</p>'");
     for (let i = 0; i < 50 && !splash.window.isDestroyed(); i++) await delay(20);
     assert.equal(splash.window.isDestroyed(), true);
-    assert.equal(win.isVisible(), false);
+    assert.equal(win.isMinimized(), true);
     active = win;
     assert.equal(tray.show(), true);
     record(`restore visible=${win.isVisible()} minimized=${win.isMinimized()}`);
     for (let i = 0; i < 50 && !win.isVisible(); i++) await delay(20);
     assert.equal(win.isVisible(), true);
-    assert.equal(tray.isHidden(), false);
+    assert.equal(win.isMinimized(), false);
     // Select the real native MenuItem without manipulating the operator's tray.
     trayMenu.items[2].click();
     assert.equal(quitting, true);
@@ -95,8 +92,8 @@ if (!process.versions.electron) {
     record("checks complete");
     writeFileSync(join(output, "receipt.json"), JSON.stringify({
       passed: true, platform: process.platform, screenshot: "startup-screen.png",
-      checks: ["sandboxed loading renderer", "close hides loading window", "waits for mounted content",
-        "startup dismissal keeps workspace hidden", "tray restores workspace", "quit callback"],
+      checks: ["sandboxed loading renderer", "close minimizes loading window", "waits for mounted content",
+        "startup dismissal keeps workspace minimized", "tray restores workspace", "quit callback"],
       limitations: "No full application, OS popup clicks, installed package, update download or CUA startup exercised.",
     }, null, 2));
     app.exit(0);

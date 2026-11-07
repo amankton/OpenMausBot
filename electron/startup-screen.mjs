@@ -18,7 +18,7 @@ export function startupScreenHtml(iconPath) {
 
 export function createStartupScreen({
   BrowserWindow, iconPath, platform = process.platform, isQuitting, onQuit,
-  onHide, isHidden = () => false, onShow, onFinished,
+  minimizeOnClose = false, onFinished,
 }) {
   let disposed = false, revealed = false, fallback, resolveReady;
   const ready = new Promise(resolve => { resolveReady = resolve; });
@@ -44,7 +44,7 @@ export function createStartupScreen({
   splash.on("close", event => {
     if (disposed || isQuitting()) return;
     event.preventDefault();
-    if (platform === "win32" && onHide) onHide(splash);
+    if (platform === "win32" && minimizeOnClose) splash.minimize();
     else onQuit();
   });
   // Renderer window.close() bypasses BrowserWindow's cancellable close path.
@@ -64,7 +64,6 @@ export function createStartupScreen({
     const grace = setTimeout(showSplash, 500);
     grace.unref?.();
   });
-  splash.on("show", () => onShow?.(splash));
   splash.once("closed", resolveReady);
   // Server startup waits on ready. A failed loading renderer must not keep
   // it from ever reaching the main window's own bounded recovery path. The
@@ -80,15 +79,9 @@ export function createStartupScreen({
       if (revealed || win.isDestroyed() || isQuitting()) return;
       revealed = true;
       const minimized = !splash.isDestroyed() && splash.isMinimized();
-      if (isHidden()) {
-        win.setSkipTaskbar(true);
-        win.hide();
-        if (maximized) win.once("show", () => win.maximize());
-      } else {
-        if (maximized) win.maximize();
-        if (minimized) { win.showInactive(); win.minimize(); }
-        else { win.show(); win.focus(); }
-      }
+      if (maximized) win.maximize();
+      if (minimized) { win.showInactive(); win.minimize(); }
+      else { win.show(); win.focus(); }
       dispose();
     };
     // React must mount before the loading window gives way to the workspace.
