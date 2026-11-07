@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "settledLayout": true,
+  "sidebarRight": 0,
+  "panel": {
+    "x": 16,
+    "width": 350,
+    "right": 366
+  },
+  "visibleTextFirstCharacterX": 33,
+  "sidebarHorizontalIntersection": 0,
+  "pointOverSidebar": false,
+  "ownerDataOrCredentialsUsed": false,
+  "providerOrModelCalls": 0,
+  "codeChanged": false,
+  "scope": "Targeted settled-layout check, not a universal mobile UX claim."
+}

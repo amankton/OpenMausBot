@@ -1,5 +1,7 @@
 # Independent approval and future-install release review
 
+Historical November 5 checkpoint. The [November 6 installation and activation report](chief-0.1.103-activation.md) supersedes its installed-version, activation and model-check status; retained findings and original evidence limits remain historical facts.
+
 Review date: November 5, 2026, America/Los_Angeles. This is the verifier-owned acceptance record. It is updated from observed source and isolated test evidence; implementation claims and older release receipts are not current installed acceptance.
 
 ## Scope and governing decisions

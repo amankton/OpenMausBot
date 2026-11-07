@@ -55,6 +55,7 @@ Use only mapped, tested commands:
 - [Chief work queue and correspondence fixtures](executive-work.md)
 - [Chief correspondence model-quality harness](chief-mail-quality.md)
 - [Independent approvals release review](approvals-release-review.md)
+- [Chief 0.1.103 installation and Full activation](chief-0.1.103-activation.md)
 - [Consolidated Chief install handoff](../chief-install-handoff/HANDOFF.md)
 - [Profile proposal and credential-card lifecycle](proposal-cards.md)
 - [Full Access without duplicate approvals](full-access.md)
