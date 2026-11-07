@@ -22,6 +22,7 @@ import { migrateWorkspaceCredentials, workspaceCredentialEnv } from "./workspace
 import { evictStartupCacheOnce } from "./startup-cache-eviction.mjs";
 import { activateExistingWindow, releaseSingleInstanceLock } from "./single-instance.mjs";
 import { pollServerIdentity } from "./server-boot-probe.mjs";
+import { loopbackServerPortAvailable } from "./server-port-availability.mjs";
 import { createServerSupervisor } from "./server-supervisor.mjs";
 import { packageUrlFromCommandLine, packageUrlFromDeepLink } from "./package-link.mjs";
 import { createOrganizationEntry, isOrganizationDeepLink, takeOrganizationDeepLink, organizationRestartIntent, withOrganizationRestartIntent, withoutOrganizationRestartIntent } from "./organization-entry.mjs";
@@ -98,6 +99,7 @@ const { STAGE_PREFIX: APPIMAGE_CUA_STAGE_PREFIX } = require("./cua-linux-bundle.
 const { desktopViewerUrl, sameDesktopViewerOrigin } = require("./desktop-viewer.cjs");
 const { createDesktopWorkspaceManager } = require("./desktop-workspace.cjs");
 const { createTrustedApprovalModeCoordinator } = require("./approval-trusted-mode.cjs");
+const { desktopServerRuntime } = require("./server-runtime-paths.cjs");
 const { DESKTOP_MUTATION_HEADER, desktopServerHeaders } = require("./desktop-server-auth.cjs");
 const { MIN_BOUNDS, normalizeUnreadCount, parseWindowState, resolveWindowState } = require("./window-state.cjs");
 
@@ -1295,9 +1297,21 @@ function receivePhoneSecretSave(proc, rawMessage) {
 
 async function startServerOn(port) {
   if (desktopShutdownStarted) return { proc: null, abort: true };
-  const entry = path.join(process.resourcesPath, "server", "index.js");
+  const runtime = desktopServerRuntime(process.resourcesPath);
+  try {
+    if (!await loopbackServerPortAvailable(port)) {
+      slog(`port ${port} is occupied; no server child started`);
+      return { proc: null, reason: "foreign-owner" };
+    }
+  } catch (error) {
+    slog(error.message);
+    return { proc: null, reason: "port-probe-failed", abort: true };
+  }
+  if (desktopShutdownStarted) return { proc: null, abort: true };
+  const entry = runtime.entry;
   const childEnv = managedComposioChildEnvironment(composioBrokerUrl(), secureCredentials, {
     ...process.env,
+    ...runtime.environment,
     // The desktop parent owns the durable data-directory lease. Each utility
     // server gets only a private capability that validates that same live
     // owner; fallback-port children must not race to replace the parent lease.
@@ -1307,7 +1321,7 @@ async function startServerOn(port) {
     // from the launching shell. It starts fail-closed until this exact main
     // process sends the private in-memory connection after spawn.
     OMB_DESKTOP_PARENT: "1",
-    OMB_STATIC_DIR: path.join(process.resourcesPath, "ui"),
+    OMB_STATIC_DIR: runtime.staticDir,
     OMB_RESOURCES_PATH: process.resourcesPath,
     OMB_SKILLS_DIR: path.join(process.resourcesPath, "skills"),
     OMB_PORT: String(port),
@@ -1327,6 +1341,7 @@ async function startServerOn(port) {
   delete childEnv.OMB_BROWSER_CONNECTION;
   slog(`fork ${entry} port=${port}`);
   const proc = utilityProcess.fork(entry, [], {
+    execArgv: runtime.execArgv,
     env: childEnv,
     stdio: ["ignore", "pipe", "pipe"],
   });
