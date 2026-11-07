@@ -3,7 +3,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:f
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { waitForExit } from '../server/testing/cleanup.ts';
-import { createCompanionOriginEndpoint, cleanupCompanionOriginEndpoint, type CompanionOriginEndpoint } from '../electron/companion-origin-gateway.mjs';
+import { companionOriginHealth, createCompanionOriginEndpoint, cleanupCompanionOriginEndpoint, validCompanionOriginTarget, type CompanionOriginEndpoint } from '../electron/companion-origin-gateway.mjs';
 import { startPhoneRemote } from './chief-phone-remote.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -31,8 +31,8 @@ async function close() {
 process.once('SIGINT', () => void close());
 process.once('SIGTERM', () => void close());
 
-// Follow the saved development server across its dynamic-port restarts. Never
-// discover or attach to the separate installed desktop app on port 8899.
+// Follow the saved workspace across restarts, including when Electron owns
+// the phone listener and its private authorization channel to the server.
 while (!closing) {
   try {
     const manifest = JSON.parse(readFileSync(join(root, '.chief-local/preview.json'), 'utf8'));
@@ -42,7 +42,20 @@ while (!closing) {
     const identity = `${url.origin}:${manifest.pid}`;
     const response = await fetch(url.origin + '/api/health', { signal: AbortSignal.timeout(3000) });
     if (!response.ok || (await response.json()).app !== 'openmausbot') throw Error('Chief is not ready');
-    if (!child || child.exitCode !== null || child.signalCode !== null || identity !== backend) {
+    if (manifest.desktopManaged === true) {
+      if (child) await stopCompanion();
+      const target = JSON.parse(readFileSync(join(directory, 'native-origin.json'), 'utf8'));
+      if (target.desktopPid !== manifest.pid || !validCompanionOriginTarget(target)) throw Error('Invalid native phone origin');
+      const state = await (await fetch('http://127.0.0.1:18911/state', { signal: AbortSignal.timeout(1000) })).json();
+      if (state.pid !== target.pid || !(await companionOriginHealth(target))) throw Error('Native phone listener is not ready');
+      const nativeIdentity = `${identity}:${target.pid}:${target.socketPath}`;
+      if (nativeIdentity !== backend) {
+        await remote.detach();
+        backend = nativeIdentity;
+        await remote.attach({ pid: target.pid, socketPath: target.socketPath });
+        console.log('Chief phone gateway attached to the desktop-owned listener');
+      }
+    } else if (!child || child.exitCode !== null || child.signalCode !== null || identity !== backend) {
       await stopCompanion();
       if (closing) break;
       origin = createCompanionOriginEndpoint();
@@ -69,7 +82,7 @@ while (!closing) {
     }
   } catch {
     // No phone is allowed to use a stale backend while Chief is restarting.
-    if (child) await stopCompanion();
+    if (child || backend) await stopCompanion();
   }
   if (!closing) await delay(5000);
 }

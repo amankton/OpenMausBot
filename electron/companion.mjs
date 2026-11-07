@@ -25,8 +25,12 @@ import {
 // sidecar opened. They must stay clear of the harness, which takes 8799 for
 // itself and 8800 for its webhook receiver — the sidecar refuses to start on
 // either and says which, rather than racing it for the socket.
-const CONTROL_PORT = 8911;
-const COMPANION_PORT = 8910;
+const managedPhoneDirectory = process.env.CHIEF_DESKTOP_COMPANION_DIRECTORY;
+if (managedPhoneDirectory && !path.isAbsolute(managedPhoneDirectory)) {
+  throw new Error("CHIEF_DESKTOP_COMPANION_DIRECTORY must be an absolute path");
+}
+const CONTROL_PORT = managedPhoneDirectory ? 18911 : 8911;
+const COMPANION_PORT = managedPhoneDirectory ? 18910 : 8910;
 
 let proc = null;
 let lastError = null;
@@ -67,8 +71,9 @@ function companionSettings() {
   try {
     const parsed = JSON.parse(fs.readFileSync(settingsFile(), "utf8"));
     return { enabled: parsed?.enabled === true, keepAwake: parsed?.keepAwake === true };
-  } catch {
-    return { enabled: false, keepAwake: false };
+  } catch (error) {
+    // The Full workspace already enabled its dedicated phone connector.
+    return { enabled: Boolean(managedPhoneDirectory && error?.code === "ENOENT"), keepAwake: false };
   }
 }
 
@@ -226,6 +231,10 @@ async function start({ resourcesPath, harnessPort, mutationToken, hostedUrl = nu
   delete childEnvironment.OMB_PHONE_SECRET_PUBLIC_KEY;
   if (hostedUrl) childEnvironment.OMB_COMPANION_HOSTED_URL = hostedUrl;
   childEnvironment.OMB_COMPANION_INTERNAL_ORIGIN = allocatedOrigin.socketPath;
+  if (managedPhoneDirectory) {
+    childEnvironment.OMB_COMPANION_DIR = managedPhoneDirectory;
+    childEnvironment.OMB_COMPANION_NAME = "Chief Development";
+  }
   if (/^[A-Za-z0-9_-]{87}$/.test(String(secretPublicKey ?? ""))) {
     childEnvironment.OMB_PHONE_SECRET_PUBLIC_KEY = secretPublicKey;
   }
@@ -313,6 +322,19 @@ async function start({ resourcesPath, harnessPort, mutationToken, hostedUrl = nu
       proc = child;
       advertisedHostedUrl = hostedUrl;
       originTarget = Object.freeze(target);
+      if (managedPhoneDirectory) {
+        // The hosted gateway needs only the phone listener's address. The
+        // capability that authorizes writes stays on the utility process port.
+        const file = path.join(managedPhoneDirectory, "native-origin.json");
+        const temporary = `${file}.${process.pid}.tmp`;
+        try {
+          fs.writeFileSync(temporary, JSON.stringify({ ...target, desktopPid: process.pid }), { mode: 0o600 });
+          fs.renameSync(temporary, file);
+        } catch {
+          try { fs.unlinkSync(temporary); } catch {}
+          log?.("could not publish the managed phone origin for hosted access");
+        }
+      }
       return companionState();
     } catch {
       await new Promise((r) => setTimeout(r, 150));
