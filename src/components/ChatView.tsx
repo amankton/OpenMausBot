@@ -84,6 +84,7 @@ import { CompactionChip, DigestChip } from "./DigestChip";
 import { RenameTitle } from "./RenameTitle";
 import { BotActivityPicker } from "./TaskPicker";
 import { ModelPicker } from "./ModelPicker";
+import { DesktopWorkspaceSwitcher } from "./DesktopWorkspaceSwitcher";
 import { SidebarPopoverMenu, type SidebarMenuItem } from "./SidebarPopoverMenu";
 import { ShortcutHint } from "./ShortcutHint";
 import {
@@ -1669,6 +1670,7 @@ function ChatHeaderMenu({ bot, messages, findOpen, onFind }: {
     <SidebarPopoverMenu
       items={items}
       ariaLabel={t("chat.more")}
+      footer={window.ogb?.workspaces ? <DesktopWorkspaceSwitcher menuItem cloudHome={state.config?.cloudHome === true} /> : undefined}
       openOnHover
       placement="below"
       renderTrigger={({ open }) => (

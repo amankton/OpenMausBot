@@ -304,6 +304,8 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         />
       )}
       {!calendarFocus && <Sidebar
+        showWorkspaceSwitcher={state.activeView !== "chat" || (!remoteClient && Boolean(localVmWorkspaceBotId)) ||
+          cloudSignIn || noEngines || !bot}
         collapseToIcons={collapseSidebar}
         open={drawerOpen}
         onClose={() => {
