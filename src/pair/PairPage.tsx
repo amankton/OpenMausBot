@@ -27,6 +27,19 @@ export function pairsAutomatically(initialCode: string | null, desktop = typeof 
   return Boolean(initialCode) && desktop;
 }
 
+export function hasPairingSession(
+  session: SessionState | null,
+  environment: EnvironmentDescriptor | null,
+  desktop = typeof window !== "undefined" && Boolean(window.ogb?.workspaces),
+): boolean {
+  // A browser on the same machine can read a desktop-managed Chief without
+  // a session. It still needs pairing before its decisions are authorized.
+  if (session?.kind === "loopback" && environment?.capabilities.selfUpdate === "desktop-managed" && !desktop) {
+    return false;
+  }
+  return isConnected(session);
+}
+
 /** What the page says above the form. My Cloud has no server screen to
  * read a code from: it says where its connection starts instead. */
 export function pairIntro({ mode, sent, email, cloudHome }: { mode: "email" | "code" | null; sent: boolean; email: string; cloudHome: boolean }): string {
@@ -82,7 +95,7 @@ export function PairPage({ initialCode, initialEmail = null, reason }: { initial
     void readSessionState().then(setSession);
   }, []);
 
-  const connected = isConnected(session);
+  const connected = hasPairingSession(session, environment);
   const emailOffered = environment?.capabilities.emailSignIn === true;
   const cloudHome = environment?.capabilities.cloudHome === true;
 
