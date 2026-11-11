@@ -51,6 +51,7 @@ export interface ApprovalBus {
   notify?: (notification: Notification | null) => void;
   /** Effective server-resolved Full Access for this exact source thread. */
   autoApply?: (botId: string, threadId: string) => boolean;
+  approvalChanged?: (botId: string) => void;
 }
 
 interface Pending {
@@ -75,7 +76,10 @@ function settleCard(pending: Pending, behavior: string, source: "user" | "system
   const existing = pending.bus.store
     .messagesFor(pending.threadId)
     .find((m) => m.id === pending.messageId);
-  if (!existing?.card || existing.card.answered) return;
+  if (!existing?.card || existing.card.answered) {
+    pending.bus.approvalChanged?.(pending.fromBotId);
+    return;
+  }
   pending.bus.store.patchMessage(pending.threadId, pending.messageId, {
     card: { ...existing.card, answered: behavior, dismissed: source !== "user" },
   });
@@ -89,11 +93,19 @@ function settleCard(pending: Pending, behavior: string, source: "user" | "system
     const waiting = store.bot(pending.fromBotId);
     if (waiting?.activity === "waiting-on-you") store.setActivity(waiting.id, "working");
   }
+  pending.bus.approvalChanged?.(pending.fromBotId);
 }
 
 /** requestId → pending ask. Lives only in memory — restarting the
  * server cancels every in-flight approval, like provider permissions do. */
 const pendingComms = new Map<string, Pending>();
+
+export function hasPendingPeerApproval(threadId: string): boolean {
+  for (const pending of pendingComms.values()) {
+    if (pending.threadId === threadId) return true;
+  }
+  return false;
+}
 
 const APPROVAL_TIMEOUT_MS = 15 * 60_000;
 
@@ -188,7 +200,6 @@ export function requestPeerApproval(
     // the card has to exist before the entry, so a timeout or an answer can
     // always find it to settle
     const card = pushApprovalCard(bus, from, target, message, action, requestId, sourceThreadId);
-    announceCard(bus, from, card, sourceThreadId);
     const timer = setTimeout(() => {
       // 15 minutes without an answer → expired. Keeps an unattended bot from
       // stalling its own turn forever (matches the Claude broker timeout).
@@ -209,6 +220,8 @@ export function requestPeerApproval(
       messageId: card.id,
       bus,
     });
+    announceCard(bus, from, card, sourceThreadId);
+    bus.approvalChanged?.(from.id);
   });
 }
 

@@ -120,6 +120,7 @@ export interface GroupThreadUsage extends TaskUsage {
  * session. Wire form: no resumeCursors or lastInstanceId — the harness's
  * own bookkeeping that no client has ever used. */
 export interface WireTask {
+  pendingPeerApproval?: boolean;
   /** Derived durable result references; provider success is not delivery. */
   resultSummary?: TaskResultSummary;
   /** Outstanding handoffs, not an active provider turn. */
@@ -241,6 +242,7 @@ export const CONNECTOR_TOOL_NAME_PATTERN = /^[A-Z][A-Z0-9_]{0,127}$/;
  * projected tasks are WireTask[] and avatarUrl is always present
  * (null when the bot has none). */
 export interface WireBot {
+  pendingPeerApproval?: boolean;
   waitingForTeammates?: boolean;
   id: string;
   /** The task selected in the UI; running turns keep their own thread id. */

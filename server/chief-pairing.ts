@@ -82,7 +82,7 @@ export class ChiefPairingRuntime {
     try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
     catch { throw new PairingError(503, "Invalid connection response"); }
   }
-  async pair(invitation: unknown, botIds: unknown, trackerWrite = false): Promise<Connection> {
+  async pair(invitation: unknown, botIds: unknown, trackerWrite = false, trackerRead = false): Promise<Connection> {
     const parsed = invitationSchema.safeParse(invitation), bots = identifiers.safeParse(botIds);
     if (!parsed.success || !bots.success || new Set(bots.data).size !== bots.data.length || bots.data.some(id => !this.options.hasBot(id))) {
       throw new PairingError(400, "Choose existing personal agents and a valid workspace invitation.");
@@ -93,7 +93,7 @@ export class ChiefPairingRuntime {
     this.busy = true;
     try {
       const claim = { challenge: parsed.data.challenge, runtimeId: this.state.runtimeId, publicKey: this.state.publicKey,
-        bots: [...bots.data].sort(), scopes: trackerWrite ? ["tracker:read", "tracker:write", "workspace:read"] : ["workspace:read"] };
+        bots: [...bots.data].sort(), scopes: trackerWrite ? ["tracker:read", "tracker:write", "workspace:read"] : trackerRead ? ["tracker:read", "workspace:read"] : ["workspace:read"] };
       const bytes = Buffer.from(JSON.stringify(["chief-pair-v1", claim.challenge, claim.runtimeId, claim.publicKey, claim.bots, claim.scopes]));
       const result = recordSchema.parse(await this.request("/connections/complete", { ...claim, signature: sign(null, bytes, this.state.privateKey).toString("base64url") }));
       const c = result.connection;

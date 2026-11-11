@@ -101,10 +101,10 @@ export function hermesCommandReviewer(env: NodeJS.ProcessEnv, workerScript?: str
   if (!home) return createCommandReviewer();
   const script = workerScript ?? join(home, "plugins", "chief-http-tools", "command_review.py");
   const suffix = process.platform === "win32" ? ["Scripts", "python.exe"] : ["bin", "python"];
-  const python = [join(home, "hermes-agent", "venv", ...suffix), join(home, "hermes-agent", ".venv", ...suffix), join(home, "venv", ...suffix)].find(existsSync);
+  const python = [env.HERMES_PYTHON || "", join(home, "hermes-agent", "venv", ...suffix), join(home, "hermes-agent", ".venv", ...suffix), join(home, "venv", ...suffix)].find(path => path && existsSync(path));
   if (!python || !existsSync(script)) return createCommandReviewer();
   const safeEnv: NodeJS.ProcessEnv = {};
-  for (const key of ["PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "APPDATA", "COMSPEC", "PATHEXT", "LANG", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"]) {
+  for (const key of ["PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "APPDATA", "COMSPEC", "PATHEXT", "LANG", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "PYTHONPATH", "CHIEF_BUDGET_RUN_ID", "CHIEF_MANAGED_REQUESTS_ONLY"]) {
     if (env[key]) safeEnv[key] = env[key];
   }
   // The backend may have a disposable HOME for provider isolation. Only this

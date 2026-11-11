@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "nodeVersion": "v24.22.2",
+  "pnpmVersion": "10.33.0",
+  "uv": {
+    "uv-aarch64-apple-darwin.tar.gz": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-aarch64-apple-darwin.tar.gz",
+      "sha256": "81b811b57e4624df7ed3aac148e0359100d9962f3d9dce00aec533dc2e086731"
+    },
+    "uv-x86_64-apple-darwin.tar.gz": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-apple-darwin.tar.gz",
+      "sha256": "20c47e4c1f630b8abaff8c291fa9b9aa300fef92c4fbff95adf198b55287cda7"
+    },
+    "uv-x86_64-pc-windows-msvc.zip": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip",
+      "sha256": "0cdc5b38fe5a8168ed6a25814f5ba43c21d313dd3187314fccb37b7cec46e021"
+    }
+  },
+  "node": {
+    "win32-x64": {
+      "url": "https://nodejs.org/dist/v24.22.2/node-v24.22.2-x64.msi",
+      "sha256": "9231bf64d19bef391dd5ee8af65411d3799c3c44a842d2320849cc1da60b6b6d"
+    },
+    "darwin-arm64": {
+      "url": "https://nodejs.org/dist/v24.22.2/node-v24.22.2.pkg",
+      "sha256": "e975e566b13aaa6b4b10689d0fea6fd8332b43a1474b9f0c970242e0c2b99bf9"
+    },
+    "darwin-x64": {
+      "url": "https://nodejs.org/dist/v24.22.2/node-v24.22.2.pkg",
+      "sha256": "e975e566b13aaa6b4b10689d0fea6fd8332b43a1474b9f0c970242e0c2b99bf9"
+    }
+  },
+  "docker": {
+    "win32-x64": {
+      "url": "https://desktop.docker.com/win/main/amd64/245422/Docker%20Desktop%20Installer.exe",
+      "sha256": "cd6273d9eaa4f07fa7593fc6813d37e1004381cebc3f26047a2554fa5db24388",
+      "version": "4.98.0"
+    },
+    "darwin-arm64": {
+      "url": "https://desktop.docker.com/mac/main/arm64/245422/Docker.dmg",
+      "sha256": "9c6f13ce4edda2abf20d801552b6acb96acd3d64b3e91b50c4484353802758b5",
+      "version": "4.98.0"
+    },
+    "darwin-x64": {
+      "url": "https://desktop.docker.com/mac/main/amd64/245422/Docker.dmg",
+      "sha256": "96b53f9a4a807b6be6207d18f360b9778ff481e1d94b5027bdf1ae2a22d837cb",
+      "version": "4.98.0"
+    }
+  },
+  "pnpm": {
+    "url": "https://registry.npmjs.org/pnpm/-/pnpm-10.33.0.tgz",
+    "sha256": "bfcc1bcbad279b13a516c446a75b3c58b6904b45d57a1951411015e50b751a80"
+  }
+}

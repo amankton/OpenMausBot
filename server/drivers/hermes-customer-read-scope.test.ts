@@ -1,0 +1,30 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { mkdtempSync, writeFileSync, mkdirSync, symlinkSync, rmSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { hermesRoutineNative } from './hermes-routine-approval.ts';
+import type { SendTurnInput } from '../contracts.ts';
+const created: string[] = [];
+afterEach(() => { vi.unstubAllEnvs(); for (const root of created.splice(0)) { if (!resolve(root).startsWith(resolve(tmpdir())) || !root.includes('chief-customer-read-')) throw Error('Unexpected fixture root'); rmSync(root, { recursive: true, force: true }); } });
+it('customer routine reads stay in the approved working folder and protect configuration', () => {
+  const root = mkdtempSync(join(tmpdir(), 'chief-customer-read-')); created.push(root);
+  const work = join(root, 'work'); mkdirSync(work); const permitted = join(work, 'draft.md'), outside = join(root, 'private.md'), config = join(work, 'config.json');
+  for (const path of [permitted, outside, config]) writeFileSync(path, 'synthetic');
+  const turn = { cwd: work, approvalMode: 'auto' } as SendTurnInput;
+  vi.stubEnv('CHIEF_CUSTOMER_INSTALLATION', '1');
+  expect(hermesRoutineNative(turn, true, 'read_file', { path: permitted })).toBe(true);
+  expect(hermesRoutineNative(turn, true, 'read_file', { path: outside })).toBe(false);
+  expect(hermesRoutineNative(turn, true, 'read_file', { path: config })).toBe(false);
+  expect(hermesRoutineNative(turn, true, 'read_file', { path: '../private.md' })).toBe(false);
+  expect(hermesRoutineNative(turn, true, 'skill_view', { name: 'unknown' })).toBe(false);
+  expect(hermesRoutineNative(turn, true, 'search_files', {})).toBe(true);
+  expect(hermesRoutineNative(turn, false, 'read_file', { path: permitted })).toBe(false);
+});
+it('customer read guard rejects a symlink/junction escape and preserves legacy opt-in', () => {
+  const root = mkdtempSync(join(tmpdir(), 'chief-customer-read-')); created.push(root);
+  const work = join(root, 'work'), outside = join(root, 'outside'); mkdirSync(work); mkdirSync(outside); writeFileSync(join(outside, 'private.md'), 'synthetic');
+  symlinkSync(outside, join(work, 'link'), process.platform === 'win32' ? 'junction' : 'dir');
+  const turn = { cwd: work, approvalMode: 'auto' } as SendTurnInput;
+  vi.stubEnv('CHIEF_CUSTOMER_INSTALLATION', '1'); expect(hermesRoutineNative(turn, true, 'read_file', { path: join(work, 'link/private.md') })).toBe(false);
+  vi.stubEnv('CHIEF_CUSTOMER_INSTALLATION', ''); expect(hermesRoutineNative(turn, true, 'read_file', { path: join(outside, 'private.md') })).toBe(true);
+});

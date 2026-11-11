@@ -24,6 +24,7 @@ export function createChatToolApproval(options: {
   const pending = new Map<string, Card>();
   let closed = false;
   return {
+    has(id: string) { return pending.has(id) && !closed && !options.signal.aborted; },
     ask(tool: string, summary: string): Promise<boolean> {
       if (closed || options.signal.aborted) return Promise.resolve(false);
       const ask = { id: newId(), tool, summary };

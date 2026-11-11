@@ -1,6 +1,6 @@
 // Density is an occasional preference chosen in Settings → Appearance; the
 // sidebar header keeps only its frequent controls (collapse, activity, add),
-// and Simple mode keeps collapse and add. The header is one row on the traffic
+// in both interface modes. The header is one row on the traffic
 // lights' line: [lights] [drag space] [buttons].
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -66,12 +66,12 @@ describe("sidebar header", () => {
     },
   );
 
-  it.each(["comfortable", "compact"] as const)("keeps collapse and add in Simple mode at %s density", (density) => {
+  it.each(["comfortable", "compact"] as const)("keeps collapse, activity and add in Simple mode at %s density", (density) => {
     fixture.advanced = false;
     fixture.density = density;
     const html = render();
     expect(html).toContain('aria-label="Collapse sidebar to avatars"');
-    expect(html).not.toContain('aria-label="Active Threads"');
+    expect(html).toContain('aria-label="Active Threads" aria-expanded="false"');
     expect(html).toContain('aria-label="New or share"');
   });
 
@@ -80,7 +80,7 @@ describe("sidebar header", () => {
     fixture.density = "icons";
     const html = render();
     expect(html).toContain('aria-label="Expand sidebar"');
-    expect(html).not.toContain('aria-label="Active Threads"');
+    expect(html).toContain('aria-label="Active Threads"');
   });
 });
 
@@ -119,7 +119,7 @@ describe("sidebar top row", () => {
     expect(row.indexOf("data-traffic-light-space")).toBeLessThan(row.indexOf("data-sidebar-top-spacer"));
     expect(row.indexOf("data-sidebar-top-spacer")).toBeLessThan(row.indexOf("data-sidebar-top-buttons"));
     expect(classesOf(row, "data-traffic-light-space")).toEqual(expect.arrayContaining(["w-[72px]", "shrink-0"]));
-    expect(row.slice(row.indexOf("data-sidebar-top-buttons")).match(/<button/g)).toHaveLength(advanced ? 3 : 2);
+    expect(row.slice(row.indexOf("data-sidebar-top-buttons")).match(/<button/g)).toHaveLength(3);
     expect(html).not.toContain("Switch server:");
   });
 

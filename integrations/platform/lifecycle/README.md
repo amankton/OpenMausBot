@@ -1,5 +1,15 @@
 # Chief lifecycle service — CON-01
 
+**November 4 installer update:** the local customer installer now deploys this
+service, initializes fresh databases with separate migration/runtime identities,
+and enables authenticated-member profile provisioning through a private signed
+broker. The local policy is limited to staging mode and a loopback workspace
+origin. Profiles require renewable membership leases; pairing still requires
+two-sided confirmation. Production file entitlements remain independent and
+receive no automatic grants. See `installer/BUILD-REPORT.md` at the repository
+root for current implementation and native acceptance evidence. The historical
+deployment notes below describe the earlier owner installation.
+
 **October 10 deployment update:** CON-01 is deployed and verified in the existing
 local loopback workspace. See `docs/verification/chief-con01-local-deployment.md`
 from the repository root and `chief-con01-deployed.json` in its evidence directory.

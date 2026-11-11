@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import { api } from "@/state/store";
 
 interface Connection { id: string; workspace: string; account: string; keyFingerprint: string; bots: string[]; scopes?: string[]; state: string; expiresAt: string }
-interface PairingStatus { enabled: boolean; bots: Array<{ id: string; name: string }>; connections: Connection[]; error?: string }
+interface PairingStatus { enabled: boolean; bots: Array<{ id: string; name: string }>; connections: Connection[]; error?: string; memberProfiles?: Array<{ workspace: string; account: string; botId: string }> }
 const button = "rounded-md border border-hairline px-3 py-2 text-xs hover:bg-control disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent";
 
 export function ChiefPairingPanel() {
@@ -33,18 +33,22 @@ export function ChiefPairingPanel() {
   const selectedAgents = status?.bots.filter(bot => bots.includes(bot.id)) ?? [];
   const currentConnections = status?.connections.filter(connection => connection.state !== "revoked" && Date.parse(connection.expiresAt) > Date.now()) ?? [];
   const previousConnections = status?.connections.filter(connection => !currentConnections.includes(connection)) ?? [];
+  let assigned: { botId: string } | undefined;
+  try { const parsed = JSON.parse(invitation); assigned = status?.memberProfiles?.find(m => m.workspace === parsed.workspace && m.account === parsed.account); } catch { /* The form validates the complete invitation on submit. */ }
+  const connectingBots = status?.memberProfiles ? assigned ? [assigned.botId] : [] : bots;
   return <section aria-label="Connect personal Chief" className="space-y-3 px-3 py-3 text-xs">
     <p className="text-ink-secondary">Create an invitation in the workspace’s Integrations page, then paste it here. Approve the matching verification code there to finish.</p>
     {status?.enabled === false && <p role="status">{status.error}</p>}
     {status?.enabled && <form className="space-y-3" onSubmit={event => { event.preventDefault(); void perform(async () => {
       let parsed: unknown;
       try { parsed = JSON.parse(invitation); } catch { throw new Error("Paste the complete invitation from the workspace."); }
-      await api("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: parsed, bots, ...(trackerWrite ? { trackerWrite: true } : {}) }) });
+      await api("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: parsed, bots: connectingBots, ...(trackerWrite ? { trackerWrite: true } : {}) }) });
       setInvitation(""); setMessage("Request sent. Compare the verification code and approve it in the workspace.");
     }); }}>
       <label className="block">Workspace invitation<textarea aria-label="Workspace invitation" value={invitation} onChange={event => setInvitation(event.target.value)} required maxLength={4096} disabled={busy} autoComplete="off" spellCheck={false}
         className="mt-1 min-h-24 w-full rounded-md border border-hairline bg-inset p-2" /></label>
-      <fieldset disabled={busy}><legend className="mb-1 font-medium">Agents to connect</legend>
+      {status.memberProfiles && <p role="status">{assigned ? `Assigned member agent: ${status.bots.find(b => b.id === assigned.botId)?.name ?? "Member assistant"}. Read-only Tracker access is included; writes need the optional grant below and workspace confirmation.` : "Sign into the shared workspace to create your member agent, paste its invitation here, and refresh this panel if needed."}</p>}
+      {!status.memberProfiles && <fieldset disabled={busy}><legend className="mb-1 font-medium">Agents to connect</legend>
         <label htmlFor={searchId} className="sr-only">Search agents to connect by name</label>
         <div className="flex min-h-9 items-center gap-2 rounded-md border border-hairline bg-inset px-2 focus-within:outline-2 focus-within:outline-accent">
           <Search size={14} aria-hidden="true" className="shrink-0 text-ink-secondary" />
@@ -62,10 +66,10 @@ export function ChiefPairingPanel() {
         </div>
         {status.bots.length > 0 && !matches.length && <p>No matching agents. Try another name or clear your search.</p>}
         {!status.bots.length && <p>Create a personal agent before pairing.</p>}
-      </fieldset>
+      </fieldset>}
       <label className="flex items-center gap-2"><input type="checkbox" checked={trackerWrite} onChange={event => setTrackerWrite(event.target.checked)} disabled={busy} />Allow selected agents to read Tracker projects/issues and create or update issues as this workspace member</label>
       <p className="text-ink-secondary">Access still requires matching workspace approval and current membership. Existing connections are not upgraded. This does not start work.</p>
-      <button className={`${button} border-accent bg-accent font-medium text-white hover:bg-accent/90`} disabled={busy || bots.length === 0} type="submit">{busy ? "Connecting…" : "Request connection"}</button>
+      <button className={`${button} border-accent bg-accent font-medium text-white hover:bg-accent/90`} disabled={busy || connectingBots.length === 0} type="submit">{busy ? "Connecting…" : "Request connection"}</button>
     </form>}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {message && <p role="status">{message}</p>}

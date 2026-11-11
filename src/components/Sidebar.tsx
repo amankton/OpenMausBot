@@ -122,7 +122,6 @@ import { LiveCallPill, liveBadgeFor } from "./LiveCallPill";
 import { ShortcutHint } from "./ShortcutHint";
 import { citationPreviewText } from "@/lib/citations";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
-import { useAdvancedMode } from "@/lib/interface-mode";
 
 /** Vertical centre of the macOS traffic lights, in CSS px from the window
  * top: electron/window-chrome.mjs sets trafficLightPosition.y = 16 and the
@@ -1912,7 +1911,6 @@ export function Sidebar({ open, onClose, collapseToIcons = false, showWorkspaceS
   const deletingRoom = deletingRoomId ? state.groups.find((g) => g.id === deletingRoomId) : undefined;
   const [plusOpen, setPlusOpen] = useState(false);
   const plusMotion = useMenuMotion(plusOpen);
-  const advanced = useAdvancedMode();
   const [attentionOpen, setAttentionOpen] = useState(false);
   const attentionMotion = useMenuMotion(attentionOpen);
   const [attentionPinned, setAttentionPinnedState] = useState(() => loadSidebarAttentionPinned());
@@ -2211,6 +2209,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false, showWorkspaceS
   // same rule and order as the sidebar tree, so the bell can never
   // disagree with it.
   const attention = crossBotAttentionThreads(state.bots, state.pendingQueued, undefined, state.groups);
+  const needsReview = attention.some(({ task }) => task.activity === "waiting-on-you");
   // Every pinned thread across every bot and room — the thread-level twin
   // of the built-in pinned-bots section, which only ever covered whole bots.
   const pinnedThreads = crossBotPinnedThreads(state.bots, state.groups, state.pendingQueued);
@@ -2286,17 +2285,21 @@ export function Sidebar({ open, onClose, collapseToIcons = false, showWorkspaceS
           >
             {density === "icons" ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>}
-          {advanced && <div ref={attentionMenuRef} className={density === "icons" ? "relative" : "contents"}>
+          <div ref={attentionMenuRef} className={density === "icons" ? "relative" : "contents"}>
             <button
               type="button"
               onClick={() => setAttentionOpen((o) => !o)}
               aria-label={t("attention.title")}
+              aria-expanded={attentionOpen}
               title={t("attention.title")}
               className="relative flex size-8 items-center justify-center rounded-md text-ink-secondary hover:bg-raised hover:text-ink"
             >
               <Activity size={17} strokeWidth={2} />
               {attention.length > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[9.5px] font-semibold leading-4 text-ink">{attention.length > 9 ? "9+" : attention.length}</span>
+                <span className={cn("absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full px-0.5 text-[9.5px] font-semibold leading-4", needsReview ? "bg-warning text-black" : "bg-accent text-ink")}>
+                  {needsReview && <span aria-hidden="true" className="absolute inset-0 rounded-full bg-warning/60 motion-safe:animate-ping" />}
+                  <span className="relative">{attention.length > 9 ? "9+" : attention.length}</span>
+                </span>
               )}
             </button>
             {attentionMotion.shown && (
@@ -2322,12 +2325,14 @@ export function Sidebar({ open, onClose, collapseToIcons = false, showWorkspaceS
                   {attention.length === 0 ? (
                     <div className="px-3.5 py-2.5 text-[13px] text-ink-secondary">{t("attention.empty")}</div>
                   ) : (
-                    <AttentionThreadRows entries={attention} onJump={(entry) => { setAttentionOpen(false); dispatch(attentionJumpAction(entry)); }} />
+                    <div className="max-h-[min(24rem,50dvh)] overflow-y-auto">
+                      <AttentionThreadRows entries={attention} onJump={(entry) => { setAttentionOpen(false); dispatch(attentionJumpAction(entry)); onClose(); }} />
+                    </div>
                   )}
                 </div>
               </>
             )}
-          </div>}
+          </div>
           {/* `contents` keeps the popover anchored to the header row */}
           <div ref={plusMenuRef} className="contents">
           <button

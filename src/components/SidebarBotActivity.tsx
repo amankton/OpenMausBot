@@ -12,9 +12,13 @@ export function sidebarBotActivityTasks(bot: Bot, queued: Record<string, unknown
   const tasks = bot.tasks ?? [{
     threadId: bot.threadId, title: t("task.newShort"), createdAt: 0,
     busy: bot.busy, activity: bot.activity, unread: bot.unread,
-    waitingForTeammates: bot.waitingForTeammates,
+    waitingForTeammates: bot.waitingForTeammates, pendingPeerApproval: bot.pendingPeerApproval,
   }];
-  return tasks.map((task) => ({ ...task, queued: Boolean(queued[task.threadId]?.length) }))
+  return tasks.map((task) => ({
+    ...task,
+    activity: task.pendingPeerApproval ? "waiting-on-you" as const : task.activity,
+    queued: Boolean(queued[task.threadId]?.length),
+  }))
     // Routine runs are reachable through their run receipt, never a menu.
     .filter((task) => !task.routineRunId)
     .filter((task) => task.activity === "waiting-on-you" || task.activity === "working" || task.busy || task.waitingForTeammates === true || task.queued || task.unread);

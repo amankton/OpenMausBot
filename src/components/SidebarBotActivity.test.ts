@@ -34,6 +34,17 @@ describe("botShowsUnread", () => {
 });
 
 describe("cross-bot attention", () => {
+  it("shows an idle thread with a pending peer review and jumps to that exact thread", () => {
+    const gateway = bot("gateway", "Crewframe Gateway", "other", [
+      task("source", "Gateway review", { pendingPeerApproval: true, busy: false }),
+      task("other", "Other chat", {}),
+    ]);
+    const entries = crossBotAttentionThreads([gateway], {});
+    expect(entries).toHaveLength(1);
+    expect(entries[0].task).toMatchObject({ activity: "waiting-on-you", busy: false });
+    expect(attentionJumpAction(entries[0])).toEqual({ type: "switchTask", botId: "gateway", threadId: "source" });
+  });
+
   it("collects only attention threads from every other bot, waiting first across bots", () => {
     const alpha = bot("a", "Alpha", "a0", [
       task("a0", "Idle chat", {}),

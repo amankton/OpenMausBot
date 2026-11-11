@@ -9,8 +9,8 @@ import { ChiefPairingPanel } from "./ChiefPairingPanel";
 let root: Root;
 let host: HTMLDivElement;
 const status = { enabled: true, bots: [{ id: "bacca", name: "Bacca" }, { id: "game", name: "Game Designer" }, { id: "qa", name: "Game QA" }], connections: [] };
-async function mount() {
-  vi.mocked(api).mockResolvedValue(status);
+async function mount(value: unknown = status) {
+  vi.mocked(api).mockResolvedValue(value);
   host = document.createElement("div"); document.body.append(host);
   root = createRoot(host);
   await act(async () => { root.render(createElement(ChiefPairingPanel)); });
@@ -25,6 +25,16 @@ async function fill(selector: string, value: string) {
 const boxes = () => [...host.querySelectorAll<HTMLInputElement>('fieldset input[type="checkbox"]')];
 afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); vi.resetAllMocks(); });
 describe("pairing agent search", () => {
+  it("selects the verified member's assigned profile and never borrows another member's agent", async () => {
+    await mount({ ...status, memberProfiles: [{ workspace: "workspace-one", account: "account-one", botId: "bacca" }] });
+    await fill("textarea", '{"workspace":"workspace-one","account":"account-two"}');
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+    await fill("textarea", '{"workspace":"workspace-one","account":"account-one"}');
+    expect(host.textContent).toContain("Assigned member agent: Bacca");
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(false);
+    await act(async () => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(api).toHaveBeenCalledWith("/api/chief-pairing", { method: "POST", body: JSON.stringify({ invitation: { workspace: "workspace-one", account: "account-one" }, bots: ["bacca"] }) });
+  });
   it("filters names and retains selected agents across searches and in the request", async () => {
     await mount();
     await fill('input[type="search"]', "  bAC  ");

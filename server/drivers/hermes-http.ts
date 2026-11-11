@@ -29,6 +29,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
     const env = { ...process.env, ...input.environment };
     const transport = env.HERMES_TRANSPORT ?? input.config.transport;
     if (transport === "acp") {
+      if (env.CHIEF_CUSTOMER_INSTALLATION === "1") throw Error("Customer installations require the budgeted Hermes HTTP transport");
       const { HermesAgentDriver: legacy } = await import("./acp/hermes.ts");
       return legacy.create({ ...input, config: legacy.decodeConfig(input.config) });
     }
@@ -42,7 +43,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
     const controls = new HermesHttpClient({ ...config, timeoutMs: Math.min(config.timeoutMs, 10000) });
     const listeners = new Set<RuntimeEventListener>();
     const sessions = new Map<string, string>();
-    type Active = { controller: AbortController; turnId: string; runId?: string; stopped: boolean; done?: Promise<void>; asks: Map<string, string[]>; bridge?: HermesToolBridge };
+    type Active = { controller: AbortController; turnId: string; runId?: string; stopped: boolean; done?: Promise<void>; asks: Map<string, string[]>; bridge?: HermesToolBridge; backgroundWork?: SendTurnInput["backgroundWork"]; expiries?: Map<string, ReturnType<typeof setTimeout>> };
     const active = new Map<string, Active>();
     const scope = (turn: SendTurnInput) => JSON.stringify([env.OMB_DATA_DIR ?? env.HOME ?? homedir(), input.instanceId, turn.botId ?? "", turn.threadId]);
     const sign = (value: string) => createHmac("sha256", config.apiKey).update(value).digest("hex");
@@ -90,6 +91,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
         capabilities: { sessionModelSwitch: "unsupported", strictResume: true, queueing: true,
           ...(bridgeEnabled ? { computerMcp: true, localComputerMcp: true, agentsMcp: true, composioMcp: true, browserMcp: true, customMcp: true, phoneMcp: true, images: true, nativeImageInput: true } : {}) },
         async sendTurn(turn) {
+          if (turn.backgroundWork && (!bridgeEnabled || env.CHIEF_BUDGET_GUARD !== "1")) throw Error("Unattended Hermes requires the installed physical-request budget guard");
           // Saved ACP chats used this virtual alias for the configured default.
           if (turn.model === "hermes-default") turn = { ...turn, model: config.model };
           if (active.has(turn.threadId)) throw new Error("Hermes already has an active generation on this thread");
@@ -97,7 +99,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
           // enforcement policy. Refuse narrowing rather than bypassing it.
           if ((!bridgeEnabled && turn.toolScope !== undefined) || turn.guestConfined) throw new Error("Hermes HTTP tool restrictions require the Chief tools plugin; guest confinement is unavailable");
           if (!bridgeEnabled && (turn.images?.length || turn.integrations?.localComputer)) throw new Error("Hermes HTTP computer tools and images require the Chief tools plugin");
-          const state: Active = { controller: new AbortController(), turnId: randomUUID(), stopped: false, asks: new Map() };
+          const state: Active = { controller: new AbortController(), turnId: randomUUID(), stopped: false, asks: new Map(), backgroundWork: turn.backgroundWork, expiries: new Map() };
           active.set(turn.threadId, state);
           const session = sessionFor(turn);
           const received = performance.now();
@@ -115,6 +117,7 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
           const finish = async (ok: boolean, reason: string) => {
             if (terminal) return;
             terminal = true;
+            for (const timer of state.expiries!.values()) clearTimeout(timer);
             if (state.bridge) {
               try { await state.bridge.close(); } catch { ok = false; reason = "tool_cleanup_failed"; publish({ type: "runtime.error", message: "Tool cleanup could not be confirmed; inspect the computer before retrying", terminal: true }); }
             }
@@ -131,15 +134,20 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
           publish({ type: "turn.started" }); log("received");
           state.done = (async () => {
             try {
+              let reviewer: ReturnType<typeof hermesCommandReviewer> | undefined;
               if (bridgeEnabled) state.bridge = await createHermesToolBridge(turn, state.controller.signal, bridgeDirectory, publish, input.config.routineApprovals === true,
-                input.config.commandReview === true && input.config.routineApprovals === true && turn.approvalMode === "auto" ? hermesCommandReviewer(env) : undefined);
+                input.config.commandReview === true && input.config.routineApprovals === true && turn.approvalMode === "auto" ? {
+                  review: (command, signal) => { reviewer ??= hermesCommandReviewer({ ...env, ...(turn.backgroundWork ? { CHIEF_BUDGET_RUN_ID: state.runId, CHIEF_MANAGED_REQUESTS_ONLY: "1" } : {}) }); return reviewer.review(command, signal); },
+                  close: async () => { await reviewer?.close(); },
+                } : undefined);
               if (state.stopped) { await finish(true, "interrupted"); return; }
               sent = performance.now(); log("dispatch", { dispatchLatencyMs: Math.round(sent - received) });
               const rebuilding = typeof turn.resumeCursor === "string" && !turn.resumeCursor.startsWith("hermes-http:");
               const admitted = await requests.json("/v1/runs", { model: turn.model || config.model,
                 session_id: session, input: rebuilding ? turn.recoveryText || turn.text : turn.text,
                 instructions: [turn.system, bridgeEnabled ? "This is a Chief-managed chat. Use chief_tools with action=list to discover the tools assigned to this turn, action=describe with an exact name for its argument schema, then action=call. For the assigned VM/computer/browser, always use these tools; native host tools do not control that computer. User images are available via action=attachments. Chief owns approvals, tool selection and cancellation." : "",
-                  input.config.commandReview === true ? `Routine commands receive automatic review. For native terminal, set workdir explicitly inside the active Chief working folder: ${turn.cwd || "unavailable; use assigned VM tools instead"}. Prefer complete visible inline code for small transformations and draft generation. Unknown or consequential scripts require an owner checkpoint; do not conceal their behavior or bypass a denial.` : ""].filter(Boolean).join("\n\n") }, undefined, status => log("headers", { status }));
+                  input.config.commandReview === true ? `Routine commands receive automatic review. For native terminal, set workdir explicitly inside the active Chief working folder: ${turn.cwd || "unavailable; use assigned VM tools instead"}. Prefer complete visible inline code for small transformations and draft generation. Unknown or consequential scripts require an owner checkpoint; do not conceal their behavior or bypass a denial.` : "",
+                  turn.backgroundWork ? `Background workflow ${turn.backgroundWork.workflowId}: the root, delegated agents and auxiliary reviews share 20 physical provider requests and 10 minutes of active work. Plan within those limits, verify and register the actual deliverable, and stop rather than starting an unmetered provider or bypassing a checkpoint.` : ""].filter(Boolean).join("\n\n") }, undefined, status => log("headers", { status }));
               if (typeof admitted.run_id !== "string" || !admitted.run_id) throw new HermesHttpError("invalid_run");
               state.runId = admitted.run_id;
               await state.bridge?.bind(state.runId);
@@ -169,6 +177,14 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
                   if (typeof data.request_id !== "string" || !Array.isArray(data.choices)) throw new HermesHttpError("invalid_approval");
                   const choices = data.choices.filter((v): v is string => typeof v === "string");
                   state.asks.set(data.request_id, choices);
+                  if (turn.backgroundWork) {
+                    const requestId = data.request_id;
+                    const timer = setTimeout(() => {
+                      if (!state.asks.delete(requestId)) return;
+                      void control(state, "approval", { request_id: requestId, choice: "deny" }).catch(() => {});
+                      publish({ type: "request.resolved", requestId, behavior: "deny", source: "timeout" });
+                    }, 15 * 60_000); timer.unref(); state.expiries!.set(requestId, timer);
+                  }
                     // Native plugin approvals identify the tool in this fixed command
                     // shape, rather than `tool`. Do not expose arbitrary commands.
                     const nativeTool = typeof data.command === "string"
@@ -212,9 +228,11 @@ export const HermesAgentDriver: ProviderDriver<Config> = {
           // Only exact choices advertised by this approval may be returned.
           const choice = decision.behavior === "deny" ? "deny" : decision.always ? "session" : "once";
           if (!choices.includes(choice)) return "unavailable";
+          if (decision.behavior !== "deny") state.backgroundWork?.resume();
           try {
             await control(state, "approval", { request_id: requestId, choice });
             state.asks.delete(requestId);
+            clearTimeout(state.expiries?.get(requestId)); state.expiries?.delete(requestId);
             emit({ ...base(threadId, state.turnId), requestId, type: "request.resolved", behavior: decision.behavior, source: "user" });
             return decision.behavior === "allow" ? "allowed-once" : "rejected";
           } catch { return "unavailable"; }

@@ -1,7 +1,7 @@
 // Hermes's standalone Chief plugin calls this per-run broker. Tool execution
 // stays in the existing app MCP/VM boundary, never in a new Hermes process.
 import { createServer } from "node:http";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import type { SendTurnInput, RuntimeEvent, RequestOutcome } from "../contracts.ts";
@@ -48,6 +48,7 @@ export async function createHermesToolBridge(turn: SendTurnInput, signal: AbortS
     publish({ type: "item.started", itemType: "tool", itemId, title: name });
     let ok = false;
     try {
+      turn.backgroundWork?.assertActive();
       const routine = hermesRoutineMcp(turn, routineApprovals, tools.identity(name));
       const identity = tools.identity(name);
       const reviewable = routineApprovals && commandReviewer && turn.approvalMode === "auto" && identity?.builtIn && identity.server === "agents" && identity.name === "vm_exec" && typeof args.command === "string" && turn.integrations?.localComputer?.scope !== "local-computer";
@@ -55,6 +56,7 @@ export async function createHermesToolBridge(turn: SendTurnInput, signal: AbortS
       if (turn.approvalMode !== "full" && !routine && verdict?.decision !== "approve" && !await approval.ask(name, verdict ? commandSummary(verdict.reason, args.command, "/home/cua/workspace") : "Allow this tool on the computer or integration assigned to this chat?")) return { text: "The person denied this tool call.", ok: false };
       if (routine) console.info(JSON.stringify({ component: "hermes.approval", threadId: turn.threadId, tool: name, source: "routine-policy" }));
       if (closed || signal.aborted) throw new Error("Turn ended");
+      turn.backgroundWork?.assertActive();
       const result = await tools.execute(name, args, signal);
       imageBudget(result.images ?? []);
       ok = result.ok;
@@ -71,6 +73,10 @@ export async function createHermesToolBridge(turn: SendTurnInput, signal: AbortS
       let text = "";
       for await (const chunk of req) { text += chunk; if (Buffer.byteLength(text) > 1024 * 1024) { reply(413, { error: "Request too large" }); return; } }
       const body = JSON.parse(text) as Record<string, unknown>;
+      if (body.action === "budget") {
+        reply(200, turn.backgroundWork ? { budgeted: true, ...turn.backgroundWork.reserveRequest() } : { budgeted: false }); return;
+      }
+      turn.backgroundWork?.assertActive();
       if (body.action === "list") {
         reply(200, { tools: tools.definitions.map(tool => ({ name: tool.function.name, description: tool.function.description.slice(0, 160) })),
           next: "Use action=describe with one exact name for its full argument schema before calling it.", imagesAvailable: !!turn.images?.length }); return;
@@ -98,6 +104,8 @@ export async function createHermesToolBridge(turn: SendTurnInput, signal: AbortS
         const cwd = reviewable ? commandReviewWorkingFolder(turn.cwd, args.workdir) : null;
         const verdict = reviewable ? cwd ? await review(name, { command: args.command as string, cwd, scope: "workspace" }) : { decision: "checkpoint", reason: "working-folder-required" } : undefined;
         if (closed || signal.aborted) throw new Error("Turn ended");
+        turn.backgroundWork?.assertActive();
+        if (allowed) turn.backgroundWork?.beforeEffect?.(`native-${name}-${createHash("sha256").update(JSON.stringify(args)).digest("hex")}`);
         reply(200, { allowed, approval: allowed && !discovery && !routine && verdict?.decision !== "approve" && turn.approvalMode !== "full",
           ...(verdict?.decision === "checkpoint" ? { summary: commandSummary(verdict.reason, args.command, typeof args.workdir === "string" ? args.workdir : undefined) } : {}) }); return;
       }
@@ -131,9 +139,9 @@ export async function createHermesToolBridge(turn: SendTurnInput, signal: AbortS
       if (!/^run_[a-zA-Z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid Hermes run identifier");
       runId = id;
       await mkdir(directory, { recursive: true });
-      await writeFile(join(directory, `${id}.json`), JSON.stringify({ url: `http://127.0.0.1:${port}/runs/${id}`, token: secret, expires: Date.now() + 24 * 60 * 60 * 1000 }), { mode: 0o600, flag: "wx" });
+      await writeFile(join(directory, `${id}.json`), JSON.stringify({ url: `http://127.0.0.1:${port}/runs/${id}`, token: secret, budgeted: Boolean(turn.backgroundWork), expires: Date.now() + 24 * 60 * 60 * 1000 }), { mode: 0o600, flag: "wx" });
     },
-    answer(id: string, behavior: "allow" | "deny" | "answer", message?: string): RequestOutcome { return approval.answer(id, behavior, message); },
+    answer(id: string, behavior: "allow" | "deny" | "answer", message?: string): RequestOutcome { if (!approval.has(id)) return "unavailable"; if (behavior !== "deny") turn.backgroundWork?.resume(); return approval.answer(id, behavior, message); },
     close,
   };
 }

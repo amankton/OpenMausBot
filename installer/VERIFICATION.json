@@ -1,0 +1,95 @@
+{
+  "version": "0.2.0-test",
+  "date": "2026-11-04",
+  "kind": "engineering-workflow-verification",
+  "checks": {
+    "vitest": {
+      "passed": 283,
+      "files": 13,
+      "notes": "282-test full run plus added stale-workflow capability case; affected 40-test subset rerun passed"
+    },
+    "node": {
+      "passed": 25,
+      "installer": 9,
+      "lifecycle": 16
+    },
+    "pythonSdkBudget": {
+      "passed": 6,
+      "cases": [
+        "sync and async",
+        "21st physical dispatch denied",
+        "official SDK retries counted",
+        "unknown response charged",
+        "unsupported transport denied",
+        "missing context denied"
+      ]
+    },
+    "typescriptServer": "passed",
+    "typescriptClient": "passed",
+    "scopedLint": "passed",
+    "personalFrontendBuild": "passed",
+    "actualHermesRuntime": {
+      "passed": true,
+      "python": "3.14",
+      "freshFrozenEnvironment": true,
+      "exportedPatchedSource": true,
+      "provider": "owned loopback synthetic HTTP",
+      "providerGenerations": 1,
+      "reservations": 1,
+      "paidCalls": 0
+    },
+    "combinedLifecycle": {
+      "passed": true,
+      "actualChiefApi": true,
+      "actualLifecycleContainer": true,
+      "freshSql": true,
+      "actualNginx": true,
+      "membershipAuthority": "synthetic Accounts/Employee stub",
+      "cases": [
+        "repeat migrations",
+        "runtime DDL denied",
+        "separate member profiles",
+        "two-sided pairing",
+        "cross-member denial",
+        "read-only connection default",
+        "service restart",
+        "no duplicate sign-in profiles",
+        "membership revocation"
+      ]
+    },
+    "wizardBrowser": {
+      "passed": true,
+      "profiles": 183,
+      "mobileWidth": 375,
+      "focusPreservedDuringPolling": true,
+      "pageErrors": 0
+    },
+    "loopbackBrowserCookieContract": "partitioned embedded and standalone first-party fallback; conflicting capabilities denied"
+  },
+  "limits": {
+    "requestsPerRoot": 20,
+    "activeWorkMsPerRoot": 600000,
+    "activeRoots": 1,
+    "enabledRoutines": 20,
+    "minimumIntervalMinutes": 15,
+    "catchUpMinutes": 30,
+    "memberLeaseSeconds": 60,
+    "consecutiveFailuresBeforeDisable": 3,
+    "schedulesEnabledBySetup": false,
+    "guaranteedCurrencyCap": false
+  },
+  "remainingTargetAcceptance": [
+    "clean OS dependency installation",
+    "actual Accounts signup and Employee creation",
+    "customer provider login and real artifact delivery",
+    "Mac Intel/Apple Silicon installation and amd64 emulation",
+    "login/reboot/sleep-wake",
+    "native packaging/signing"
+  ],
+  "privacy": {
+    "ownerAccountsUsed": false,
+    "ownerProfilesCopied": false,
+    "ownerContainersStopped": false,
+    "ownerSharedMemoryConnectionPackaged": false
+  }
+}

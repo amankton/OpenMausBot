@@ -21,6 +21,7 @@ import { failedTurnTool } from "../shared/failed-turn.ts";
 import { newId } from "./contracts.ts";
 import { peerApprovalFailure, requestPeerApproval, type ApprovalBus, type PeerApprovalFailure } from "./peer-approval.ts";
 import { canAccessTeam, peerAllowed } from "./peer-roster.ts";
+import { directPeerRoute } from "./direct-peer-routes.ts";
 import { type BotRecord, type GroupRecord, type Message, type Store } from "./store.ts";
 
 export interface DelegationItem {
@@ -765,7 +766,7 @@ async function processOne(
     delete item.busySince;
     savePending();
   }
-  if (sender.approvePeerComms && !item.approvalAlreadyGranted) {
+  if ((sender.approvePeerComms || (item.completionOwner === "external" && directPeerRoute("external-delegation", sender, target))) && !item.approvalAlreadyGranted) {
     const verdict = await requestPeerApproval(
       approvalBus,
       sender,
@@ -955,6 +956,7 @@ function dropIfUnreachable(
   sourceThreadId: string,
   item: PendingDelegationItem,
 ): boolean {
+  if (item.completionOwner === "external" && directPeerRoute("external-delegation", sender, target)) return false;
   const sectionsDiffer = !canAccessTeam(sender, target.section);
   if (!sectionsDiffer && !target.hidden && peerAllowed(sender, target)) return false;
   const reason = sectionsDiffer

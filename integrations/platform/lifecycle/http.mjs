@@ -11,8 +11,9 @@ const bearer = request => {
 const session = (request, optional = false) => {
   const values = (request.headers.cookie ?? '').split(';').map(v => v.trim()).filter(v => v.startsWith(cookieName + '='));
   if (optional && values.length === 0) return undefined;
-  if (values.length !== 1) throw new AccessError(401, 'A member session is required');
-  return values[0].slice(cookieName.length + 1);
+  const secrets = [...new Set(values.map(value => value.slice(cookieName.length + 1)))];
+  if (secrets.length !== 1) throw new AccessError(401, 'A member session is required');
+  return secrets[0];
 };
 async function readBody(request) {
   if (!/^application\/json(?:;|$)/i.test(request.headers['content-type'] ?? '')) throw new AccessError(415, 'JSON is required');
@@ -25,6 +26,11 @@ async function readBody(request) {
 }
 export function createLifecycleServer({ pairing, origin, readiness = async () => {}, tracker }) {
   const configured = new URL(origin);
+  // Chromium's embedded loopback workspace needs a partitioned cookie. A
+  // first-party HTTP fallback also supports standalone browsers that reject
+  // Secure cookies on localhost. Equal duplicates represent the same session;
+  // conflicting cookie generations remain denied above.
+  const cookie = (secret = '', expires = new Date(0)) => configured.protocol === 'https:' ? sessionCookie(secret, expires) : [sessionCookie(secret, expires), `${cookieName}=${secret}; Path=/chief/v1; HttpOnly; SameSite=Strict; Expires=${expires.toUTCString()}`];
   if (!['http:', 'https:'].includes(configured.protocol) || configured.origin !== origin) throw Error('An exact lifecycle browser origin is required');
   return createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, async (request, response) => {
     response.setHeader('Content-Type', 'application/json');
@@ -48,12 +54,12 @@ export function createLifecycleServer({ pairing, origin, readiness = async () =>
       if (method === 'POST' && path === '/chief/v1/sessions') {
         exact(await readBody(request), []);
         const result = await pairing.openSession(bearer(request), session(request, true));
-        response.setHeader('Set-Cookie', sessionCookie(result.secret, result.expiresAt));
+        response.setHeader('Set-Cookie', cookie(result.secret, result.expiresAt));
         return send(201, { member: result.member, expiresAt: result.expiresAt });
       }
       if (method === 'DELETE' && path === '/chief/v1/sessions/current') {
         await pairing.closeBrowserSession(session(request, true));
-        response.setHeader('Set-Cookie', sessionCookie()); return send(200, { revoked: true });
+        response.setHeader('Set-Cookie', cookie()); return send(200, { revoked: true });
       }
       if (method === 'POST' && path === '/chief/v1/connections/challenges') {
         exact(await readBody(request), []);

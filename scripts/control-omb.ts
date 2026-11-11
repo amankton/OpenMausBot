@@ -455,6 +455,9 @@ export async function launchVerificationServer(
    * Optional native home is used only for tools-free auxiliary command review.
    * Credentials are passed only to the backend, never fixture info/config. */
   hermesHttp?: { baseUrl: string; apiKey: string; model: string; toolsDirectory?: string; home?: string },
+  /** Synthetic customer install: all state and bridge capabilities are created
+   * inside this launcher's own disposable directory. Never inherited. */
+  customerWorkflow = false,
   /** Programmatic tests only: an owned loopback Composio API, never a live service. */
   composioFixtureApi?: string,
 ): Promise<VerificationServer> {
@@ -513,6 +516,13 @@ export async function launchVerificationServer(
 
   const log = openSync(logPath, "a", 0o600);
   const childEnv = verificationServerEnvironment(parentEnv, dataDir, port);
+  if (customerWorkflow) {
+    const bridge = join(dataDir, "member-bridge"), keyFile = join(dataDir, "member-key"), template = join(dataDir, "member-template.json"), work = join(dataDir, "work");
+    mkdirSync(bridge, { recursive: true }); mkdirSync(work, { recursive: true });
+    writeFileSync(keyFile, "a".repeat(64), { mode: 0o600 });
+    writeFileSync(template, JSON.stringify({ name: "Synthetic member", soul: "Fixture role; no external effects", modelSelection: { instanceId: hermesHttp ? "hermes" : "claude", model: hermesHttp?.model || "default" } }), { mode: 0o600 });
+    Object.assign(childEnv, { CHIEF_CUSTOMER_INSTALLATION: "1", CHIEF_BUDGET_GUARD: "1", CHIEF_MEMBER_BRIDGE_DIR: bridge, CHIEF_MEMBER_BRIDGE_KEY_FILE: keyFile, CHIEF_MEMBER_TEMPLATE_FILE: template, CHIEF_WORK_ROOT: work });
+  }
   if (hermesHttp) {
     if (hermesHttp.home) childEnv.HERMES_HOME = hermesHttp.home;
     childEnv.HERMES_API_BASE_URL = hermesHttp.baseUrl;

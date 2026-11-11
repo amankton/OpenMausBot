@@ -1,13 +1,23 @@
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { SPAWNED_PROXIES } from "../proxy-paths.ts";
 import { hermesRoutineMcp, hermesRoutineNative } from "./hermes-routine-approval.ts";
 import { removeTempDir } from "../testing/cleanup.ts";
 
 const roots: string[] = [];
-afterEach(async () => { for (const root of roots.splice(0)) await removeTempDir(root); });
+afterEach(async () => { for (const root of roots.splice(0)) await removeTempDir(root); vi.unstubAllEnvs(); });
 const turn = { threadId: "t", text: "work", approvalMode: "auto" as const };
+
+it("automatically reads only through the exact member-scoped Huly proxy, never an impostor or write", () => {
+  vi.stubEnv("OMB_DATA_DIR", "/synthetic/private"); vi.stubEnv("CHIEF_LIFECYCLE_ORIGIN", "http://localhost:12345");
+  const current = { ...turn, botId: "member", integrations: { custom: { huly: { command: process.execPath, args: [SPAWNED_PROXIES.huly], env: { CHIEF_HULY_DIRECTORY: "/synthetic/private", CHIEF_HULY_BOT: "member", CHIEF_HULY_ORIGIN: "http://localhost:12345" } } } } };
+  expect(hermesRoutineMcp(current, true, { server: "huly", name: "issues", builtIn: false })).toBe(true);
+  expect(hermesRoutineMcp(current, true, { server: "huly", name: "create_issue", builtIn: false })).toBe(false);
+  current.integrations.custom.huly.args = ["impostor.mjs"];
+  expect(hermesRoutineMcp(current, true, { server: "huly", name: "issues", builtIn: false })).toBe(false);
+});
 
 it("requires both explicit opt-in and the source conversation's Auto mode", () => {
   expect(hermesRoutineNative(turn, false, "read_file", {})).toBe(false);

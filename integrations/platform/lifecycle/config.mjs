@@ -35,8 +35,11 @@ export async function lifecycleConfig(env = process.env) {
     return value;
   };
   const policyFile = env.CHIEF_LIFECYCLE_POLICY_FILE;
+  const localMemberDirectory = env.CHIEF_LOCAL_MEMBER_BRIDGE_DIRECTORY;
+  if (localMemberDirectory && (mode !== 'staging' || !['localhost', '127.0.0.1'].includes(url.hostname) || !isAbsolute(localMemberDirectory))) throw Error('Automatic local-member provisioning is restricted to a local pilot');
   if (policyFile && !isAbsolute(policyFile)) throw Error('Lifecycle policy path must be absolute');
-  return { mode, origin, database, port, host: env.CHIEF_LIFECYCLE_HOST ?? '127.0.0.1',
+  return { mode, origin, database, port, host: env.CHIEF_LIFECYCLE_HOST ?? '127.0.0.1', localMemberDirectory,
+    localMemberKey: localMemberDirectory ? await secretFile(required(env, 'CHIEF_LOCAL_MEMBER_KEY_FILE')) : undefined,
     accountsUrl: endpoint('CHIEF_LIFECYCLE_ACCOUNTS_URL'), transactorUrl: endpoint('CHIEF_LIFECYCLE_TRANSACTOR_URL'), policyFile,
     collaboratorUrl: env.CHIEF_LIFECYCLE_COLLABORATOR_URL ? endpoint('CHIEF_LIFECYCLE_COLLABORATOR_URL') : undefined,
     encryptionKey: await encryptionKeyFile(required(env, 'CHIEF_LIFECYCLE_ENCRYPTION_KEY_FILE')) };

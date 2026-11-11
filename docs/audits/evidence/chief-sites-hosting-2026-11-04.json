@@ -1,0 +1,927 @@
+{
+  "audit_date": "2026-11-04",
+  "timezone": "America/Los_Angeles",
+  "source_root": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite",
+  "head": "fc5003a7807c83d737f3b4e28ed85f15ae8b3167",
+  "branch": "codex/chief-unified-platform",
+  "working_source_included": true,
+  "retained_source_revision": "03b7aad7dc562f4f9769c51a4df08191a0393997",
+  "source_evidence": [
+    {
+      "id": "personal_host",
+      "path": "server/index.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/index.ts",
+      "line": 13,
+      "anchor": "import { createServer, type IncomingMessage, type ServerResponse } from \"node:http\";",
+      "sha256": "eb794119de7fd43bb252c5edf1ec1f217bfb2c0016065311957ee7a89768fb62"
+    },
+    {
+      "id": "browser_surface",
+      "path": "src/components/DesktopCapabilities.tsx",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/src/components/DesktopCapabilities.tsx",
+      "line": 11,
+      "anchor": "ready: typeof window === \"undefined\" || !window.ogb,",
+      "sha256": "88586e33fc45b4801592fe60d373b85140af3e032660e92b8e702938bb681d82"
+    },
+    {
+      "id": "workspace_surface",
+      "path": "src/components/SharedWorkspacePage.tsx",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/src/components/SharedWorkspacePage.tsx",
+      "line": 20,
+      "anchor": "export function sharedWorkspaceUrl(value: unknown, chiefOrigin: string): string | null {",
+      "sha256": "95b1eb3e6a5d54544c0176493e327e070c455cb81f7705b21f7d3dcff347b750"
+    },
+    {
+      "id": "workspace_route",
+      "path": "server/routes/shared-workspace.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/routes/shared-workspace.ts",
+      "line": 31,
+      "anchor": "export function createSharedWorkspaceRoutes(options: { env?: NodeJS.ProcessEnv; localOnly?: boolean } = {}) {",
+      "sha256": "679b6d0885f8958170dbbe1d970dc22e11e12081149c99ffac2caadd2aea4280"
+    },
+    {
+      "id": "profiles",
+      "path": "server/store.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/store.ts",
+      "line": 637,
+      "anchor": "this.bots = JSON.parse(readFileSync(BOTS_FILE, \"utf8\"));",
+      "sha256": "0bdd37a9ef3a6f3df3b7d9c170e2d3a372969a4b88afd675ef1acf21423e239f"
+    },
+    {
+      "id": "message_db",
+      "path": "server/message-db.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/message-db.ts",
+      "line": 15,
+      "anchor": "import { DatabaseSync } from \"node:sqlite\";",
+      "sha256": "a0c24e5415110c3c9ce7ca51364b9d00fe21b23de1e72205cc8951d419a00693"
+    },
+    {
+      "id": "search",
+      "path": "server/message-db.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/message-db.ts",
+      "line": 155,
+      "anchor": "CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(",
+      "sha256": "a0c24e5415110c3c9ce7ca51364b9d00fe21b23de1e72205cc8951d419a00693"
+    },
+    {
+      "id": "search_threads",
+      "path": "server/message-search-worker.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/message-search-worker.ts",
+      "line": 2,
+      "anchor": "import { Worker } from \"node:worker_threads\";",
+      "sha256": "cd373f377d577e2c87f2ccf02915db8a809c661a52d4ac9cd1f95486b530fdb9"
+    },
+    {
+      "id": "memory",
+      "path": "server/memory-store.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/memory-store.ts",
+      "line": 80,
+      "anchor": "export function parseMemoryPath(path: string): MemoryDocRef {",
+      "sha256": "dbe026ff0b9501e0124597fcb7a3849f7243337d4a8b0987cb4a83257963d711"
+    },
+    {
+      "id": "skills",
+      "path": "server/skills.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/skills.ts",
+      "line": 473,
+      "anchor": "export function syncSkillLinks(",
+      "sha256": "4b790a57bc043b0ab49357860113e38d371e9fc879ca4364af8ddc5063cc4b8d"
+    },
+    {
+      "id": "attachments",
+      "path": "server/attachments.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/attachments.ts",
+      "line": 14,
+      "anchor": "} from \"node:fs\";",
+      "sha256": "50741960329fae034a5702c49d67d2bd119ad42b25bdd76a15d974a43f63fbdc"
+    },
+    {
+      "id": "results",
+      "path": "server/task-results.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/task-results.ts",
+      "line": 8,
+      "anchor": "import { taskResultById, taskResultRow, taskResultRows, taskResultWorkRows, writeTaskResult } from \"./message-db.ts\";",
+      "sha256": "2fa4fefb58fa75c6eb96435a2f86dad8e71a6c8b2a8844b762a72bbb037f2579"
+    },
+    {
+      "id": "usage",
+      "path": "server/usage-ledger.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/usage-ledger.ts",
+      "line": 10,
+      "anchor": "import { readFileSync } from \"node:fs\";",
+      "sha256": "31fd9acaaa93f022e072dffc5c00353020bfe365f0739788b3fa8881908d05fe"
+    },
+    {
+      "id": "provider_registry",
+      "path": "server/drivers/builtIn.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/builtIn.ts",
+      "line": 24,
+      "anchor": "export const BUILT_IN_DRIVERS: readonly AnyProviderDriver[] = [",
+      "sha256": "8536fa33382d92c6bbdf187cd1281228dc5ac5a0a12985f2addfd2aef3f23117"
+    },
+    {
+      "id": "api_runtime",
+      "path": "server/drivers/openai-chat.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/openai-chat.ts",
+      "line": 180,
+      "anchor": "export function createOpenAIChatRuntime<Config>(options: RuntimeOptions<Config>): ProviderInstance {",
+      "sha256": "8bb9745138b60510f70ab64495457872f6d682686cb4d07e67a1aefcf3f85038"
+    },
+    {
+      "id": "api_runtime_local_tools",
+      "path": "server/drivers/openai-chat.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/openai-chat.ts",
+      "line": 498,
+      "anchor": "tools = await mountChatTools(options.tools === false ? undefined : turn.integrations, abort.signal, options.computerUse, scope);",
+      "sha256": "8bb9745138b60510f70ab64495457872f6d682686cb4d07e67a1aefcf3f85038"
+    },
+    {
+      "id": "api_tool_mount",
+      "path": "server/drivers/chat-mcp-tools.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/chat-mcp-tools.ts",
+      "line": 259,
+      "anchor": "export async function mountChatTools(integrations: SendTurnInput[\"integrations\"], signal: AbortSignal, computerUse = false, toolScope?: ToolScope): Promise<ChatToolSession> {",
+      "sha256": "179be396e8382a4f37c9ca6b8ebf45cf47a0e441b078670b6c124cadb2f4190c"
+    },
+    {
+      "id": "api_tool_subprocess",
+      "path": "server/drivers/chat-mcp-tools.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/chat-mcp-tools.ts",
+      "line": 72,
+      "anchor": "this.child = spawnCli(server.command, server.args, {",
+      "sha256": "179be396e8382a4f37c9ca6b8ebf45cf47a0e441b078670b6c124cadb2f4190c"
+    },
+    {
+      "id": "codex_subprocess",
+      "path": "server/drivers/codex.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/codex.ts",
+      "line": 841,
+      "anchor": "const child = spawnCli(config.cli, appServerArgs, {",
+      "sha256": "fbdb4707073c53c2c18844526a198a2564ac65b726809ad1719474baf182bbc1"
+    },
+    {
+      "id": "hosted_plan_block",
+      "path": "server/drivers/codex.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/codex.ts",
+      "line": 616,
+      "anchor": "? \"ChatGPT plan sign-in for hosted Pro requires OpenAI's hosted-app approval. Use a Company model or API key until that integration is approved; the local desktop flow cannot be used here.\"",
+      "sha256": "fbdb4707073c53c2c18844526a198a2564ac65b726809ad1719474baf182bbc1"
+    },
+    {
+      "id": "plan_auth",
+      "path": "server/drivers/chatgpt-plan-auth.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/chatgpt-plan-auth.ts",
+      "line": 83,
+      "anchor": "export class ChatGptPlanAuthController {",
+      "sha256": "d02ac48232bee86fb9007ee1e0ed42e8b149e8d19e629b51d663981da16d9c92"
+    },
+    {
+      "id": "claude",
+      "path": "server/drivers/claude.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/claude.ts",
+      "line": 21,
+      "anchor": "import { brokerSocketPath, describeSpawnFailure, execCli, killCliTree, spawnCli } from \"../procs.ts\";",
+      "sha256": "1aa10b2665138fca71bcb7c4f4c4bab436e3e95fd7050a0e537fa2b6403dcb94"
+    },
+    {
+      "id": "claude_login",
+      "path": "server/drivers/claude-login-auth.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/claude-login-auth.ts",
+      "line": 244,
+      "anchor": "child = spawnCli(this.options.cli, [\"auth\", \"logout\"], { env: { ...env, NO_COLOR: \"1\" }, stdio: [\"pipe\", \"pipe\", \"pipe\"] });",
+      "sha256": "10eeb1c59d48d267340116d0c0751f7f6d221290fc7f03d5b01e5cb2889b0e5f"
+    },
+    {
+      "id": "acp",
+      "path": "server/drivers/acp/core.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/acp/core.ts",
+      "line": 37,
+      "anchor": "import { describeSpawnFailure, execCli, killCliTree, spawnCli } from \"../../procs.ts\";",
+      "sha256": "5853df6a5e8e032c7a9e9f62dbadfe100e29e0bb4312ae41ab2b540b662c11da"
+    },
+    {
+      "id": "pi",
+      "path": "server/drivers/pi.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/pi.ts",
+      "line": 29,
+      "anchor": "import { describeSpawnFailure, execCli, killCliTree, spawnCli } from \"../procs.ts\";",
+      "sha256": "c196b6048b5bc5891f5a014e428c61a991c8f148bdc2957a11967c3ffc07fe17"
+    },
+    {
+      "id": "antigravity",
+      "path": "server/drivers/antigravity.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/antigravity.ts",
+      "line": 91,
+      "anchor": "command: runtime.executablePath,",
+      "sha256": "9e8e700f63bf39d8974786792e2d125aba76849ac5b143287b2a5b14d103716e"
+    },
+    {
+      "id": "hermes",
+      "path": "server/drivers/hermes-http.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/hermes-http.ts",
+      "line": 94,
+      "anchor": "if (turn.backgroundWork && (!bridgeEnabled || env.CHIEF_BUDGET_GUARD !== \"1\")) throw Error(\"Unattended Hermes requires the installed physical-request budget guard\");",
+      "sha256": "ec5afd63aa6713f17a727a46cbf384e3892342031940610deedac0ef926d8bcb"
+    },
+    {
+      "id": "hermes_http",
+      "path": "server/drivers/hermes-http-client.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/hermes-http-client.ts",
+      "line": 81,
+      "anchor": "export class HermesHttpClient {",
+      "sha256": "304d1f51c2dccb0db426103973acf51fa682a490313f540d6db1a47ff04c8bfd"
+    },
+    {
+      "id": "hermes_bridge",
+      "path": "server/drivers/hermes-tool-bridge.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/hermes-tool-bridge.ts",
+      "line": 5,
+      "anchor": "import { mkdir, writeFile, unlink } from \"node:fs/promises\";",
+      "sha256": "02f9e6b80a72ae1697625a0ac866c026271fc83acbf7ade4ac1310312ae03ee3"
+    },
+    {
+      "id": "boatagent",
+      "path": "server/drivers/boatagent.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/boatagent.ts",
+      "line": 65,
+      "anchor": "catalog = await fetch(`${root}/api/provider-models`, { signal: AbortSignal.timeout(15_000) })",
+      "sha256": "133938009d713a9e0ccc41764b56bc4f4e6165165bd561a394747603d2788d2e"
+    },
+    {
+      "id": "api_compat",
+      "path": "server/drivers/openai-compat.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/openai-compat.ts",
+      "line": 4,
+      "anchor": "import { createOpenAIChatRuntime } from \"./openai-chat.ts\";",
+      "sha256": "37456d0400ae89f8c707a3579aa7d58b1621f5465c25e1ccbf1b1f9cee1ffe7d"
+    },
+    {
+      "id": "grok",
+      "path": "server/drivers/grok.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/grok.ts",
+      "line": 4,
+      "anchor": "import { createOpenAIChatRuntime } from \"./openai-chat.ts\";",
+      "sha256": "13a0327bd92caadef3ed09da2189cad879d932b03ffbff534c6a7c617d60b2a2"
+    },
+    {
+      "id": "mistral",
+      "path": "server/drivers/mistral.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/mistral.ts",
+      "line": 3,
+      "anchor": "import { createOpenAIChatRuntime } from \"./openai-chat.ts\";",
+      "sha256": "238ec2b00dba3af278e88e8cb66d714ae9df6bf27285570d91180a32c2c689f7"
+    },
+    {
+      "id": "cerebras",
+      "path": "server/drivers/cerebras.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/cerebras.ts",
+      "line": 3,
+      "anchor": "import { createOpenAIChatRuntime } from \"./openai-chat.ts\";",
+      "sha256": "fea796ffd8d249178b57b3371060b2b2ba52825dc347b08f12e42edf3dceb8eb"
+    },
+    {
+      "id": "minimax",
+      "path": "server/drivers/minimax.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/drivers/minimax.ts",
+      "line": 9,
+      "anchor": "import { createOpenAIChatRuntime } from \"./openai-chat.ts\";",
+      "sha256": "312455000bc0d32933365f5bc0a70ec08730cbbd329ede32da9a75b7666c293a"
+    },
+    {
+      "id": "routines",
+      "path": "server/routines.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/routines.ts",
+      "line": 1503,
+      "anchor": "this.timer = setInterval(() => void this.tick(), 10_000);",
+      "sha256": "88d3837ffaf6a6b81fdfe4a957c56fff5f60f869bde83e2dfd47bb5b4900140b"
+    },
+    {
+      "id": "background",
+      "path": "server/background-work.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/background-work.ts",
+      "line": 7,
+      "anchor": "export const CUSTOMER_BACKGROUND_LIMITS = Object.freeze({ requests: 20, activeMs: 10 * 60_000, intervalMinutes: 15, enabledRoutines: 20, catchUpMs: 30 * 60_000, failureLimit: 3 });",
+      "sha256": "a3f604aede875aaad83b076e5a6d6cac3d89184cea77c7d0275dd0e39f0786d9"
+    },
+    {
+      "id": "members",
+      "path": "server/customer-members.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/customer-members.ts",
+      "line": 19,
+      "anchor": "export class CustomerMembers {",
+      "sha256": "8c8d82513fa6ec69b5e98230ae72aa4b7e90d411c54c4934137d2f549b7b43b3"
+    },
+    {
+      "id": "webhooks",
+      "path": "server/webhooks.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/webhooks.ts",
+      "line": 313,
+      "anchor": "export class WebhookManager {",
+      "sha256": "13371661d1d861597f6c6e5cd5ccfc7aac2883cb2bbf67069d7a71b2843101ea"
+    },
+    {
+      "id": "remote_mcp",
+      "path": "server/mcp-http.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/mcp-http.ts",
+      "line": 159,
+      "anchor": "export class RemoteMcpClient {",
+      "sha256": "b69d370f3642bc638383045521f197bcb0ea3a9d16f644ffd3116d9b04ac96a9"
+    },
+    {
+      "id": "stdio_mcp",
+      "path": "server/mcp-bridge.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/mcp-bridge.ts",
+      "line": 52,
+      "anchor": "const child = spawn(probe.command, probe.args, {",
+      "sha256": "f48146ad05b86cd317fe7b9a00164ec1f1809dcac8ff580e388dbff923431dd0"
+    },
+    {
+      "id": "jev",
+      "path": "server/decider/jev.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/decider/jev.ts",
+      "line": 25,
+      "anchor": "export function jevEndpoint(baseUrl?: string | null): URL | null {",
+      "sha256": "d4f40a6b9f1eaf973a313c5da9b1f3d96d5cad3b67945840801eb1e26aeb59cd"
+    },
+    {
+      "id": "local_computer",
+      "path": "server/local-computer.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/local-computer.ts",
+      "line": 1,
+      "anchor": "import { lstatSync, readFileSync, realpathSync, statSync } from \"node:fs\";",
+      "sha256": "bb708a2af3c6ece8ec2e08abbfb00fd2a154c69b27468eecd69ab1e2df38af21"
+    },
+    {
+      "id": "container_computer",
+      "path": "server/container-computer.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/container-computer.ts",
+      "line": 8,
+      "anchor": "import { execFile } from \"node:child_process\";",
+      "sha256": "654128a206420106faa5891e2a0d1cb09c66234b3c22d856df504817467493c7"
+    },
+    {
+      "id": "vps",
+      "path": "server/vps-computer.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/vps-computer.ts",
+      "line": 1318,
+      "anchor": "const child = spawn(\"ssh\", vpsSshTunnelArgs(alias, localPort, connection.privateIp, ssh.configPath), {",
+      "sha256": "3ee77df7b3ea17f916185090f0ecda1c43f8d228fef3d03f8db5ab0861d9754d"
+    },
+    {
+      "id": "browser_engine",
+      "path": "server/browser-runtime.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/browser-runtime.ts",
+      "line": 68,
+      "anchor": "this.child = spawnCli(spec.command, spec.args, {",
+      "sha256": "d76d3f05fe09001a552826f890b638547220039967e845d8ea374d8b137d13fe"
+    },
+    {
+      "id": "voice",
+      "path": "server/live-call.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/live-call.ts",
+      "line": 15,
+      "anchor": "export const LIVE_MODEL = \"gpt-live-1\";",
+      "sha256": "a1c22a71ae56ccea3afe9a28a2b0407f915d496c20f281ef675076979a4a67c8"
+    },
+    {
+      "id": "voice_state",
+      "path": "server/live-call-controller.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/live-call-controller.ts",
+      "line": 321,
+      "anchor": "callerRequests: new Map(),",
+      "sha256": "70aaf224581f693af8d0696539b1c51432d6e9f49c3187e99c2800ae6781adee"
+    },
+    {
+      "id": "gemini_bridge",
+      "path": "server/gemini-live.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/gemini-live.ts",
+      "line": 1,
+      "anchor": "import { WebSocket } from 'ws';",
+      "sha256": "3e1af62825e5ae98cc61ee6ad92194706aceb5aa6181d2b27992725afca3355f"
+    },
+    {
+      "id": "office",
+      "path": "server/office.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/office.ts",
+      "line": 1,
+      "anchor": "import { existsSync, readFileSync, mkdirSync } from \"node:fs\";",
+      "sha256": "a56b18de9885d11c916d971695f42d6f794b5dfce00a972ac65930e92e632d8b"
+    },
+    {
+      "id": "office_media",
+      "path": "server/office-media.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/office-media.ts",
+      "line": 12,
+      "anchor": "export function createOfficeMedia(env: NodeJS.ProcessEnv = process.env): OfficeMedia {",
+      "sha256": "00bbd50f4e8a1ad2f4e28da06ea7cf5f0ea9ef56eb149f0b46252b0c2de01b3d"
+    },
+    {
+      "id": "cloud_tts",
+      "path": "server/tts/elevenlabs.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/tts/elevenlabs.ts",
+      "line": 74,
+      "anchor": "const res = await fetch(`${elevenLabsProviderApi()}/voices`, {",
+      "sha256": "9a5e4fe02a8a64cb99386279d3fd73ff9f2bf758c2757a0ba5ae54cfd275e32b"
+    },
+    {
+      "id": "local_tts",
+      "path": "server/tts/system-voices.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/tts/system-voices.ts",
+      "line": 15,
+      "anchor": "import { execFile } from \"node:child_process\";",
+      "sha256": "bdab4a63d58c4a6d6316d01fed557811e14c97eaad990070fc08c95241111f1b"
+    },
+    {
+      "id": "model_server_tts",
+      "path": "server/tts/chatterbox.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/tts/chatterbox.ts",
+      "line": 56,
+      "anchor": "return await fetch(url, init);",
+      "sha256": "7b82eff2b3bbe88fae76c9e214ceb40300a0bef1daaa618bb3426abc733a2e6f"
+    },
+    {
+      "id": "backups",
+      "path": "server/workspace-backup.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/workspace-backup.ts",
+      "line": 13,
+      "anchor": "import { Worker } from \"node:worker_threads\";",
+      "sha256": "2a24ee38089b34d202b91464e1992b0b60385558ddd05724bb4cd35087db3f0e"
+    },
+    {
+      "id": "local_auth",
+      "path": "server/request-auth.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/request-auth.ts",
+      "line": 28,
+      "anchor": "export type RequestAuth =",
+      "sha256": "7f9f828aab3410d0d5af3a5364798c53a4a696a2c58777ad42499333031e2d3d"
+    },
+    {
+      "id": "sessions",
+      "path": "server/sessions.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/sessions.ts",
+      "line": 217,
+      "anchor": "export class SessionRegistry {",
+      "sha256": "613402870b2ea69560068ec8275d58b1ad3806788bdc18f6fbeb998a3eeeaf61"
+    },
+    {
+      "id": "local_pairing_storage",
+      "path": "server/chief-pairing-storage.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/chief-pairing-storage.ts",
+      "line": 5,
+      "anchor": "export const PAIRING_PRIVATE_DIRECTORY = \".chief-pairing-private\";",
+      "sha256": "b39a0c74435aefb499581fce74a109520d4f4d4546a3770b9d8366d8abb4d06d"
+    },
+    {
+      "id": "phone_sidecar",
+      "path": "companion/README.md",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/companion/README.md",
+      "line": 72,
+      "anchor": "- **Accept anything with an `Origin` header.** A native app sends none, so a",
+      "sha256": "0f42596be4598455db6ae76cd1f1d6f564ca775d4dc2f2d7afaabe461c3253de"
+    },
+    {
+      "id": "keychain",
+      "path": "electron/secure-credentials.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/electron/secure-credentials.mjs",
+      "line": 1,
+      "anchor": "// Reading the OS-encrypted credential store (credentials.bin via safeStorage).",
+      "sha256": "2ccb385a530fadd575f0c09a0b2d4538b97a63a7d82755383a80a007471b7c4c"
+    },
+    {
+      "id": "adb",
+      "path": "electron/android-device.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/electron/android-device.mjs",
+      "line": 30,
+      "anchor": "return platform === \"win32\" ? \"adb.exe\" : \"adb\";",
+      "sha256": "f7450b13653d0debb4e552ac38370821396cb0d5b5e91583361b7d0ef9e6ddba"
+    },
+    {
+      "id": "base_services",
+      "path": "integrations/platform/compose.json",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/compose.json",
+      "line": 3,
+      "anchor": "\"services\": {",
+      "sha256": "57c63ac434e62723b174907d0e90ffa898ed87b53e93c846b48b8bc2460005a7"
+    },
+    {
+      "id": "media_services",
+      "path": "integrations/platform/meetings.compose.json",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/meetings.compose.json",
+      "line": 25,
+      "anchor": "\"livekit\": { \"condition\": \"service_started\" }",
+      "sha256": "08a7ab36d6696651ff0af54dfca70ec4a802da4ef7c332640200a4ec8cc6fb37"
+    },
+    {
+      "id": "lifecycle_overlay",
+      "path": "integrations/platform/lifecycle/compose.yaml",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/compose.yaml",
+      "line": 3,
+      "anchor": "services:",
+      "sha256": "f54641ccb6b438cc45a75fe82a11672efa7b56c3555e9459c54d81c713c65cfc"
+    },
+    {
+      "id": "platform_contract",
+      "path": "docs/architecture/chief-stage0-contracts.md",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/docs/architecture/chief-stage0-contracts.md",
+      "line": 7,
+      "anchor": "## Actual schema and canonical ownership",
+      "sha256": "c80c659af6e77d17f875ecd9cb81954ca75ea256f41fa3670da418ebd5a32306"
+    },
+    {
+      "id": "platform_model",
+      "path": ".chief-local/platform-source/models/all/src/index.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/.chief-local/platform-source/models/all/src/index.ts",
+      "line": 81,
+      "anchor": "import tracker, { trackerId, createModel as trackerModel } from '@hcengineering/model-tracker'",
+      "sha256": "e9cd0c12f981d35d185756c5dd50a436a537563584ed4e7b208325b1d97270c0"
+    },
+    {
+      "id": "platform_transactor",
+      "path": ".chief-local/platform-source/pods/server/src/__start.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/.chief-local/platform-source/pods/server/src/__start.ts",
+      "line": 10,
+      "anchor": "import { getPlatformQueue } from '@hcengineering/kafka'",
+      "sha256": "021c8898e776f7f9c3e8c63de9374640a6e3415b52644d463aba9e153c64aaf8"
+    },
+    {
+      "id": "platform_collaborator",
+      "path": ".chief-local/platform-source/server/collaborator/src/server.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/.chief-local/platform-source/server/collaborator/src/server.ts",
+      "line": 60,
+      "anchor": "const hocuspocus = new Hocuspocus({",
+      "sha256": "0b89672c396e83f513b0fdf9e077051aa11c59e79a3f0ef9bee6e24a127e511d"
+    },
+    {
+      "id": "lifecycle_main",
+      "path": "integrations/platform/lifecycle/main.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/main.mjs",
+      "line": 28,
+      "anchor": "const sql = postgres(config.database, { max: 8, connect_timeout: 5, idle_timeout: 20, onnotice() {} });",
+      "sha256": "e5a69da6064ee119511bff854f7b9cbdce71fd4560b70be819ab874ed1b13295"
+    },
+    {
+      "id": "lifecycle_http",
+      "path": "integrations/platform/lifecycle/http.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/http.mjs",
+      "line": 51,
+      "anchor": "const runtime = ['/chief/v1/connections/complete', '/chief/v1/runtime/authorize', '/chief/v1/runtime/tracker'].includes(path);",
+      "sha256": "2b9b432432160b187b2e918c1a54364117b2e8f5e028ed5eff7840b59b01a31a"
+    },
+    {
+      "id": "lifecycle_tracker",
+      "path": "integrations/platform/lifecycle/tracker.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/tracker.mjs",
+      "line": 29,
+      "anchor": "export class TrackerClient {",
+      "sha256": "06f9a6992d2dcd40f8d57140aba8bc208b25862fbf65ca97b011cfd852a4a49d"
+    },
+    {
+      "id": "lifecycle_provisioning",
+      "path": "integrations/platform/lifecycle/provisioning.mjs",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/provisioning.mjs",
+      "line": 2,
+      "anchor": "import { readFile, writeFile, rename, lstat } from 'node:fs/promises';",
+      "sha256": "7365ca1e3574ddc512726e49bef025668ab7753a8a867f085c64519abd976746"
+    },
+    {
+      "id": "lifecycle_schema",
+      "path": "integrations/platform/lifecycle/001-pairing.sql",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/001-pairing.sql",
+      "line": 2,
+      "anchor": "CREATE TABLE IF NOT EXISTS chief_lifecycle.schema_version (",
+      "sha256": "250c63c9b6b8f1fd6f2b5489fee152e500ecb6a5bfe1e3494fc8fd297f11dc30"
+    },
+    {
+      "id": "lifecycle_writes",
+      "path": "integrations/platform/lifecycle/003-tracker-actions.sql",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/003-tracker-actions.sql",
+      "line": 1,
+      "anchor": "CREATE TABLE IF NOT EXISTS chief_lifecycle.tracker_action (",
+      "sha256": "b912419e18760ff198c749011020b9bfe5f9cc00e62daaf70194705feaea5226"
+    },
+    {
+      "id": "lifecycle_epochs",
+      "path": "integrations/platform/lifecycle/002-membership-epoch.sql",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/platform/lifecycle/002-membership-epoch.sql",
+      "line": 1,
+      "anchor": "ALTER TABLE chief_lifecycle.member_session",
+      "sha256": "81bab20117f805eda772120a50788bfa3ada8360f5451a68af060da56c87599d"
+    },
+    {
+      "id": "workspace_tools",
+      "path": "server/huly-tools.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/server/huly-tools.ts",
+      "line": 18,
+      "anchor": "export const hulyToolDefinitions = [",
+      "sha256": "b91c08c757eefee0e987cd1a4e5d7a32667ca37703a03e5934a81cadaf6ed26c"
+    },
+    {
+      "id": "capture",
+      "path": "integrations/meeting-capture/README.md",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/integrations/meeting-capture/README.md",
+      "line": 13,
+      "anchor": "`Systran/faster-whisper-tiny.en`, revision",
+      "sha256": "b863b41cdb0acf4d7a6dd0aa9355d54481914c29eb87b1d8aa0addf29c37a725"
+    },
+    {
+      "id": "installer",
+      "path": "installer/BUILD-REPORT.md",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/installer/BUILD-REPORT.md",
+      "line": 3,
+      "anchor": "Version `0.2.0-test`, November 4, 2026. Automatic member provisioning and unattended-work budgets are implemented. This remains an engineering candidate pending native Mac acceptance. It includes source/build inputs and compiled Linux works",
+      "sha256": "0f064a4cc6ba23262d6f6c5a5f34ce3f2d0583131a86f04904d896193c275360"
+    },
+    {
+      "id": "control_plane",
+      "path": "cloudflare/control-plane/src/index.ts",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/cloudflare/control-plane/src/index.ts",
+      "line": 224,
+      "anchor": "export default createWorker();",
+      "sha256": "cf2aef31424936609d1c63b7cbcbdfa0d78cc9b83f0a48e3cd80bd00e56f6f5e"
+    },
+    {
+      "id": "control_plane_bindings",
+      "path": "cloudflare/control-plane/wrangler.jsonc",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/cloudflare/control-plane/wrangler.jsonc",
+      "line": 47,
+      "anchor": "\"send_email\": [",
+      "sha256": "a57e18b03e09b2829912f8fa40c11a4231247393a1db8c610fa0dee93da1b8fe"
+    },
+    {
+      "id": "app_broker",
+      "path": "cloudflare/composio-broker/README.md",
+      "absolute_path": "C:/Users/amank/Documents/ChatGPT/CHIEF SOFTWARE WORKSPACE/chief-executive-suite/cloudflare/composio-broker/README.md",
+      "line": 3,
+      "anchor": "This Worker keeps the shared Composio project key out of desktop builds. Each",
+      "sha256": "806a45827341673f9ccae9f4fc9c5d8aeb5b448e549675357beb2ee7ee86baa9"
+    }
+  ],
+  "sites_version": "1.1.3",
+  "sites_references": [
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/SKILL.md",
+      "sha256": "00750ea5ca37e2b49afd2a57fee2149d22ee4f48af40bc094e6d2cee3e7bd1ad"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/references/storage.md",
+      "sha256": "608efea142e68b80e88a466bd4b1523a19c6c4c74af6662aff9718caa605ce16"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/references/identity-and-secrets.md",
+      "sha256": "0ade4af1dad4cef94ba104781bfdbd466a26f6a0227d366ec02c6447453d108f"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/references/app-integrations.md",
+      "sha256": "a80725b71e0e3308fa0827e21d6a3c9428d43685579d059a47091c376c91c220"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/references/site-mcp-server.md",
+      "sha256": "b1d304a65d7cdffab4a0b2234cebcddd44c6af52a84f8ee9ca360b1b2403999e"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/references/recurring-updates.md",
+      "sha256": "08bd1618634109053e1316519a220c14b06333ff04acd2334e12f42f8ea00b01"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/templates/vinext-starter/vite.config.ts",
+      "sha256": "22ff558b1636d251e076f74c1697c7166079861667af10922d6bc505cb8f8290"
+    },
+    {
+      "path": "C:/Users/amank/.codex/plugins/cache/openai-curated-remote/sites/1.1.3/skills/sites/templates/vinext-starter/worker/index.ts",
+      "sha256": "a0a10229cdda6f5fdb32234e3539007412233bb4938a671866c9295a44a3bdb6"
+    }
+  ],
+  "base_service_names": [
+    "nginx",
+    "cockroach",
+    "redpanda",
+    "minio",
+    "elastic",
+    "rekoni",
+    "print",
+    "transactor",
+    "collaborator",
+    "account",
+    "workspace",
+    "front",
+    "fulltext",
+    "stats",
+    "kvs"
+  ],
+  "additional_meeting_services": [
+    "love",
+    "livekit"
+  ],
+  "additional_lifecycle_service": "chief-lifecycle (overlay)",
+  "static_import_indicators": {
+    "child_process": {
+      "files": [
+        "server/browser-engine.ts",
+        "server/browser-live.ts",
+        "server/caddy.ts",
+        "server/checkpoints.ts",
+        "server/chief-pairing-storage.ts",
+        "server/claude-update.ts",
+        "server/cli-setup.ts",
+        "server/cli.ts",
+        "server/cloud-home-start.ts",
+        "server/container-computer.ts",
+        "server/env-path.ts",
+        "server/fleet-cli.ts",
+        "server/mcp-bridge.ts",
+        "server/mcp-gate.ts",
+        "server/memory-store.ts",
+        "server/plan-usage.ts",
+        "server/procs.ts",
+        "server/server-launcher.ts",
+        "server/tailscale.ts",
+        "server/tunnel.ts",
+        "server/vps-computer.ts",
+        "server/drivers/antigravity-acp.ts",
+        "server/drivers/claude-login-auth.ts",
+        "server/drivers/codex-device-auth.ts",
+        "server/drivers/phone-proxy.ts",
+        "server/drivers/pi-mcp-extension.ts",
+        "server/tts/system-voices.ts",
+        "server/drivers/acp/hermes.ts",
+        "server/drivers/acp/opencode-go.ts",
+        "server/drivers/acp/quiet-status.ts"
+      ],
+      "count": 30
+    },
+    "sqlite": {
+      "files": [
+        "server/cloud-move.ts",
+        "server/message-db.ts",
+        "server/message-search-query.ts",
+        "server/message-search.worker.ts",
+        "server/workspace-backup.ts"
+      ],
+      "count": 5
+    },
+    "worker_threads": {
+      "files": [
+        "server/message-search-worker.ts",
+        "server/message-search.worker.ts",
+        "server/workspace-backup.ts",
+        "server/workspace-backup.worker.ts"
+      ],
+      "count": 4
+    },
+    "fs": {
+      "files": [
+        "server/admin-activity.ts",
+        "server/atomic.ts",
+        "server/attachments.ts",
+        "server/background-work.ts",
+        "server/boat-create-idempotency.ts",
+        "server/boat-delete-journal.ts",
+        "server/bot-cwd.ts",
+        "server/bot-folder.ts",
+        "server/brand.ts",
+        "server/browser-engine.ts",
+        "server/browser-lifecycle-cleanup.ts",
+        "server/caddy.ts",
+        "server/calendar-calls.ts",
+        "server/checkpoints.ts",
+        "server/chief-pairing-storage.ts",
+        "server/chief-pairing.ts",
+        "server/claude-accounts.ts",
+        "server/cli-setup.ts",
+        "server/cli.ts",
+        "server/cloud-home-start.ts",
+        "server/cloud-home.ts",
+        "server/cloud-lending.ts",
+        "server/cloud-move.ts",
+        "server/cloud-owner.ts",
+        "server/cloud-secrets.ts",
+        "server/command-allowlist.ts",
+        "server/config.ts",
+        "server/container-computer.ts",
+        "server/customer-members.ts",
+        "server/decision-log.ts",
+        "server/delegations.ts",
+        "server/engine-install.ts",
+        "server/enterprise.ts",
+        "server/env-path.ts",
+        "server/environment.ts",
+        "server/external-runtime.ts",
+        "server/fleet-agent.ts",
+        "server/fleet-cli.ts",
+        "server/fleet-client.ts",
+        "server/group-thread-usage.ts",
+        "server/hosted-models.ts",
+        "server/huly-tools.ts",
+        "server/index.ts",
+        "server/lending-memory.ts",
+        "server/local-computer.ts",
+        "server/local-vm-stop-reason.ts",
+        "server/managed-desktop.ts",
+        "server/mcp-gate.ts",
+        "server/mcp-oauth-store.ts",
+        "server/memory-journal.ts",
+        "server/memory-store.ts",
+        "server/memory-topics.ts",
+        "server/memory-upkeep.ts",
+        "server/message-db.ts",
+        "server/message-file.ts",
+        "server/message-search-worker.ts",
+        "server/office.ts",
+        "server/org-library.ts",
+        "server/outbound-counts.ts",
+        "server/plan-usage.ts",
+        "server/presets.ts",
+        "server/procs.ts",
+        "server/profile-learned.ts",
+        "server/profile-versions.ts",
+        "server/project-scout.ts",
+        "server/proxy-paths.ts",
+        "server/published-teams.ts",
+        "server/room-handoffs.ts",
+        "server/routines.ts",
+        "server/section-context.ts",
+        "server/server-launcher.ts",
+        "server/service-cli.ts",
+        "server/sessions.ts",
+        "server/skill-library.ts",
+        "server/skills-library-migration.ts",
+        "server/skills.ts",
+        "server/spend.ts",
+        "server/store.ts",
+        "server/team-computers.ts",
+        "server/team-memory.ts",
+        "server/thread-events.ts",
+        "server/thread-log-rotation.ts",
+        "server/thread-retention.ts",
+        "server/thread-starters.ts",
+        "server/tunnel.ts",
+        "server/turn-images.ts",
+        "server/usage-ledger.ts",
+        "server/vps-ssh.ts",
+        "server/webhooks.ts",
+        "server/workspace-backup-http.ts",
+        "server/workspace-backup.ts",
+        "server/workspace.ts",
+        "server/decider/log.ts",
+        "server/drivers/antigravity-acp.ts",
+        "server/drivers/antigravity-runtime.ts",
+        "server/drivers/antigravity-temp.ts",
+        "server/drivers/chat-images.ts",
+        "server/drivers/chatgpt-plan-auth.ts",
+        "server/drivers/claude.ts",
+        "server/drivers/codex-catalog.ts",
+        "server/drivers/codex-device-auth.ts",
+        "server/drivers/codex-instructions.ts",
+        "server/drivers/codex-mcp-names.ts",
+        "server/drivers/codex.ts",
+        "server/drivers/hermes-command-review.ts",
+        "server/drivers/hermes-routine-approval.ts",
+        "server/drivers/hermes-tool-bridge.ts",
+        "server/drivers/local-inject.ts",
+        "server/drivers/minimax.ts",
+        "server/drivers/native.ts",
+        "server/drivers/permission-command.ts",
+        "server/drivers/phone-proxy.ts",
+        "server/drivers/pi-mcp-extension.ts",
+        "server/drivers/pi.ts",
+        "server/drivers/prompt-split.ts",
+        "server/harness/bus.ts",
+        "server/hooks/omb-hook.ts",
+        "server/model-catalog/catalog.ts",
+        "server/routes/shared-workspace.ts",
+        "server/tts/system-voices.ts",
+        "server/drivers/acp/core.ts",
+        "server/drivers/acp/droid.ts",
+        "server/drivers/acp/gemini.ts",
+        "server/drivers/acp/grok.ts",
+        "server/drivers/acp/hermes.ts",
+        "server/drivers/acp/kimi.ts",
+        "server/drivers/acp/opencode-go.ts",
+        "server/drivers/acp/quiet-status.ts",
+        "server/drivers/acp/qwen.ts"
+      ],
+      "count": 129
+    },
+    "net": {
+      "files": [
+        "server/custom-domain.ts",
+        "server/gemini-audio-bridge.ts",
+        "server/permission-proxy.ts",
+        "server/request-auth.ts",
+        "server/vps-computer.ts",
+        "server/drivers/claude.ts",
+        "server/routes/desktop-viewer.ts"
+      ],
+      "count": 7
+    }
+  },
+  "native_plugin_eligibility_tool_available": false,
+  "verification_kind": "source and documented platform-contract audit; no runtime or deployed Sites acceptance",
+  "public_references": [
+    "https://developers.cloudflare.com/workers/platform/limits/",
+    "https://developers.cloudflare.com/workers/runtime-apis/nodejs/#non-functional-stub-modules",
+    "https://developers.cloudflare.com/d1/sql-api/sql-statements/",
+    "https://developers.cloudflare.com/d1/platform/limits/",
+    "https://developers.cloudflare.com/durable-objects/best-practices/websockets/"
+  ]
+}

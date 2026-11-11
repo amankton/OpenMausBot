@@ -43,7 +43,7 @@ it("enforces exact mailbox approvals through the real HTTP relay and owner route
   const realFetch = globalThis.fetch;
   globalThis.fetch = (input,init = {}) => realFetch(input,{...init,headers:{...Object.fromEntries(new Headers(init.headers)),"x-openmausbot-desktop-owner":desktopOwner}});
   let fixture: Awaited<ReturnType<typeof launchVerificationServer>>;
-  try { fixture = await launchVerificationServer({FAKE_CLAUDE_MODE:"slow",FAKE_CLAUDE_SLOW_FINISH_GATE:join(gates,"finish"),OMB_TEST_DESKTOP_OWNER_TOKEN:desktopOwner},undefined,undefined,undefined,undefined,undefined,[],undefined,undefined,undefined,origin+"/api/v3.1"); }
+  try { fixture = await launchVerificationServer({FAKE_CLAUDE_MODE:"slow",FAKE_CLAUDE_SLOW_FINISH_GATE:join(gates,"finish"),OMB_TEST_DESKTOP_OWNER_TOKEN:desktopOwner},undefined,undefined,undefined,undefined,undefined,[],undefined,undefined,undefined,false,origin+"/api/v3.1"); }
   finally { globalThis.fetch = realFetch; }
   const api = async (method: string,path: string,body?: unknown,token?: string,expected = 200) => {
     const response = await fetch(fixture.info.url+path,{method,headers:{"content-type":"application/json",origin:fixture.info.url,...(token ? {authorization:`Bearer ${token}`} : {"x-openmausbot-desktop-owner":desktopOwner})},...(body === undefined ? {} : {body:JSON.stringify(body)})});

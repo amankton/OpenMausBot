@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 
 import { DATA_DIR } from "./config.ts";
+import { CUSTOMER_BACKGROUND_LIMITS as CUSTOMER_LIMITS } from "./background-work.ts";
 import type { RuntimeEvent } from "./contracts.ts";
 import { writeFileAtomic } from "./atomic.ts";
 import { redactSecretsInText } from "./redact.ts";
@@ -104,6 +105,7 @@ export interface Routine {
   lastSkippedAt?: number;
   /** Derived from retained terminal receipts, not another persisted authority. */
   failureStreak?: number;
+  customerFailureCount?: number;
   /** Conversation that created this routine in chat. Calendar/import-created
    * routines intentionally have no source, and older files migrate in place. */
   sourceThreadId?: string;
@@ -247,6 +249,8 @@ export interface RoutineInput {
 
 interface RoutineFile {
   version: 1;
+  lastSweepAt?: number;
+  lastSuccessfulSweepAt?: number;
   routines: Routine[];
   runs: RoutineRun[];
   /** Durable commit receipts for cross-file confirmation recovery. */
@@ -274,6 +278,9 @@ function routineRequestOwnerKey(owner: RoutineRequestOwner): string {
 }
 
 export interface RoutineManagerOptions {
+  customerPolicy?: boolean;
+  canStartBackground?: () => boolean;
+  beforeStartBackground?: (run: RoutineRun) => void;
   file?: string;
   now?: () => number;
   /** Keyed frames only: every payload on this bus is `{ kind, … }`, which
@@ -792,6 +799,8 @@ export class RoutineManager {
   private webhookRunReceipts: WebhookRunReceipt[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private ticking = false;
+  private lastSweepAt?: number;
+  private lastSuccessfulSweepAt?: number;
   /** The file existed but could not be read (corrupt JSON or a schema
    * failure). Saves are refused while set so a fresh empty state can never
    * overwrite whatever is on disk. Missing means a first run. */
@@ -803,6 +812,8 @@ export class RoutineManager {
     this.now = options.now ?? Date.now;
     try {
       const disk = JSON.parse(readFileSync(this.file, "utf8")) as Partial<RoutineFile>;
+      if (typeof disk?.lastSweepAt === "number" && Number.isFinite(disk.lastSweepAt)) this.lastSweepAt = disk.lastSweepAt;
+      if (typeof disk?.lastSuccessfulSweepAt === "number" && Number.isFinite(disk.lastSuccessfulSweepAt)) this.lastSuccessfulSweepAt = disk.lastSuccessfulSweepAt;
       // A store with the wrong top-level shape is damaged, not empty: a
       // present collection must be a list. Absent ones stay tolerant so
       // older files without newer receipt fields still load.
@@ -918,8 +929,12 @@ export class RoutineManager {
     if (recovered.length > 0) {
       this.save();
       for (const run of recovered) {
-        this.notifyRunChanged(run);
-        this.options.onRunFailed?.(run);
+        if (this.options.customerPolicy) {
+          const definition = this.routines.find(r => r.id === run.routineId);
+          if (definition) { definition.enabled = false; definition.nextRunAt = null; definition.updatedAt = Math.max(this.now(), definition.updatedAt + 1); }
+          this.failRun(this.runs.find(r => r.id === run.id)!, "Interrupted by restart; routine disabled until effects are reviewed and it is explicitly re-enabled");
+        }
+        else { this.notifyRunChanged(run); this.options.onRunFailed?.(run); }
       }
     }
   }
@@ -928,13 +943,26 @@ export class RoutineManager {
     return this.routines.map(routine => this.routineWithHealth(routine));
   }
 
+  backgroundHealth() { return { lastSweepAt: this.lastSweepAt, lastSuccessfulSweepAt: this.lastSuccessfulSweepAt, lastSuccessfulExecutionAt: this.runs.filter(r => r.status === "completed").reduce<number | undefined>((at, r) => Math.max(at ?? 0, r.finishedAt ?? 0), undefined), policy: this.options.customerPolicy ? CUSTOMER_LIMITS : null }; }
+
+  private validateCustomer(input: Pick<Routine, "enabled" | "schedule" | "target" | "runOn">, id?: string) {
+    if (!this.options.customerPolicy || !input.enabled) return;
+    if (input.runOn !== "maus") throw Error("Customer background work requires local Hermes execution");
+    if (this.routines.filter(r => r.enabled && r.id !== id).length >= CUSTOMER_LIMITS.enabledRoutines) throw Error("At most 20 enabled customer routines are allowed");
+    if (input.schedule.type === "interval" && input.schedule.everyMinutes < CUSTOMER_LIMITS.intervalMinutes) throw Error("Customer routines require at least 15 minutes between firings");
+    if (input.schedule.type === "cron") {
+      const runs = nextCronRuns(input.schedule, this.now(), 200);
+      if (runs.some((at, i) => i > 0 && at - runs[i - 1]! < CUSTOMER_LIMITS.intervalMinutes * 60_000)) throw Error("Customer cron schedules require at least 15 minutes between firings");
+    }
+  }
+
   private routineWithHealth(routine: Routine): Routine {
     // Successful delegated/provider turns are not successful runs until the
     // routine settles. Cancellation and missed schedules are not attempts.
     const outcomes = this.runs.filter(run => run.routineId === routine.id && (run.status === "failed" || run.status === "completed")).reverse()
       .sort((a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt) || b.createdAt - a.createdAt);
     const success = outcomes.findIndex(run => run.status === "completed");
-    const failures = success < 0 ? outcomes.length : success;
+    const failures = this.options.customerPolicy ? routine.customerFailureCount ?? (success < 0 ? outcomes.length : success) : success < 0 ? outcomes.length : success;
     const { installedPackage: _installedPackage, ...visible } = cloneRoutine(routine);
     return { ...visible, ...(failures ? { failureStreak: failures } : {}) };
   }
@@ -1075,6 +1103,7 @@ export class RoutineManager {
     }
     const at = this.now();
     const clean = sanitizeInput(input, at);
+    this.validateCustomer(clean);
     if (this.targetState(clean) === "missing") throw new Error(this.missingTargetMessage(clean.target));
     const nextRunAt = clean.enabled ? this.initialOccurrence(clean.schedule, at) : null;
     if (clean.schedule.type === "interval" && clean.enabled && nextRunAt === null) {
@@ -1130,6 +1159,7 @@ export class RoutineManager {
       continuity: patch.continuity ?? routine.continuity,
       overlap: Object.hasOwn(patch, "overlap") ? patch.overlap : routine.overlap,
     }, now);
+    this.validateCustomer(clean, id);
     if (this.targetState(clean) === "missing") throw new Error(this.missingTargetMessage(clean.target));
     const scheduleChanged = JSON.stringify(clean.schedule) !== JSON.stringify(routine.schedule);
     const enabledChanged = clean.enabled !== routine.enabled;
@@ -1152,6 +1182,7 @@ export class RoutineManager {
         // confirmation cards. Keep it monotonic even for two writes in one ms.
         updatedAt: Math.max(now, routine.updatedAt + 1),
       });
+      if (this.options.customerPolicy && patch.enabled === true) routine.customerFailureCount = 0;
       // `Object.assign` cannot remove a key, and a cleared flag is absent
       // rather than false, so switching continuity off has to delete it.
       if (!clean.continuity) delete routine.continuity;
@@ -1483,11 +1514,13 @@ export class RoutineManager {
     this.ticking = true;
     try {
       const now = this.now();
+      this.lastSweepAt = now;
+      const catchUpMs = this.options.customerPolicy ? CUSTOMER_LIMITS.catchUpMs : CATCH_UP_MS;
       for (const run of this.runs) {
         if (
           !["running", "waiting"].includes(run.status) ||
           run.startedAt == null ||
-          run.timeoutMinutes == null ||
+          this.options.customerPolicy || run.timeoutMinutes == null ||
           now - run.startedAt < run.timeoutMinutes * 60_000
         ) continue;
         const threadId = run.threadId;
@@ -1514,7 +1547,7 @@ export class RoutineManager {
           for (const routine of dueRoutines) {
             const pendingAt = routine.nextRunAt!;
             const late = now - pendingAt;
-            const scheduledFor = routine.schedule.type === "interval" && late <= CATCH_UP_MS
+            const scheduledFor = routine.schedule.type === "interval" && late <= catchUpMs
               ? latestIntervalOccurrence(routine.schedule, now) ?? pendingAt
               : pendingAt;
             // Frequent recurring work must not build an unbounded queue of stale
@@ -1526,10 +1559,10 @@ export class RoutineManager {
               (run.triggerSource ?? (run.manual ? "manual" : "schedule")) === "schedule");
             if (!overlapping || (routine.overlap === "queue" && !scheduledQueued)) {
               const run = this.newRun(routine, scheduledFor, false, allocations);
-              if (late > CATCH_UP_MS) {
+              if (late > catchUpMs) {
                 run.status = "missed";
                 run.finishedAt = now;
-                run.error = "This computer was offline for more than 12 hours after the scheduled time";
+                run.error = this.options.customerPolicy ? "Skipped an occurrence more than 30 minutes late; no backlog was replayed" : "This computer was offline for more than 12 hours after the scheduled time";
               }
               scheduledRuns.push(run);
             } else {
@@ -1599,7 +1632,14 @@ export class RoutineManager {
         // a teammate. Queue means after THIS run, not merely a free bot slot.
         const sameRoutineWorking = triggerSource === "schedule" && this.runs.some(other =>
           other.id !== run.id && other.routineId === run.routineId && ["running", "waiting"].includes(other.status));
-        const state = sameRoutineWorking ? "busy" : this.targetState(run);
+        if (this.options.customerPolicy) {
+          if (definition && !definition.enabled) { run.status = "cancelled"; run.finishedAt = now; run.error = "This routine is disabled"; this.save(); this.emitRun(run); continue; }
+          const previous = this.runs.filter(r => r.id !== run.id && r.routineId === run.routineId && r.startedAt != null).sort((a, b) => b.startedAt! - a.startedAt!)[0];
+          if (previous && now - previous.startedAt! < CUSTOMER_LIMITS.intervalMinutes * 60_000) continue;
+          if (now - run.scheduledFor > catchUpMs) { this.missQueuedRun(run, "Skipped queued work more than 30 minutes late"); continue; }
+          if (definition) { try { this.validateCustomer(definition, definition.id); } catch (e) { this.failRun(run, (e as Error).message); this.update(definition.id, { enabled: false }); continue; } }
+        }
+        const state = sameRoutineWorking || this.options.canStartBackground?.() === false ? "busy" : this.targetState(run);
         if (state === "busy") {
           // A queued run behind a busy target is deferred, not silent. Stamp
           // the wait once so receipts and cards can say how long it has been
@@ -1642,6 +1682,8 @@ export class RoutineManager {
           continue;
         }
         run.threadId = task.threadId;
+        try { this.options.beforeStartBackground?.(cloneRun(run)); }
+        catch (e) { this.failRun(run, e instanceof Error ? e.message : String(e)); continue; }
         run.startedAt = startedAt;
         run.status = "running";
         this.save();
@@ -1680,8 +1722,10 @@ export class RoutineManager {
           this.failThread(task.threadId, error instanceof Error ? error.message : String(error));
         }
       }
+      this.lastSuccessfulSweepAt = this.now();
     } finally {
       this.ticking = false;
+      if (this.options.customerPolicy) this.save();
     }
   }
 
@@ -1738,7 +1782,11 @@ export class RoutineManager {
       const pending = this.options.hasPendingDelegations?.(event.threadId) === true;
       run.status = pending ? "waiting" : "completed";
       run.attention = pending ? "Waiting for delegated work to finish" : undefined;
-      if (!pending) run.finishedAt = this.now();
+      if (!pending) {
+        run.finishedAt = this.now();
+        const definition = this.routines.find(r => r.id === run.routineId);
+        if (this.options.customerPolicy && definition) definition.customerFailureCount = 0;
+      }
       run.error = undefined;
     } else {
       return null;
@@ -1814,9 +1862,19 @@ export class RoutineManager {
     run.attention = undefined;
     run.error = redactSecretsInText(message).slice(0, 500);
     run.finishedAt = this.now();
+    const definition = this.routines.find(r => r.id === run.routineId);
+    if (this.options.customerPolicy && definition) {
+      definition.customerFailureCount = (definition.customerFailureCount ?? 0) + 1;
+      if (definition.customerFailureCount >= CUSTOMER_LIMITS.failureLimit) {
+        definition.enabled = false; definition.nextRunAt = null;
+        definition.updatedAt = Math.max(this.now(), definition.updatedAt + 1);
+        run.error += "; routine disabled after three failures. Repair the cause and explicitly re-enable it.";
+      }
+    }
     this.save();
     this.emitRun(run);
-    this.options.onRunFailed?.(cloneRun(run));
+    if (!this.options.customerPolicy || !definition || definition.customerFailureCount === 1 || definition.customerFailureCount === CUSTOMER_LIMITS.failureLimit) this.options.onRunFailed?.(cloneRun(run));
+    if (this.options.customerPolicy && definition) this.emitRoutine(definition);
   }
 
   private missQueuedRun(run: RoutineRun, message: string) {
@@ -2027,6 +2085,8 @@ export class RoutineManager {
     mkdirSync(dirname(this.file), { recursive: true });
     writeFileAtomic(this.file, JSON.stringify({
       version: 1,
+      ...(this.lastSweepAt === undefined ? {} : { lastSweepAt: this.lastSweepAt }),
+      ...(this.lastSuccessfulSweepAt === undefined ? {} : { lastSuccessfulSweepAt: this.lastSuccessfulSweepAt }),
       routines: [...this.routines, ...this.unloadedRoutines],
       runs: this.runs,
       routineRequestReceipts: this.routineRequestReceipts,

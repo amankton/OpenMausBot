@@ -96,6 +96,27 @@ function bridge(botId: string, threadId: string) {
 }
 
 describe("a bot's external runtime", () => {
+  it("exposes a pending peer review on the idle source thread and clears it when answered", async () => {
+    const runtime = await createBot("Review gateway");
+    const peer = await createBot("Review peer");
+    try {
+      await api("PATCH", `/api/bots/${runtime.id}`, { approvePeerComms: true });
+      writeFileSync(runtimesFile(), JSON.stringify({ [runtime.id]: { token: TOKEN, threadId: runtime.threadId } }), { mode: 0o600 });
+      const delegated = await asRuntime("POST", "/api/internal/delegate-bot", { toBotId: peer.id, message: "Review fixture" });
+      expect(delegated.body).toMatchObject({ queued: true });
+      const sourceTask = async () => (await botState(runtime.id)).tasks.find((task: { threadId: string }) => task.threadId === runtime.threadId);
+      await expect.poll(async () => (await sourceTask()).pendingPeerApproval, { timeout: 15_000 }).toBe(true);
+      expect((await sourceTask()).busy).not.toBe(true);
+      const { body } = await api("GET", `/api/threads/${runtime.threadId}/messages`);
+      const card = body.messages.find((message: any) => message.card?.subtitle === "Review fixture").card;
+      expect((await api("POST", `/api/threads/${runtime.threadId}/respond`, { requestId: card.requestId, behavior: "deny" })).status).toBe(200);
+      await expect.poll(async () => (await sourceTask()).pendingPeerApproval).toBe(false);
+    } finally {
+      writeFileSync(runtimesFile(), "{}");
+      for (const bot of [runtime, peer]) await api("DELETE", `/api/bots/${bot.id}`);
+    }
+  }, 30_000);
+
   it("gets a standing agents capability for its pinned thread from external-runtimes.json", async () => {
     const runtime = await createBot("Gateway");
     const peer = await createBot("Peer");

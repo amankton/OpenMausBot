@@ -110,6 +110,14 @@ export type RequestOutcome = "allowed-once" | "rejected" | "answered" | "unavail
 // the first turn (the agentcal per-turn-process model) with resumeCursor
 // carrying the provider-native continuation (e.g. a claude session id).
 export interface SendTurnInput {
+  /** Harness-only callbacks. Never accepted from a browser or model. */
+  backgroundWork?: {
+    workflowId: string;
+    assertActive: () => void;
+    resume: () => void;
+    reserveRequest: () => { remainingActiveMs: number; remainingRequests: number };
+    beforeEffect?: (identity: string) => void;
+  };
   threadId: ThreadId;
   /** The bot this turn belongs to. threadIds are meant to be unique per bot
    * task, but a driver's process-level resource maps (permission-broker

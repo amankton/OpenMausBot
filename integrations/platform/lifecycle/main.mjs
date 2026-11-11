@@ -9,6 +9,7 @@ import { verifySchema } from './migrations.mjs';
 export { verifySchema } from './migrations.mjs';
 import { TrackerClient } from './tracker.mjs';
 import { createLifecycleServer } from './http.mjs';
+import { localMemberProvisioner } from './provisioning.mjs';
 
 export async function rotateCredentials(sql, oldKey, newKey) {
   const oldVault = credentialVault(oldKey), newVault = credentialVault(newKey);
@@ -25,7 +26,7 @@ export async function main(command = process.argv[2] ?? 'serve') {
   if (!['serve', 'migrate', 'rotate-key', 'revoke-all'].includes(command)) throw Error('Unknown lifecycle operation');
   const config = await lifecycleConfig();
   const sql = postgres(config.database, { max: 8, connect_timeout: 5, idle_timeout: 20, onnotice() {} });
-  let server;
+  let server, heartbeat;
   try {
     if (command === 'migrate') { await migratePairing(sql); return; }
     await verifySchema(sql);
@@ -33,8 +34,9 @@ export async function main(command = process.argv[2] ?? 'serve') {
       const key = await encryptionKeyFile(process.env.CHIEF_LIFECYCLE_NEW_KEY_FILE ?? '');
       await rotateCredentials(sql, config.encryptionKey, key); return;
     }
+    const provisioner = config.localMemberDirectory ? localMemberProvisioner({ directory: config.localMemberDirectory, key: config.localMemberKey }) : undefined;
     const pairing = new PairingService({ sql, encryptionKey: config.encryptionKey,
-      verifyMember: accountsMemberVerifier(config), entitlement: fileEntitlements({ file: config.policyFile, mode: config.mode }) });
+      verifyMember: accountsMemberVerifier(config), entitlement: provisioner ? member => provisioner.ensure(member) : fileEntitlements({ file: config.policyFile, mode: config.mode }) });
     if (command === 'revoke-all') {
       await transaction(sql, async tx => {
         const sessions = await tx`SELECT id FROM chief_lifecycle.member_session WHERE revoked_at IS NULL FOR UPDATE`;
@@ -42,10 +44,30 @@ export async function main(command = process.argv[2] ?? 'serve') {
       }); return;
     }
     server = createLifecycleServer({ pairing, origin: config.origin, tracker: config.collaboratorUrl ? new TrackerClient(config) : undefined, readiness: async () => { await sql`SELECT 1`; } });
+    if (provisioner) {
+      let checking = false;
+      const refresh = async () => {
+        if (checking) return; checking = true;
+        try {
+          const rows = await sql`SELECT * FROM chief_lifecycle.member_session WHERE revoked_at IS NULL AND expires_at > now() ORDER BY id LIMIT 1000`;
+          for (const row of rows) {
+            try { await provisioner.ensure(await pairing.storedMember(row)); }
+            catch (error) {
+              if ([401, 403].includes(error.status)) await provisioner.revoke({ workspace: row.workspace, account: row.account, person: row.person, membershipEpoch: row.membership_epoch, role: 'USER' }).catch(() => {});
+              // Authority outage never renews a lease. Native work stops when
+              // its last verified 60-second lease expires.
+            }
+          }
+        } catch { /* Database outage also fails closed through lease expiry. */ }
+        finally { checking = false; }
+      };
+      heartbeat = setInterval(() => void refresh(), 15_000); heartbeat.unref(); void refresh();
+    }
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(config.port, config.host, resolve); });
     console.log(JSON.stringify({ event: 'chief-lifecycle-ready', mode: config.mode, port: config.port }));
     await new Promise(resolve => { process.once('SIGTERM', resolve); process.once('SIGINT', resolve); });
   } finally {
+    clearInterval(heartbeat);
     if (server) await new Promise(resolve => server.close(resolve));
     await sql.end({ timeout: 5 });
   }
